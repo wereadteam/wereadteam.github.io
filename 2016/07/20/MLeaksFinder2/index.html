@@ -267,13 +267,11 @@
 <li>查找循环引用链</li>
 </ul>
 <p>下面，我们来逐一看一下这几个特性。</p>
-<p>&lt;!--more--&gt;</p>
-<h1>assert 改为 alert</h1>
-<p>在 MLeaksFiner 0.1 版本，当 MLeaksFinder 发现内存泄漏时，会直接中 assert 并打出内存泄漏的信息。Assert 能迫使开发者及时地去修复内存泄漏，并且，如果只是打日志，内存泄漏的日志很可能会被淹没在众多的日志中。这种 assert 的方法在我们实际的项目取得了不错的效果。</p>
+<a id="more"></a>
+<h1 id="assert-改为-alert"><a href="#assert-改为-alert" class="headerlink" title="assert 改为 alert"></a>assert 改为 alert</h1><p>在 MLeaksFiner 0.1 版本，当 MLeaksFinder 发现内存泄漏时，会直接中 assert 并打出内存泄漏的信息。Assert 能迫使开发者及时地去修复内存泄漏，并且，如果只是打日志，内存泄漏的日志很可能会被淹没在众多的日志中。这种 assert 的方法在我们实际的项目取得了不错的效果。</p>
 <p>然而，assert 确实也有不好的一面。当开发者在调试业务逻辑的过程中，如果由于内存泄漏中 assert 而使得整个程序挂掉了，那么开发者的思维会因此被打断，并不得不在修复完内存泄漏之后，从头开始调试业务逻辑。有时候开发者更希望的是连贯地调完整个业务逻辑之后，再回过头来修复内存泄漏。</p>
 <p>因此，MLeaksFinder 0.2 把 assert 改成了 alert。当发现内存泄漏之后，开发者可以把 alert 框关掉，并继续调试业务逻辑。而且，把 assert 改成 alert 之后，也使得进一步分析内存成为可能，为下面两个新特性垫定基础。</p>
-<h1>追踪对象的生命周期</h1>
-<p>当发现可能的内存泄漏对象并给出 alert 之后，MLeaksFinder 会进一步地追踪该对象的生命周期，并在该对象释放时给出 <code>Object Deallocated</code> 的 alert。</p>
+<h1 id="追踪对象的生命周期"><a href="#追踪对象的生命周期" class="headerlink" title="追踪对象的生命周期"></a>追踪对象的生命周期</h1><p>当发现可能的内存泄漏对象并给出 alert 之后，MLeaksFinder 会进一步地追踪该对象的生命周期，并在该对象释放时给出 <code>Object Deallocated</code> 的 alert。</p>
 <p>为什么认为一个对象内存泄漏之后，还要进一步去追踪该对象后续会不会释放呢？MLeaksFinder 的基本原理是这样的，当一个 ViewController 被 pop 或 dismiss 之后，我们认为该 ViewController，包括它上面的子 ViewController，以及它的 View，View 的 subView 等等，都很快会被释放，如果某个 View 或者 ViewController 没释放，我们就认为该对象泄漏了。然而，这样的判断内存泄漏的方法存在两个可能的“误判”：</p>
 <p><strong>1) 单例或者被 cache 起来复用的 View 或 ViewController</strong></p>
 <p>对于这样的 View 或 ViewController，在被 pop 或 dismiss 之后是不会被释放的。然而，由于 View 相关的对象一般都占用了较多了内存，这样的设计通常来说不是好的设计。如果开发者由于性能问题等原因而不得不这样设计的时候，开发者可以在报泄漏的类里重载 <code>- (BOOL)willDealloc</code> 方法，直接 <code>return NO;</code> 以消除内存泄漏的警告，这个消除内存泄漏警告的方法与 MLeaksFinder 0.1 版本一致。</p>
@@ -287,15 +285,14 @@
 <p>下面我们来看如何利用对象的生命周期来分析内存的真正使用情况，分三种情况：</p>
 <p><strong>1) 单例或者被 cache 起来复用</strong></p>
 <p>如下面所示，在第一次 pop 的时候报 Memory Leak，在之后的重复 push 并 pop 同一个 ViewController 过程中，即不报 Object Deallocated，也不报 Memory Leak。这种情况下我们可以确定该对象被设计成单例或者 cache 起来了。</p>
-<p><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">    pop             push           pop           push          pop&#10;----------&#62; Leak ----------&#62; | ----------&#62; | ----------&#62; | ----------&#62;</span><br></pre></td></tr></table></figure></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">    pop             push           pop           push          pop&#10;----------&#62; Leak ----------&#62; | ----------&#62; | ----------&#62; | ----------&#62;</span><br></pre></td></tr></table></figure>
 <p><strong>2) 释放不及时</strong></p>
 <p>如下面所示，在第一次 pop 的时候报 Memory Leak，在之后的重复 push 并 pop 同一个 ViewController 过程中，对于同一个类不断地报 Object Deallocated 和 Memory Leak。这种情况属于释放不及时的情况。</p>
-<p><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">    pop             push                 pop             push                 pop&#10;----------&#62; Leak ----------&#62; Dealloc ----------&#62; Leak ----------&#62; Dealloc ----------&#62; Leak</span><br></pre></td></tr></table></figure></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">    pop             push                 pop             push                 pop&#10;----------&#62; Leak ----------&#62; Dealloc ----------&#62; Leak ----------&#62; Dealloc ----------&#62; Leak</span><br></pre></td></tr></table></figure>
 <p><strong>3) 真正的内存泄漏</strong></p>
 <p>如下面所示，在第一次 pop 的时候报 Memory Leak，在之后的重复 push 并 pop 同一个 ViewController 过程中，不报 Object Deallocated，但每次 pop 之后又报 Memory Leak。这种情况下每回进入并退出一个页面后，就报有新的内存泄漏，同时被报泄漏的对象又从来没有释放过，可以确定是真正的内存泄漏。</p>
-<p><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">    pop             push           pop             push           pop&#10;----------&#62; Leak ----------&#62; | ----------&#62; Leak ----------&#62; | ----------&#62; Leak</span><br></pre></td></tr></table></figure></p>
-<h1>查找循环引用链</h1>
-<p>Facebook 在前阵子开源了一个循环引用检测工具 <a href="https://github.com/facebook/FBRetainCycleDetector" target="_blank" rel="external">FBRetainCycleDetector</a>。当传入内存中的任意一个 OC 对象，FBRetainCycleDetector 会递归遍历该对象的所有强引用的对象，以检测以该对象为根结点的强引用树有没有循环引用。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">    pop             push           pop             push           pop&#10;----------&#62; Leak ----------&#62; | ----------&#62; Leak ----------&#62; | ----------&#62; Leak</span><br></pre></td></tr></table></figure>
+<h1 id="查找循环引用链"><a href="#查找循环引用链" class="headerlink" title="查找循环引用链"></a>查找循环引用链</h1><p>Facebook 在前阵子开源了一个循环引用检测工具 <a href="https://github.com/facebook/FBRetainCycleDetector" target="_blank" rel="external">FBRetainCycleDetector</a>。当传入内存中的任意一个 OC 对象，FBRetainCycleDetector 会递归遍历该对象的所有强引用的对象，以检测以该对象为根结点的强引用树有没有循环引用。</p>
 <p>我们知道，很多循环引用是 block 的使用不当造成的。而 FBRetainCycleDetector 最大的技术亮点，正在于如何找出一个 block 的所有强引用对象。对于这个感兴趣的，可以看 facebook 的这篇<a href="https://code.facebook.com/posts/583946315094347/automatic-memory-leak-detection-on-ios/" target="_blank" rel="external">文章</a>。</p>
 <p>然而，FBRetainCycleDetector 的使用存在两个问题：</p>
 <ul>
@@ -303,8 +300,7 @@
 <li>检测循环引用比较耗时</li>
 </ul>
 <p>正是由于这两个问题，FBRetainCycleDetector 通常是结合其它工具一起使用，通过其它工具先找出候选的检测对象，然后进行有选择的检测。当 MLeaksFinder 与 FBRetainCycleDetector 结合使用时，正好能达到很好的效果。我们先通过 MLeaksFinder 找到内存泄漏的对象，然后再过 FBRetainCycleDetector 检测该对象有没有循环引用即可。</p>
-<p>循环引用的输出信息如下：
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">(&#10;    &#34;-&#62; MyTableViewCell &#34;,&#10;    &#34;-&#62; _callback -&#62; __NSMallocBlock__ &#34;&#10;)</span><br></pre></td></tr></table></figure></p>
+<p>循环引用的输出信息如下：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">(&#10;    &#34;-&#62; MyTableViewCell &#34;,&#10;    &#34;-&#62; _callback -&#62; __NSMallocBlock__ &#34;&#10;)</span><br></pre></td></tr></table></figure></p>
 <p>上面的信息表示，<code>MyTableViewCell</code> 有一个强引用的成员变量 <code>_callback</code>，该变量的类型是 <code>__NSMallocBlock__</code>，在 <code>_callback</code> 里，又强引用了 <code>MyTableViewCell</code> 造成循环引用。</p>
 
       
@@ -481,7 +477,7 @@
               
             
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#undefined"><span class="nav-number">1.</span> <span class="nav-text">assert 改为 alert</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#undefined"><span class="nav-number">2.</span> <span class="nav-text">追踪对象的生命周期</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#undefined"><span class="nav-number">3.</span> <span class="nav-text">查找循环引用链</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#assert-改为-alert"><span class="nav-number">1.</span> <span class="nav-text">assert 改为 alert</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#追踪对象的生命周期"><span class="nav-number">2.</span> <span class="nav-text">追踪对象的生命周期</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#查找循环引用链"><span class="nav-number">3.</span> <span class="nav-text">查找循环引用链</span></a></li></ol></div>
             
           </div>
           <div class="post-toc-indicator-bottom post-toc-indicator">
