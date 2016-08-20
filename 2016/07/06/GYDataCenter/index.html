@@ -58,29 +58,29 @@
 
 
 <meta name="description" content="GYDataCenter 是一个 SQLite 数据库框架，提供了一套简单易用的面向对象的数据操作接口，同时保留了 SQL 查询的灵活性。GYDataCenter 简单易上手，相对于 CoreData，GYDataCenter 的学习成本更低。同时，根据自己的需求，开发者可以更方便地划分数据库，设计数据库表，数据库索引等。
-概览GYDataCenter 具有以下特性：
+概览
+GYDataCenter 具有以下特性：
 
-面向对象的数据操作接口
-使">
+面向对象的数据操作接口">
 <meta property="og:type" content="article">
 <meta property="og:title" content="GYDataCenter：高性能数据库框架">
 <meta property="og:url" content="http://weread.qq.com/2016/07/06/GYDataCenter/index.html">
 <meta property="og:site_name" content="WeRead团队博客">
 <meta property="og:description" content="GYDataCenter 是一个 SQLite 数据库框架，提供了一套简单易用的面向对象的数据操作接口，同时保留了 SQL 查询的灵活性。GYDataCenter 简单易上手，相对于 CoreData，GYDataCenter 的学习成本更低。同时，根据自己的需求，开发者可以更方便地划分数据库，设计数据库表，数据库索引等。
-概览GYDataCenter 具有以下特性：
+概览
+GYDataCenter 具有以下特性：
 
-面向对象的数据操作接口
-使">
-<meta property="og:image" content="http://weread.qq.com/./img/GYDataCenter1.png">
-<meta property="og:image" content="http://weread.qq.com/./img/GYDataCenter2.png">
-<meta property="og:updated_time" content="2016-07-06T03:23:36.000Z">
+面向对象的数据操作接口">
+<meta property="og:image" content="http://weread.qq.com/img/GYDataCenter1.png">
+<meta property="og:image" content="http://weread.qq.com/img/GYDataCenter2.png">
+<meta property="og:updated_time" content="2016-08-20T11:23:40.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="GYDataCenter：高性能数据库框架">
 <meta name="twitter:description" content="GYDataCenter 是一个 SQLite 数据库框架，提供了一套简单易用的面向对象的数据操作接口，同时保留了 SQL 查询的灵活性。GYDataCenter 简单易上手，相对于 CoreData，GYDataCenter 的学习成本更低。同时，根据自己的需求，开发者可以更方便地划分数据库，设计数据库表，数据库索引等。
-概览GYDataCenter 具有以下特性：
+概览
+GYDataCenter 具有以下特性：
 
-面向对象的数据操作接口
-使">
+面向对象的数据操作接口">
 
 
 
@@ -273,7 +273,8 @@
 
       
         <p><a href="https://github.com/Zepo/GYDataCenter" target="_blank" rel="external">GYDataCenter</a> 是一个 SQLite 数据库框架，提供了一套简单易用的面向对象的数据操作接口，同时保留了 SQL 查询的灵活性。GYDataCenter 简单易上手，相对于 CoreData，GYDataCenter 的学习成本更低。同时，根据自己的需求，开发者可以更方便地划分数据库，设计数据库表，数据库索引等。</p>
-<h1 id="概览"><a href="#概览" class="headerlink" title="概览"></a>概览</h1><p>GYDataCenter 具有以下特性：</p>
+<h1>概览</h1>
+<p>GYDataCenter 具有以下特性：</p>
 <ul>
 <li>面向对象的数据操作接口</li>
 <li>使用 SQLite 的 where 语句做为查询条件</li>
@@ -283,41 +284,61 @@
 <li>自动批量写入磁盘</li>
 <li>使用 <a href="https://www.sqlite.org/lang_analyze.html" target="_blank" rel="external">ANALYZE</a> 优化查询</li>
 </ul>
-<a id="more"></a>
-<h1 id="使用方法"><a href="#使用方法" class="headerlink" title="使用方法"></a>使用方法</h1><p>1）把 model 类继承于 GYModelObject。<br><figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">@interface</span> <span class="title">Employee</span> : <span class="title">GYModelObject</span></span></span><br><span class="line"><span class="keyword">@property</span> (<span class="keyword">nonatomic</span>, <span class="keyword">assign</span>) <span class="built_in">NSInteger</span> employeeId;</span><br><span class="line"><span class="keyword">@property</span> (<span class="keyword">nonatomic</span>, <span class="keyword">strong</span>) <span class="built_in">NSString</span> *name;</span><br><span class="line"><span class="keyword">@property</span> (<span class="keyword">nonatomic</span>, <span class="keyword">strong</span>) <span class="built_in">NSDate</span> *dateOfBirth;</span><br><span class="line"><span class="keyword">@property</span> (<span class="keyword">nonatomic</span>, <span class="keyword">strong</span>) Department *department;</span><br><span class="line"><span class="keyword">@end</span></span><br></pre></td></tr></table></figure></p>
-<p>2）实现下面的 protocol 方法，指定数据库名，表名，指定哪个 property 做为主键（主键可以为 nil），以及哪些 property 需要持久化。<br><figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line">+ (<span class="built_in">NSString</span> *)dbName &#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="string">@"GYDataCenterTests"</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">+ (<span class="built_in">NSString</span> *)tableName &#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="string">@"Employee"</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">+ (<span class="built_in">NSString</span> *)primaryKey &#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="string">@"employeeId"</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">+ (<span class="built_in">NSArray</span> *)persistentProperties &#123;</span><br><span class="line">    <span class="keyword">static</span> <span class="built_in">NSArray</span> *properties = <span class="literal">nil</span>;</span><br><span class="line">    <span class="keyword">if</span> (!properties) &#123;</span><br><span class="line">        properties = @[</span><br><span class="line">                       <span class="string">@"employeeId"</span>,</span><br><span class="line">                       <span class="string">@"name"</span>,</span><br><span class="line">                       <span class="string">@"dateOfBirth"</span>,</span><br><span class="line">                       <span class="string">@"department"</span></span><br><span class="line">                       ];</span><br><span class="line">    &#125;);</span><br><span class="line">    <span class="keyword">return</span> properties;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
-<p>3）实现上面方法后，即可以存储，查询，更新数据。<br><figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">Employee *employee = ...</span><br><span class="line">[employee save];</span><br><span class="line"></span><br><span class="line">employee = [Employee objectForId:@<span class="number">1</span>];</span><br><span class="line"><span class="built_in">NSArray</span> *employees = [Employee objectsWhere:<span class="string">@"WHERE employeeId &lt; ? ORDER BY employeeId"</span></span><br><span class="line">                                  arguments:@[ @<span class="number">10</span> ]];</span><br></pre></td></tr></table></figure></p>
-<p>4) 这里的查询条件使用的还是 SQL 的 where 语句，这样做有两个好处：</p>
+<p>&lt;!--more--&gt;</p>
+<h1>使用方法</h1>
+<p>1）把 model 类继承于 GYModelObject。
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">@interface</span> <span class="title">Employee</span> : <span class="title">GYModelObject</span></span></span><br><span class="line"><span class="keyword">@property</span> (<span class="keyword">nonatomic</span>, <span class="keyword">assign</span>) <span class="built_in">NSInteger</span> employeeId;</span><br><span class="line"><span class="keyword">@property</span> (<span class="keyword">nonatomic</span>, <span class="keyword">strong</span>) <span class="built_in">NSString</span> *name;</span><br><span class="line"><span class="keyword">@property</span> (<span class="keyword">nonatomic</span>, <span class="keyword">strong</span>) <span class="built_in">NSDate</span> *dateOfBirth;</span><br><span class="line"><span class="keyword">@property</span> (<span class="keyword">nonatomic</span>, <span class="keyword">strong</span>) Department *department;</span><br><span class="line"><span class="keyword">@end</span></span><br></pre></td></tr></table></figure></p>
+<p>2）实现下面的 protocol 方法，指定数据库名，表名，指定哪个 property 做为主键（主键可以为 nil），以及哪些 property 需要持久化。
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line">+ (<span class="built_in">NSString</span> *)dbName &#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="string">@"GYDataCenterTests"</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">+ (<span class="built_in">NSString</span> *)tableName &#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="string">@"Employee"</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">+ (<span class="built_in">NSString</span> *)primaryKey &#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="string">@"employeeId"</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">+ (<span class="built_in">NSArray</span> *)persistentProperties &#123;</span><br><span class="line">    <span class="keyword">static</span> <span class="built_in">NSArray</span> *properties = <span class="literal">nil</span>;</span><br><span class="line">    <span class="keyword">if</span> (!properties) &#123;</span><br><span class="line">        properties = @[</span><br><span class="line">                       <span class="string">@"employeeId"</span>,</span><br><span class="line">                       <span class="string">@"name"</span>,</span><br><span class="line">                       <span class="string">@"dateOfBirth"</span>,</span><br><span class="line">                       <span class="string">@"department"</span></span><br><span class="line">                       ];</span><br><span class="line">    &#125;);</span><br><span class="line">    <span class="keyword">return</span> properties;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>3）实现上面方法后，即可以存储，查询，更新数据。
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">Employee *employee = ...</span><br><span class="line">[employee save];</span><br><span class="line"></span><br><span class="line">employee = [Employee objectForId:@<span class="number">1</span>];</span><br><span class="line"><span class="built_in">NSArray</span> *employees = [Employee objectsWhere:<span class="string">@"WHERE employeeId &lt; ? ORDER BY employeeId"</span></span><br><span class="line">                                  arguments:@[ @<span class="number">10</span> ]];</span><br></pre></td></tr></table></figure></p>
+<ol start="4">
+<li>这里的查询条件使用的还是 SQL 的 where 语句，这样做有两个好处：</li>
+</ol>
 <ol>
 <li>学习成本低。如果你已经熟悉 SQL 的语法，GYDataCenter 可以很快上手，你无需再学习一套新的查询语法。</li>
 <li>保持了 SQL 查询的灵活性。</li>
 </ol>
-<p>实际上，跟原生 SQL 一样，除了 where 语句，你也可以直接使用 order by，limit 等其它语句：<br><figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">NSArray</span> *employees = [Employee objectsWhere:<span class="string">@"ORDER BY employeeId"</span></span><br><span class="line">                                  arguments:<span class="literal">nil</span>];</span><br><span class="line"><span class="built_in">NSArray</span> *employees = [Employee objectsWhere:<span class="string">@"LIMIT 1"</span></span><br><span class="line">                                  arguments:<span class="literal">nil</span>];</span><br></pre></td></tr></table></figure></p>
-<p>甚至是内嵌查询：<br><figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">NSArray</span> *employees = [Employee objectsWhere:<span class="string">@"WHERE department in (SELECT departmentId from department WHERE name = ?)"</span></span><br><span class="line">                                  arguments:@[ <span class="string">@"Human Resource"</span> ]];</span><br></pre></td></tr></table></figure></p>
-<h1 id="特性"><a href="#特性" class="headerlink" title="特性"></a>特性</h1><h2 id="自动创建及更新数据库表"><a href="#自动创建及更新数据库表" class="headerlink" title="自动创建及更新数据库表"></a>自动创建及更新数据库表</h2><p>如上面所示，开发者只需把 model 继承于 GYModelObject，并实现必要的 protocol 方法，即可以存储，查询，更新 model 对象了。开发者无需自己创建数据库，数据库表等，GYDataCenter 会自动创建。</p>
+<p>实际上，跟原生 SQL 一样，除了 where 语句，你也可以直接使用 order by，limit 等其它语句：
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">NSArray</span> *employees = [Employee objectsWhere:<span class="string">@"ORDER BY employeeId"</span></span><br><span class="line">                                  arguments:<span class="literal">nil</span>];</span><br><span class="line"><span class="built_in">NSArray</span> *employees = [Employee objectsWhere:<span class="string">@"LIMIT 1"</span></span><br><span class="line">                                  arguments:<span class="literal">nil</span>];</span><br></pre></td></tr></table></figure></p>
+<p>甚至是内嵌查询：
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">NSArray</span> *employees = [Employee objectsWhere:<span class="string">@"WHERE department in (SELECT departmentId from department WHERE name = ?)"</span></span><br><span class="line">                                  arguments:@[ <span class="string">@"Human Resource"</span> ]];</span><br></pre></td></tr></table></figure></p>
+<h1>特性</h1>
+<h2>自动创建及更新数据库表</h2>
+<p>如上面所示，开发者只需把 model 继承于 GYModelObject，并实现必要的 protocol 方法，即可以存储，查询，更新 model 对象了。开发者无需自己创建数据库，数据库表等，GYDataCenter 会自动创建。</p>
 <p>并且，当一个数据库表已经存在时，如果开发者添加了新的持久化的 property，GYDataCenter 也会自动更新数据库表，添加相应的 column 定义。</p>
 <p>但是，GYDataCenter <strong>不能</strong>自动删除或修改已经存在的 column，如果开发者因业务变更需要这样做，开发者只能自己创建一个新表，并把数据迁移过去。</p>
-<p>GYDataCenter 同样能自动创建及修改数据库索引，开发者只需实现下面方法。与 property 不同，已存在的索引是可以自动删除的。<br><figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">+ (<span class="built_in">NSArray</span> *)indices &#123;</span><br><span class="line">    <span class="keyword">return</span> @[</span><br><span class="line">             @[ <span class="string">@"dateOfBirth"</span> ],</span><br><span class="line">             @[ <span class="string">@"department"</span>, <span class="string">@"name"</span> ]</span><br><span class="line">             ];</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
-<h2 id="关系型-property-及-faulting"><a href="#关系型-property-及-faulting" class="headerlink" title="关系型 property 及 faulting"></a>关系型 property 及 faulting</h2><p>如上面所示，持久化 property 的类型可以是另外一个 model 类型。比如 <strong>Employee</strong> 有一个属性 department，该属性的类型为 <strong>Department</strong>。这种属性称为 <strong>关系型 property</strong>。对于关系型 property，必须在实现里定义为 dynamic：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">@dynamic department;</span><br></pre></td></tr></table></figure></p>
-<p>对于上面的关系型 property，GYDataCenter 会在 Employee 的数据库表里添加一个 column，用于存储 department 的主键值。当调用<code>[employee save]</code>时，GYDataCenter 会把 department 的主键值存在新插入的 Employee 数据库记录里。但是 GYDataCenter <strong>不会</strong>把整个 department 存在 Department 表里。当开发者需要这样做时，需要显示地调用 save：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">[employee save];&#10;[employee.department save];</span><br></pre></td></tr></table></figure></p>
+<p>GYDataCenter 同样能自动创建及修改数据库索引，开发者只需实现下面方法。与 property 不同，已存在的索引是可以自动删除的。
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">+ (<span class="built_in">NSArray</span> *)indices &#123;</span><br><span class="line">    <span class="keyword">return</span> @[</span><br><span class="line">             @[ <span class="string">@"dateOfBirth"</span> ],</span><br><span class="line">             @[ <span class="string">@"department"</span>, <span class="string">@"name"</span> ]</span><br><span class="line">             ];</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<h2>关系型 property 及 faulting</h2>
+<p>如上面所示，持久化 property 的类型可以是另外一个 model 类型。比如 <strong>Employee</strong> 有一个属性 department，该属性的类型为 <strong>Department</strong>。这种属性称为 <strong>关系型 property</strong>。对于关系型 property，必须在实现里定义为 dynamic：
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">@dynamic department;</span><br></pre></td></tr></table></figure></p>
+<p>对于上面的关系型 property，GYDataCenter 会在 Employee 的数据库表里添加一个 column，用于存储 department 的主键值。当调用<code>[employee save]</code>时，GYDataCenter 会把 department 的主键值存在新插入的 Employee 数据库记录里。但是 GYDataCenter <strong>不会</strong>把整个 department 存在 Department 表里。当开发者需要这样做时，需要显示地调用 save：
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">[employee save];&#10;[employee.department save];</span><br></pre></td></tr></table></figure></p>
 <p>当开发者通过查询接口从 GYDataCenter 里拿出 Empolyee 对象时，属性 department 不会被完全赋值。属性 department 会指向一个 Department 对象，但该对象只有主键值被初始化了。当代码里第一次访问属性 department 时，department 才被完全赋值，这个过程对开发者是透明的。这个机制叫 faulting，与 Core Data 类似。</p>
 <p>Faulting 机制避免了拿一个对象时把它所有的关系对象，以及关系对象的关系对象都拿出来。这样带来了两个好处：</p>
 <ol>
 <li>减少内存使用。</li>
 <li>提高查询性能。</li>
 </ol>
-<h2 id="高性能-cache-层"><a href="#高性能-cache-层" class="headerlink" title="高性能 cache 层"></a>高性能 cache 层</h2><p>与 FMDatabaseQueue 建议的一致，GYDataCenter 对于每一个数据库（dbName 相同）的所有操作，都放在同一个队列排队执行，这样做既保证了线程安全，同时又保证了数据的一致性。实际上，GYDataCenter 底层用的正是 FMDatabaseQueue。</p>
+<h2>高性能 cache 层</h2>
+<p>与 FMDatabaseQueue 建议的一致，GYDataCenter 对于每一个数据库（dbName 相同）的所有操作，都放在同一个队列排队执行，这样做既保证了线程安全，同时又保证了数据的一致性。实际上，GYDataCenter 底层用的正是 FMDatabaseQueue。</p>
 <p>为了提高性能，GYDataCenter 还对 model 对象做了 cache，cache 以 model 对象的主键值为索引。开发者可以为每个 model 类型指定是否要 cache，以及在 memory warning 时是否要回收 cache。GYDataCenter 对于每一个数据库的所有 cache 的操作，同样也放在一个队列排队执行，具体流程如下：</p>
-<h4 id="1）按主键的查询操作"><a href="#1）按主键的查询操作" class="headerlink" title="1）按主键的查询操作"></a>1）按主键的查询操作</h4><p>先到 cache 队列查询 cache 是否存在，存在则返回，不存在则同步到 DB 队列查询数据库，从 DB 队列返回后，回到 cache 队列先更新 cache，然后再返回。</p>
-<p><img src="./img/GYDataCenter1.png" alt=""></p>
-<h4 id="2）按-where-的查询操作"><a href="#2）按-where-的查询操作" class="headerlink" title="2）按 where 的查询操作"></a>2）按 where 的查询操作</h4><p>先进 cache 队列，通过 cache 队列同步调起 DB 队列查询数据库，并组装对象。在组装对象时，对于每一条记录先拿出主键值到 cache 查询一下对象是否存在，如果存在则直接使用，不存在则生成新的对象，并拿出其它 column 值以初始化新生成的对象。所有对象组装完后，返回 cache 队列，更新 cache 并返回。</p>
-<h4 id="3）写操作"><a href="#3）写操作" class="headerlink" title="3）写操作"></a>3）写操作</h4><p>先到 cache 队列更新 cache，然后异步调起 DB 队列执行数据库操作。</p>
-<p><img src="./img/GYDataCenter2.png" alt=""></p>
-<h2 id="自动批量写入"><a href="#自动批量写入" class="headerlink" title="自动批量写入"></a>自动批量写入</h2><p>我们都知道，当数据库连续执行多个写操作时，可以通过事务（transaction）把多个写操作包在一起，一次性写入磁盘以提高性能。GYDataCenter 利用这点，自动地把多个 DB 操作包在一个事务中，以提高性能。</p>
+<h4>1）按主键的查询操作</h4>
+<p>先到 cache 队列查询 cache 是否存在，存在则返回，不存在则同步到 DB 队列查询数据库，从 DB 队列返回后，回到 cache 队列先更新 cache，然后再返回。</p>
+<p><img src="/img/GYDataCenter1.png" alt=""></p>
+<h4>2）按 where 的查询操作</h4>
+<p>先进 cache 队列，通过 cache 队列同步调起 DB 队列查询数据库，并组装对象。在组装对象时，对于每一条记录先拿出主键值到 cache 查询一下对象是否存在，如果存在则直接使用，不存在则生成新的对象，并拿出其它 column 值以初始化新生成的对象。所有对象组装完后，返回 cache 队列，更新 cache 并返回。</p>
+<h4>3）写操作</h4>
+<p>先到 cache 队列更新 cache，然后异步调起 DB 队列执行数据库操作。</p>
+<p><img src="/img/GYDataCenter2.png" alt=""></p>
+<h2>自动批量写入</h2>
+<p>我们都知道，当数据库连续执行多个写操作时，可以通过事务（transaction）把多个写操作包在一起，一次性写入磁盘以提高性能。GYDataCenter 利用这点，自动地把多个 DB 操作包在一个事务中，以提高性能。</p>
 <p>前面说过，对于同一个数据库的所有操作，都放到一个队列排队执行。由于对于同一个数据库，只有一个数据库句柄，且只有一个线程，使得自动批量写入 DB 成为可能。当数据库连接建立时，GYDataCenter 即马上开始一个事务，并且每隔一个固定的时间（默认 1 秒），GYDataCenter 就会把事务提交后再马上开始一个新的事务。</p>
 <p>这种优化对于写操作频繁的情况特别有效，当然，对于读操作也是有帮助的。如果不手动加事务，SQLite 会为每个 SQL 的执行创建一个事务，把多个 SQL 的执行包在一个事务中，避免了创建多个事务的开销。</p>
 <p>虽然不断地定时提交事务， GYDataCenter 仍然支持多个请求的原子操作。GYDataCenter 提供了 <code>-inTransaction:dbName:</code> 接口，在该接口的开始，GYDataCenter 会把定时事务提交暂停，并把上一个事务提交掉。接着，把参数 block 里的多个操作包在一个事务里，并在该接口结束时恢复定时事务提交。</p>
-<h2 id="ANALYZE-优化查询"><a href="#ANALYZE-优化查询" class="headerlink" title="ANALYZE 优化查询"></a>ANALYZE 优化查询</h2><p><a href="https://www.sqlite.org/lang_analyze.html" target="_blank" rel="external">ANALYZE</a> 是 SQLite 提供的一个工具，执行 ANALYZE 命令后 SQLite 会收集数据和索引的统计信息，并将这些统计信息存于数据库文件的一个内部表里（sqlite_stat1）。这些统计数据可以帮助 SQLite 在执行 SQL 时选择更优的策略，从而提高数据库性能。</p>
+<h2>ANALYZE 优化查询</h2>
+<p><a href="https://www.sqlite.org/lang_analyze.html" target="_blank" rel="external">ANALYZE</a> 是 SQLite 提供的一个工具，执行 ANALYZE 命令后 SQLite 会收集数据和索引的统计信息，并将这些统计信息存于数据库文件的一个内部表里（sqlite_stat1）。这些统计数据可以帮助 SQLite 在执行 SQL 时选择更优的策略，从而提高数据库性能。</p>
 <p>ANALYZE 命令产生的统计数据不会自动更新，随着数据库写操作的不断累积，这些统计信息会变得不准确，需要重新执行 ANALYZE 命令。根据这点，GYDataCenter 统计写操作的次数，当写操作累计达到一定次数时（默认 500），GYDataCenter 会在 app 进入后台时执行一次 ANALYZE 命令，以此优化性能。</p>
 <p>ANALYZE 命令的执行是比较快的，在实际项目的实践中发现，ANALYZE 命令的执行时间是几十毫秒级别，因此，不必担心由于 ANALYZE 执行太慢导致 app 被系统 kill 掉。</p>
 
@@ -495,7 +516,7 @@
               
             
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#概览"><span class="nav-number">1.</span> <span class="nav-text">概览</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#使用方法"><span class="nav-number">2.</span> <span class="nav-text">使用方法</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#特性"><span class="nav-number">3.</span> <span class="nav-text">特性</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#自动创建及更新数据库表"><span class="nav-number">3.1.</span> <span class="nav-text">自动创建及更新数据库表</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#关系型-property-及-faulting"><span class="nav-number">3.2.</span> <span class="nav-text">关系型 property 及 faulting</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#高性能-cache-层"><span class="nav-number">3.3.</span> <span class="nav-text">高性能 cache 层</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#1）按主键的查询操作"><span class="nav-number">3.3.0.1.</span> <span class="nav-text">1）按主键的查询操作</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#2）按-where-的查询操作"><span class="nav-number">3.3.0.2.</span> <span class="nav-text">2）按 where 的查询操作</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#3）写操作"><span class="nav-number">3.3.0.3.</span> <span class="nav-text">3）写操作</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#自动批量写入"><span class="nav-number">3.4.</span> <span class="nav-text">自动批量写入</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#ANALYZE-优化查询"><span class="nav-number">3.5.</span> <span class="nav-text">ANALYZE 优化查询</span></a></li></ol></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#undefined"><span class="nav-number">1.</span> <span class="nav-text">概览</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#undefined"><span class="nav-number">2.</span> <span class="nav-text">使用方法</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#undefined"><span class="nav-number">3.</span> <span class="nav-text">特性</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#undefined"><span class="nav-number">3.1.</span> <span class="nav-text">自动创建及更新数据库表</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#undefined"><span class="nav-number">3.2.</span> <span class="nav-text">关系型 property 及 faulting</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#undefined"><span class="nav-number">3.3.</span> <span class="nav-text">高性能 cache 层</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#undefined"><span class="nav-number">3.3.0.1.</span> <span class="nav-text">1）按主键的查询操作</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#undefined"><span class="nav-number">3.3.0.2.</span> <span class="nav-text">2）按 where 的查询操作</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#undefined"><span class="nav-number">3.3.0.3.</span> <span class="nav-text">3）写操作</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#undefined"><span class="nav-number">3.4.</span> <span class="nav-text">自动批量写入</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#undefined"><span class="nav-number">3.5.</span> <span class="nav-text">ANALYZE 优化查询</span></a></li></ol></li></ol></div>
             
           </div>
           <div class="post-toc-indicator-bottom post-toc-indicator">
