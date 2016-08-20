@@ -1,0 +1,824 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  <link href="/vendors/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css"/>
+
+
+
+
+  <link href="//fonts.googleapis.com/css?family=Lato:300,400,700,400italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+
+
+
+<link href="/vendors/font-awesome/css/font-awesome.min.css?v=4.4.0" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=0.5.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="微信读书,iOS" />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=0.5.0" />
+
+
+
+
+
+
+<meta name="description" content="看了 Limboy(文章1 文章2) 和 Casa (文章) 对 iOS 组件化方案的讨论，写篇文章梳理下思路。
+首先我觉得”组件”在这里不太合适，因为按我理解组件是指比较小的功能块，这些组件不需要多少组件间通信，没什么依赖，也就不需要做什么其他处理，面向对象就能搞定。而这里提到的是较大粒度的业务功能，我们习惯称为”模块”。为了方便表述，下面模块和组件代表同一个意思，都是指较大粒度的业务模块。
+一">
+<meta property="og:type" content="article">
+<meta property="og:title" content="iOS 组件化方案探索">
+<meta property="og:url" content="http://weread.qq.com/2016/03/19/iOS-Component/index.html">
+<meta property="og:site_name" content="WeRead团队博客">
+<meta property="og:description" content="看了 Limboy(文章1 文章2) 和 Casa (文章) 对 iOS 组件化方案的讨论，写篇文章梳理下思路。
+首先我觉得”组件”在这里不太合适，因为按我理解组件是指比较小的功能块，这些组件不需要多少组件间通信，没什么依赖，也就不需要做什么其他处理，面向对象就能搞定。而这里提到的是较大粒度的业务功能，我们习惯称为”模块”。为了方便表述，下面模块和组件代表同一个意思，都是指较大粒度的业务模块。
+一">
+<meta property="og:image" content="http://weread.qq.com/./img/component1.png">
+<meta property="og:image" content="http://weread.qq.com/./img/component2.png">
+<meta property="og:image" content="http://weread.qq.com/./img/component3.png">
+<meta property="og:updated_time" content="2016-07-06T03:11:55.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="iOS 组件化方案探索">
+<meta name="twitter:description" content="看了 Limboy(文章1 文章2) 和 Casa (文章) 对 iOS 组件化方案的讨论，写篇文章梳理下思路。
+首先我觉得”组件”在这里不太合适，因为按我理解组件是指比较小的功能块，这些组件不需要多少组件间通信，没什么依赖，也就不需要做什么其他处理，面向对象就能搞定。而这里提到的是较大粒度的业务功能，我们习惯称为”模块”。为了方便表述，下面模块和组件代表同一个意思，都是指较大粒度的业务模块。
+一">
+
+
+
+<script type="text/javascript" id="hexo.configuration">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 0,
+      author: '博主'
+    }
+  };
+</script>
+
+  <title> iOS 组件化方案探索 | WeRead团队博客 </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">WeRead团队博客</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+  <p class="site-subtitle"></p>
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu ">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-home fa-fw"></i> <br />
+            
+            首頁
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-archive fa-fw"></i> <br />
+            
+            歸檔
+          </a>
+        </li>
+      
+
+      
+      
+      
+    </ul>
+  
+
+  
+</nav>
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                iOS 组件化方案探索
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">發表於</span>
+            <time itemprop="dateCreated" datetime="2016-03-19T10:03:29+08:00" content="2016-03-19">
+              2016-03-19
+            </time>
+          </span>
+
+          
+            <span class="post-category" >
+              &nbsp; | &nbsp;
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <!--span class="post-meta-item-text">分類於</span-->
+              
+                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                  <!--a href="/categories/bang/" itemprop="url" rel="index"-->
+                    <span itemprop="name">bang</span>
+                  <!--/a-->
+                </span>
+
+                
+                
+
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                &nbsp; | &nbsp;
+                <a href="/2016/03/19/iOS-Component/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2016/03/19/iOS-Component/" itemprop="commentsCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+
+          
+          
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>看了 Limboy(<a href="http://limboy.me/ios/2016/03/10/mgj-components.html" target="_blank" rel="external">文章1</a> <a href="http://limboy.me/ios/2016/03/14/mgj-components-continued.html" target="_blank" rel="external">文章2</a>) 和 Casa (<a href="http://casatwy.com/iOS-Modulization.html" target="_blank" rel="external">文章</a>) 对 iOS 组件化方案的讨论，写篇文章梳理下思路。</p>
+<p>首先我觉得”组件”在这里不太合适，因为按我理解组件是指比较小的功能块，这些组件不需要多少组件间通信，没什么依赖，也就不需要做什么其他处理，面向对象就能搞定。而这里提到的是较大粒度的业务功能，我们习惯称为”模块”。为了方便表述，下面模块和组件代表同一个意思，都是指较大粒度的业务模块。</p>
+<p>一个 APP 有多个模块，模块之间会通信，互相调用，例如微信读书有 书籍详情  想法列表  阅读器  发现卡片  等等模块，这些模块会互相调用，例如 书籍详情要调起阅读器和想法列表，阅读器要调起想法列表和书籍详情，等等，一般我们是怎样调用呢，以阅读器为例，会这样写：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">#import &#34;WRBookDetailViewController.h&#34;&#10;#import &#34;WRReviewViewController.h&#34;&#10;@implementation Mediator&#10;- (void)gotoDetail &#123;&#10;    WRBookDetailViewController *detailVC = [[WRBookDetailViewController alloc] initWithBookId:self.bookId];&#10;    [self.navigationController.pushViewController:detailVC animated:YES];&#10;&#125;&#10;&#10;- (void)gotoReview &#123;&#10;    WRReviewViewController *reviewVC = [[WRReviewViewController alloc] initWithBookId:self.bookId reviewType:1];&#10;    [self.navigationController.pushViewController:reviewVC animated:YES];&#10;&#125;&#10;@end</span><br></pre></td></tr></table></figure>
+<a id="more"></a>
+<p>看起来挺好，这样做简单明了，没有多余的东西，项目初期推荐这样快速开发，但到了项目越来越庞大，这种方式会有什么问题呢？显而易见，每个模块都离不开其他模块，互相依赖粘在一起成为一坨：</p>
+<p><img src="./img/component1.png" alt=""></p>
+<p>这样揉成一坨对测试/编译/开发效率/后续扩展都有一些坏处，那怎么解开这一坨呢。很简单，按软件工程的思路，下意识就会加一个中间层：</p>
+<p><img src="./img/component2.png" alt=""></p>
+<p>叫他 Mediator Manager Router 什么都行，反正就是负责转发信息的中间层，暂且叫他 Mediator。</p>
+<p>看起来顺眼多了，但这里有几个问题：</p>
+<ol>
+<li>Mediator 怎么去转发组件间调用？</li>
+<li>一个模块只跟 Mediator 通信，怎么知道另一个模块提供了什么接口？</li>
+<li>按上图的画法，模块和 Mediator 间互相依赖，怎样破除这个依赖？</li>
+</ol>
+<h2 id="方案1"><a href="#方案1" class="headerlink" title="方案1"></a>方案1</h2><p>对于前两个问题，最直接的反应就是在 Mediator 直接提供接口，调用对应模块的方法：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">//Mediator.m&#10;#import &#34;BookDetailComponent.h&#34;&#10;#import &#34;ReviewComponent.h&#34;&#10;@implementation Mediator&#10;+ (UIViewController *)BookDetailComponent_viewController:(NSString *)bookId &#123;&#10;    return [BookDetailComponent detailViewController:bookId];&#10;&#125;&#10;+ (UIViewController *)ReviewComponent_viewController:(NSString *)bookId reviewType:(NSInteger)type &#123;&#10;    return [ReviewComponent reviewViewController:bookId type:type];&#10;&#125;&#10;@end</span><br></pre></td></tr></table></figure></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">//BookDetailComponent  &#32452;&#20214;&#10;#import &#34;Mediator.h&#34;&#10;#import &#34;WRBookDetailViewController.h&#34;&#10;@implementation BookDetailComponent&#10;+ (UIViewController *)detailViewController:(NSString *)bookId &#123;&#10;    WRBookDetailViewController *detailVC = [[WRBookDetailViewController alloc] initWithBookId:bookId];&#10;    return detailVC;&#10;&#125;&#10;@end</span><br></pre></td></tr></table></figure>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">//ReviewComponent  &#32452;&#20214;&#10;#import &#34;Mediator.h&#34;&#10;#import &#34;WRReviewViewController.h&#34;&#10;@implementation ReviewComponent&#10;+ (UIViewController *)reviewViewController:(NSString *)bookId type:(NSInteger)type &#123;&#10;    UIViewController *reviewVC = [[WRReviewViewController alloc] initWithBookId:bookId type:type];&#10;    return reviewVC;&#10;&#125;&#10;@end</span><br></pre></td></tr></table></figure>
+<p>然后在阅读模块里：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">//WRReadingViewController.m&#10;#import &#34;Mediator.h&#34;&#10;@implementation WRReadingViewController&#10;- (void)gotoDetail:(NSString *)bookId &#123;&#10;    UIViewController *detailVC = [Mediator BookDetailComponent_viewControllerForDetail:bookId];&#10;    [self.navigationController pushViewController:detailVC];&#10;&#10;    UIViewController *reviewVC = [Mediator ReviewComponent_viewController:bookId type:1];&#10;    [self.navigationController pushViewController:reviewVC];&#10;&#125;&#10;@end</span><br></pre></td></tr></table></figure></p>
+<p>这就是一开始架构图的实现，看起来显然这样做并没有什么好处，依赖关系并没有解除，Mediator 依赖了所有模块，而调用者又依赖 Mediator，最后还是一坨互相依赖，跟原来没有 Mediator 的方案相比除了更麻烦点其他没区别。</p>
+<p>那怎么办呢。</p>
+<p>怎样让Mediator解除对各个组件的依赖，同时又能调到各个组件暴露出来的方法？对于OC有一个法宝可以做到，就是runtime反射调用：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">//Mediator.m&#10;@implementation Mediator&#10;+ (UIViewController *)BookDetailComponent_viewController:(NSString *)bookId &#123;&#10;    Class cls = NSClassFromString(@&#34;BookDetailComponent&#34;);&#10;    id obj = [[cls alloc] init];&#10;    return [obj performSelector:NSSelectorFromString(@&#34;detailViewController:&#34;) withObject:@&#123;@&#34;bookId&#34;:bookId&#125;];&#10;&#125;&#10;+ (UIViewController *)ReviewComponent_viewController:(NSString *)bookId type:(NSInteger)type &#123;&#10;    Class cls = NSClassFromString(@&#34;ReviewComponent&#34;);&#10;    id obj = [[cls alloc] init];&#10;    return [obj performSelector:NSSelectorFromString(@&#34;reviewViewController:&#34;) withObject:@&#123;@&#34;bookId&#34;:bookId, @&#34;type&#34;: @(type)&#125;];&#10;&#125;&#10;@end</span><br></pre></td></tr></table></figure></p>
+<p>这下 Mediator 没有再对各个组件有依赖了，你看已经不需要 #import 什么东西了，对应的架构图就变成：</p>
+<p><img src="./img/component3.png" alt=""></p>
+<p>只有调用其他组件接口时才需要依赖 Mediator，组件开发者不需要知道 Mediator 的存在。</p>
+<p>等等，既然用runtime就可以解耦取消依赖，那还要Mediator做什么？组件间调用时直接用runtime接口调不就行了，这样就可以没有任何依赖就完成调用：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">//WRReadingViewController.m&#10;@implementation WRReadingViewController&#10;- (void)gotoReview:(NSString *)bookId &#123;&#10;    Class cls = NSClassFromString(@&#34;BookDetailComponent&#34;);&#10;    id obj = [[cls alloc] init];&#10;    UIViewController *reviewVC = [obj performSelector:NSSelectorFromString(@&#34;reviewViewController:&#34;) withObject:@&#123;@&#34;bookId&#34;:bookId, @&#34;type&#34;: @(1)&#125;];&#10;    [self.navigationController pushViewController:reviewVC];&#10;&#125;&#10;@end</span><br></pre></td></tr></table></figure></p>
+<p>这样就完全解耦了，但这样做的问题是：</p>
+<ol>
+<li>调用者写起来很恶心，代码提示都没有，每次调用写一坨。</li>
+<li>runtime方法的参数个数和类型限制，导致只能每个接口都统一传一个 <code>NSDictionary</code>。这个 <code>NSDictionary</code>里的key value是什么不明确，需要找个地方写文档说明和查看。</li>
+<li>编译器层面不依赖其他组件，实际上还是依赖了，直接在这里调用，没有引入调用的组件时就挂了</li>
+</ol>
+<p>把它移到Mediator后：</p>
+<ol>
+<li>调用者写起来不恶心，代码提示也有了。</li>
+<li>参数类型和个数无限制，由 Mediator 去转就行了，组件提供的还是一个 <code>NSDictionary</code> 参数的接口，但在Mediator 里可以提供任意类型和个数的参数，像上面的例子显式要求参数 <code>NSString *bookId</code> 和 <code>NSInteger type</code>。</li>
+<li>Mediator可以做统一处理，调用某个组件方法时如果某个组件不存在，可以做相应操作，让调用者与组件间没有耦合。</li>
+</ol>
+<p>到这里，基本上能解决我们的问题：各组件互不依赖，组件间调用只依赖中间件Mediator，Mediator不依赖其他组件。接下来就是优化这套写法，有两个优化点：</p>
+<ol>
+<li>Mediator 每一个方法里都要写 runtime 方法，格式是确定的，这是可以抽取出来的。</li>
+<li>每个组件对外方法都要在 Mediator 写一遍，组件一多 Mediator 类的长度是恐怖的。</li>
+</ol>
+<p>优化后就成了 casa 的方案，target-action 对应第一点，target就是class，action就是selector，通过一些规则简化动态调用。Category 对应第二点，每个组件写一个 Mediator 的 Category，让 Mediator 不至于太长。这里有个<a href="https://github.com/casatwy/CTMediator" target="_blank" rel="external">demo</a>。</p>
+<p>总结起来就是，组件通过中间件通信，中间件通过 runtime 接口解耦，通过 target-action 简化写法，通过 category 感官上分离组件接口代码。这里可以看到这个实现的 <a href="https://github.com/casatwy/CTMediator" target="_blank" rel="external">Demo</a>。</p>
+<h2 id="方案2"><a href="#方案2" class="headerlink" title="方案2"></a>方案2</h2><p>回到 Mediator 最初的三个问题，蘑菇街用的是另一种方式解决：注册表的方式，用URL表示接口，在模块启动时注册模块提供的接口，一个简化的实现：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">//Mediator.m  &#20013;&#38388;&#20214;&#10;@implementation Mediator&#10;typedef void (^componentBlock) (id param);&#10;@property (nonatomic, storng) NSMutableDictionary *cache&#10;- (void)registerURLPattern:(NSString *)urlPattern toHandler:(componentBlock)blk &#123;&#10;    [cache setObject:blk forKey:urlPattern];&#10;&#125;&#10;&#10;- (void)openURL:(NSString *)url withParam:(id)param &#123;&#10;   componentBlock blk = [cache objectForKey:url];&#10;   if (bulk) blk(param);&#10;&#125;&#10;@end</span><br></pre></td></tr></table></figure></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">//BookDetailComponent  &#32452;&#20214;&#10;#import &#34;Mediator.h&#34;&#10;#import &#34;WRBookDetailViewController.h&#34;&#10;+ (void)initComponent &#123;&#10;   [[Mediator sharedInstance] registerURLPattern:@&#34;weread://bookDetail&#34; toHandler:^(NSDictionary *param) &#123;&#10;    WRBookDetailViewController *detailVC = [[WRBookDetailViewController alloc] initWithBookId:param[@&#34;bookId&#34;]];&#10;    [[UIApplication sharedApplication].keyWindow.rootViewController.navigationController pushViewController:detailVC animated:YES];&#10;   &#125;];&#10;&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">//WRReadingViewController.m  &#35843;&#29992;&#32773;&#10;//ReadingViewController.m&#10;#import &#34;Mediator.h&#34;&#10;&#10;+ (void)gotoDetail:(NSString *)bookId &#123;&#10;    [[Mediator sharedInstance] openURL:@&#34;weread://bookDetail&#34; withParam:@&#123;@&#34;bookId&#34;: bookId&#125;];&#10;&#125;</span><br></pre></td></tr></table></figure>
+<p>这样同样做到每个模块间没有依赖，Mediator 也不依赖其他组件，不过这里不一样的一点是组件本身和调用者都依赖了Mediator，不过这不是重点，架构图还是跟方案1一样。</p>
+<p>各个组件初始化时向 Mediator 注册对外提供的接口，Mediator 通过保存在内存的表去知道有哪些模块哪些接口，接口的形式是 <code>URL-&gt;block</code>。</p>
+<p>这里抛开URL的远程调用和本地调用混在一起导致的问题，先说只用于本地调用的情况，对于本地调用，URL只是一个表示组件的key，没有其他作用，这样做有三个问题：</p>
+<ol>
+<li>需要有个地方列出各个组件里有什么 URL 接口可供调用。蘑菇街做了个后台专门管理。</li>
+<li>每个组件都需要初始化，内存里需要保存一份表，组件多了会有内存问题。</li>
+<li>参数的格式不明确，是个灵活的 dictionary，也需要有个地方可以查参数格式。</li>
+</ol>
+<p>第二点没法解决，第一点和第三点可以跟前面那个方案一样，在 Mediator 每个组件暴露方法的转接口，然后使用起来就跟前面那种方式一样了。</p>
+<p>抛开URL不说，这种方案跟方案1的共同思路就是：Mediator 不能直接去调用组件的方法，因为这样会产生依赖，那我就要通过其他方法去调用，也就是通过 字符串-&gt;方法 的映射去调用。runtime 接口的 <code>className + selectorName -&gt; IMP</code> 是一种，注册表的 <code>key -&gt; block</code> 是一种，而前一种是 OC 自带的特性，后一种需要内存维持一份注册表，这是不必要的。</p>
+<p>现在说回 URL，组件化是不应该跟 URL 扯上关系的，因为组件对外提供的接口主要是模块间代码层面上的调用，我们先称为本地调用，而 URL 主要用于 APP 间通信，姑且称为远程调用。按常规思路者应该是对于远程调用，再加个中间层转发到本地调用，让这两者分开。那这里这两者混在一起有什么问题呢？</p>
+<p>如果是 URL 的形式，那组件对外提供接口时就要同时考虑本地调用和远程调用两种情况，而远程调用有个限制，传递的参数类型有限制，只能传能被字符串化的数据，或者说只能传能被转成 json 的数据，像 UIImage 这类对象是不行的，所以如果组件接口要考虑远程调用，这里的参数就不能是这类非常规对象，接口的定义就受限了。</p>
+<p>用理论的话来说就是，远程调用是本地调用的子集，这里混在一起导致组件只能提供子集功能，无法提供像方案1那样提供全集功能。所以这个方案是天生有缺陷的，对于遗漏的这部分功能，蘑菇街使用了另一种方案补全，请看方案3。</p>
+<h2 id="方案3"><a href="#方案3" class="headerlink" title="方案3"></a>方案3</h2><p>蘑菇街为了补全本地调用的功能，为组件多加了另一种方案，就是通过 protocol-class 注册表的方式。首先有一个新的中间件：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">//ProtocolMediator.m  &#26032;&#20013;&#38388;&#20214;&#10;@implementation ProtocolMediator&#10;@property (nonatomic, storng) NSMutableDictionary *protocolCache&#10;- (void)registerProtocol:(Protocol *)proto forClass:(Class)cls &#123;&#10;    NSMutableDictionary *protocolCache;&#10;    [protocolCache setObject:cls forKey:NSStringFromProtocol(proto)];&#10;&#125;&#10;&#10;- (Class)classForProtocol:(Protocol *)proto &#123;&#10;  return protocolCache[NSStringFromProtocol(proto)];&#10;&#125;&#10;@end</span><br></pre></td></tr></table></figure>
+<p>然后有一个公共Protocol文件，定义了每一个组件对外提供的接口：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">//ComponentProtocol.h&#10;@protocol BookDetailComponentProtocol &#60;NSObject&#62;&#10;- (UIViewController *)bookDetailController:(NSString *)bookId;&#10;- (UIImage *)coverImageWithBookId:(NSString *)bookId;&#10;@end&#10;&#10;@protocol ReviewComponentProtocol &#60;NSObject&#62;&#10;- (UIViewController *)ReviewController:(NSString *)bookId;&#10;@end</span><br></pre></td></tr></table></figure></p>
+<p>再在模块里实现这些接口，并在初始化时调用 registerProtocol 注册。<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">//BookDetailComponent  &#32452;&#20214;&#10;#import &#34;ProtocolMediator.h&#34;&#10;#import &#34;ComponentProtocol.h&#34;&#10;#import &#34;WRBookDetailViewController.h&#34;&#10;+ (void)initComponent&#10;&#123;&#10;   [[ProtocolMediator sharedInstance] registerProtocol:@protocol(BookDetailComponentProtocol) forClass:[self class];&#10;&#125;&#10;&#10;- (UIViewController *)bookDetailController:(NSString *)bookId &#123;&#10;    WRBookDetailViewController *detailVC = [[WRBookDetailViewController alloc] initWithBookId:param[@&#34;bookId&#34;]];&#10;    return detailVC;&#10;&#125;&#10;&#10;- (UIImage *)coverImageWithBookId:(NSString *)bookId &#123;&#10;    &#8230;.&#10;&#125;</span><br></pre></td></tr></table></figure></p>
+<p>最后调用者通过 protocol 从 ProtocolMediator 拿到提供这些方法的 Class，再进行调用：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">//WRReadingViewController.m  &#35843;&#29992;&#32773;&#10;//ReadingViewController.m&#10;#import &#34;ProtocolMediator.h&#34;&#10;#import &#34;ComponentProtocol.h&#34;&#10;+ (void)gotoDetail:(NSString *)bookId &#123;&#10;    Class cls = [[ProtocolMediator sharedInstance] classForProtocol:BookDetailComponentProtocol];&#10;    id bookDetailComponent = [[cls alloc] init];&#10;    UIViewController *vc = [bookDetailComponent bookDetailController:bookId];&#10;    [[UIApplication sharedApplication].keyWindow.rootViewController.navigationController.navigationController pushViewController:vc animated:YES];&#10;&#125;</span><br></pre></td></tr></table></figure>
+<p>这种思路有点绕，这个方案跟刚才两个最大的不同就是，它不是直接通过 Mediator 调用组件方法，而是通过 Mediator 拿到组件对象，再自行去调用组件方法。</p>
+<p>结果就是组件方法的调用是分散在各地的，没有统一的入口，也就没法做组件不存在时的统一处理。组件1调用了组件2的方法，如果用前面两种方式，组件间是没有依赖的，组件1+Mediator可以单独抽离出来，只需要在Mediator里做好调用组件2方法时的异常处理就行。而这种方法组件1对组件2的调用分散在各个地方，没法做这些处理，在不修改组件1代码的情况下，组件1和组件2是分不开的。</p>
+<p>当然你也可以在这上面跟方案1一样在 Mediator 对每一个组件接口 wrapper 一层，那这样这种方案跟方案1比除了更复杂点，其他没什么区别。</p>
+<p>在 protocol-class 这个方案上，主要存在的问题就是分散调用导致耦合，另外实现上会有一些绕，其他就没什么了。casa 说的 “protocol对业务产生了侵入，且不符合黑盒模型。” 其实并没有这么夸张，实际上 protocol 对外提供组件方法，跟方案1在 Mediator wrapper 对外提供组件方法是差不多的。</p>
+<h2 id="最后"><a href="#最后" class="headerlink" title="最后"></a>最后</h2><p>蘑菇街在一个项目里同时用了方案2和方案3两种方式，会让写组件的人不知所措，新增一个接口时不知道该用方案2的方式还是方案3的方式，可能这个在蘑菇街内部会通过一些文档规则去规范，但其实是没有必要的。可能是蘑菇街作为电商平台一开始就注重APP页面间跳转的概念，每个模块已经有一个对应的URL，于是组件化时自然想到通过URL的方式表示组件，后续发现URL方式的限制，于是加上方案3的方式，这也是正常的探索过程。</p>
+<p>上面论述下方案1确实比方案2+方案3简单明了，没有 注册表常驻内存/参数传递限制/调用分散 这些缺点，方案1多做的一步是需要对所有组件方法进行一层 wrapper，但若想要明确提供组件的方法和参数类型，解耦统一处理，方案2和方案3同样需要多加这层。</p>
+<p>实际上我没有组件化相关的实践，这里仅从 limboy 和 casa 提供的这几个方案对比分析，我还对组件化带来的收益是否大于组件化增加的成本这点存疑，相信真正实践起来还会碰到很多坑，继续探索中。</p>
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2016/02/25/GYHttpMock/" rel="next" title="GYHttpMock：iOS HTTP请求模拟工具">
+                <i class="fa fa-chevron-left"></i> GYHttpMock：iOS HTTP请求模拟工具
+              </a>
+            
+          </div>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2016/05/03/WeRead-Performance/" rel="prev" title="微信读书 iOS 性能优化总结">
+                微信读书 iOS 性能优化总结 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目錄
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            本站概覽
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel ">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/default_avatar.png"
+               alt="" />
+          <p class="site-author-name" itemprop="name"></p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">11</span>
+              <span class="site-state-item-name">文章</span>
+            </a>
+          </div>
+          
+          
+            <div class="site-state-item site-state-categories">
+              
+                <span class="site-state-item-count">6</span>
+                <span class="site-state-item-name">分類</span>
+              
+            </div>
+          
+
+          
+
+        </nav>
+
+        
+        <div class="links">
+          <h4>开源项目</h4>
+          <div class="links-of-author motion-element">
+            
+              
+                <div class="links-of-author-item">
+                  <a href="https://github.com/bang590/JSPatch" target="_blank">
+                    
+                      <i class="fa fa-github"></i> JSPatch
+                    
+                  </a>
+                </div>
+              
+                <div class="links-of-author-item">
+                  <a href="https://github.com/Zepo/MLeaksFinder" target="_blank">
+                    
+                      <i class="fa fa-github"></i> MLeaksFinder
+                    
+                  </a>
+                </div>
+              
+                <div class="links-of-author-item">
+                  <a href="https://github.com/hypoyao/GYHttpMock" target="_blank">
+                    
+                      <i class="fa fa-github"></i> GYHttpMock
+                    
+                  </a>
+                </div>
+              
+                <div class="links-of-author-item">
+                  <a href="https://github.com/liuslevis/GYBootingProtection" target="_blank">
+                    
+                      <i class="fa fa-github"></i> GYBootingProtection
+                    
+                  </a>
+                </div>
+              
+            
+          </div>
+        </div>
+
+        
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+      </section>
+
+      
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc-indicator-top post-toc-indicator">
+            <i class="fa fa-angle-double-up"></i>
+          </div>
+          <div class="post-toc">
+            
+              
+            
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#方案1"><span class="nav-number">1.</span> <span class="nav-text">方案1</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#方案2"><span class="nav-number">2.</span> <span class="nav-text">方案2</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#方案3"><span class="nav-number">3.</span> <span class="nav-text">方案3</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#最后"><span class="nav-number">4.</span> <span class="nav-text">最后</span></a></li></ol></div>
+            
+          </div>
+          <div class="post-toc-indicator-bottom post-toc-indicator">
+            <i class="fa fa-angle-double-down"></i>
+          </div>
+        </section>
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2016</span>
+  <span class="with-love">
+    <i class="icon-next-heart fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder"></span>
+</div>
+
+<div class="powered-by">
+  由 <a class="theme-link" href="http://hexo.io">Hexo</a> 強力驅動
+</div>
+
+<div class="theme-info">
+  主題 -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+<div class="footer-links">
+  <a href="http://weread.qq.com/">
+    微信读书
+  </a>
+</div>
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-1895639-12', 'auto');
+  ga('send', 'pageview');
+
+</script>
+
+
+
+      </div>
+    </footer>
+
+    <div class="back-to-top"></div>
+  </div>
+
+  
+
+
+  
+
+
+
+  <script type="text/javascript" src="/vendors/jquery/index.js?v=2.1.3"></script>
+
+  <script type="text/javascript" src="/vendors/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  <script type="text/javascript" src="/vendors/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  <script type="text/javascript" src="/vendors/velocity/velocity.min.js"></script>
+
+  <script type="text/javascript" src="/vendors/velocity/velocity.ui.min.js"></script>
+
+  <script type="text/javascript" src="/vendors/fancybox/source/jquery.fancybox.pack.js"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=0.5.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=0.5.0"></script>
+
+
+
+  
+  
+
+  
+  
+<script type="text/javascript" src="/js/src/scrollspy.js?v=0.5.0"></script>
+
+<script type="text/javascript" id="sidebar.toc.highlight">
+  $(document).ready(function () {
+    var tocSelector = '.post-toc';
+    var $tocSelector = $(tocSelector);
+    var activeCurrentSelector = '.active-current';
+
+    $tocSelector
+      .on('activate.bs.scrollspy', function () {
+        var $currentActiveElement = $(tocSelector + ' .active').last();
+
+        removeCurrentActiveClass();
+        $currentActiveElement.addClass('active-current');
+
+        $tocSelector[0].scrollTop = $currentActiveElement.position().top;
+      })
+      .on('clear.bs.scrollspy', function () {
+        removeCurrentActiveClass();
+      });
+
+    function removeCurrentActiveClass () {
+      $(tocSelector + ' ' + activeCurrentSelector)
+        .removeClass(activeCurrentSelector.substring(1));
+    }
+
+    function processTOC () {
+      getTOCMaxHeight();
+      toggleTOCOverflowIndicators();
+    }
+
+    function getTOCMaxHeight () {
+      var height = $('.sidebar').height() -
+                   $tocSelector.position().top -
+                   $('.post-toc-indicator-bottom').height();
+
+      $tocSelector.css('height', height);
+
+      return height;
+    }
+
+    function toggleTOCOverflowIndicators () {
+      tocOverflowIndicator(
+        '.post-toc-indicator-top',
+        $tocSelector.scrollTop() > 0 ? 'show' : 'hide'
+      );
+
+      tocOverflowIndicator(
+        '.post-toc-indicator-bottom',
+        $tocSelector.scrollTop() >= $tocSelector.find('ol').height() - $tocSelector.height() ? 'hide' : 'show'
+      )
+    }
+
+    $(document).on('sidebar.motion.complete', function () {
+      processTOC();
+    });
+
+    $('body').scrollspy({ target: tocSelector });
+    $(window).on('resize', function () {
+      if ( $('.sidebar').hasClass('sidebar-active') ) {
+        processTOC();
+      }
+    });
+
+    onScroll($tocSelector);
+
+    function onScroll (element) {
+      element.on('mousewheel DOMMouseScroll', function (event) {
+          var oe = event.originalEvent;
+          var delta = oe.wheelDelta || -oe.detail;
+
+          this.scrollTop += ( delta < 0 ? 1 : -1 ) * 30;
+          event.preventDefault();
+
+          toggleTOCOverflowIndicators();
+      });
+    }
+
+    function tocOverflowIndicator (indicator, action) {
+      var $indicator = $(indicator);
+      var opacity = action === 'show' ? 1 : 0;
+      $indicator.velocity ?
+        $indicator.velocity('stop').velocity({
+          opacity: opacity
+        }, { duration: 100 }) :
+        $indicator.stop().animate({
+          opacity: opacity
+        }, 100);
+    }
+
+  });
+</script>
+
+<script type="text/javascript" id="sidebar.nav">
+  $(document).ready(function () {
+    var html = $('html');
+    var TAB_ANIMATE_DURATION = 200;
+    var hasVelocity = $.isFunction(html.velocity);
+
+    $('.sidebar-nav li').on('click', function () {
+      var item = $(this);
+      var activeTabClassName = 'sidebar-nav-active';
+      var activePanelClassName = 'sidebar-panel-active';
+      if (item.hasClass(activeTabClassName)) {
+        return;
+      }
+
+      var currentTarget = $('.' + activePanelClassName);
+      var target = $('.' + item.data('target'));
+
+      hasVelocity ?
+        currentTarget.velocity('transition.slideUpOut', TAB_ANIMATE_DURATION, function () {
+          target
+            .velocity('stop')
+            .velocity('transition.slideDownIn', TAB_ANIMATE_DURATION)
+            .addClass(activePanelClassName);
+        }) :
+        currentTarget.animate({ opacity: 0 }, TAB_ANIMATE_DURATION, function () {
+          currentTarget.hide();
+          target
+            .stop()
+            .css({'opacity': 0, 'display': 'block'})
+            .animate({ opacity: 1 }, TAB_ANIMATE_DURATION, function () {
+              currentTarget.removeClass(activePanelClassName);
+              target.addClass(activePanelClassName);
+            });
+        });
+
+      item.siblings().removeClass(activeTabClassName);
+      item.addClass(activeTabClassName);
+    });
+
+    $('.post-toc a').on('click', function (e) {
+      e.preventDefault();
+      var targetSelector = NexT.utils.escapeSelector(this.getAttribute('href'));
+      var offset = $(targetSelector).offset().top;
+      hasVelocity ?
+        html.velocity('stop').velocity('scroll', {
+          offset: offset  + 'px',
+          mobileHA: false
+        }) :
+        $('html, body').stop().animate({
+          scrollTop: offset
+        }, 500);
+    });
+
+    // Expand sidebar on post detail page by default, when post has a toc.
+    NexT.motion.middleWares.sidebar = function () {
+      var $tocContent = $('.post-toc-content');
+
+      if (CONFIG.sidebar === 'post') {
+        if ($tocContent.length > 0 && $tocContent.html().trim().length > 0) {
+          NexT.utils.displaySidebar();
+        }
+      }
+    };
+  });
+</script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=0.5.0"></script>
+
+
+
+  
+
+
+
+  
+
+    <script type="text/javascript">
+      var disqus_shortname = 'wereadteam';
+      var disqus_identifier = '2016/03/19/iOS-Component/';
+      var disqus_title = 'iOS 组件化方案探索';
+      var disqus_url = 'http://weread.qq.com/2016/03/19/iOS-Component/';
+
+      function run_disqus_script(disqus_script){
+        var dsq = document.createElement('script');
+        dsq.type = 'text/javascript';
+        dsq.async = true;
+        dsq.src = '//' + disqus_shortname + '.disqus.com/' + disqus_script;
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+      }
+
+      run_disqus_script('count.js');
+      
+        run_disqus_script('embed.js');
+      
+    </script>
+  
+
+
+
+  
+  
+
+  
+  
+
+
+</body>
+</html>

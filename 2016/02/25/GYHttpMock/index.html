@@ -1,0 +1,800 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  <link href="/vendors/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css"/>
+
+
+
+
+  <link href="//fonts.googleapis.com/css?family=Lato:300,400,700,400italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+
+
+
+<link href="/vendors/font-awesome/css/font-awesome.min.css?v=4.4.0" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=0.5.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="微信读书,iOS" />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=0.5.0" />
+
+
+
+
+
+
+<meta name="description" content="GYHttpMock 是刚开源的 iOS 请求模拟工具，用于iOS App网络层开发，可以截获指定的 HTTP request，并根据规则，完全替换或部分修改真实的网络返回数据。
+背景iOS App开发过程中，前台开发过程通常都是并行进行的，因此难免会出现一些客户端需要等待后台开发联调的情景，等待的过程往往痛若而无奈（后台被催得痛苦，前端无奈等待）。通常解决办法是，客户端在某处 hardcode">
+<meta property="og:type" content="article">
+<meta property="og:title" content="GYHttpMock：iOS HTTP请求模拟工具">
+<meta property="og:url" content="http://weread.qq.com/2016/02/25/GYHttpMock/index.html">
+<meta property="og:site_name" content="WeRead团队博客">
+<meta property="og:description" content="GYHttpMock 是刚开源的 iOS 请求模拟工具，用于iOS App网络层开发，可以截获指定的 HTTP request，并根据规则，完全替换或部分修改真实的网络返回数据。
+背景iOS App开发过程中，前台开发过程通常都是并行进行的，因此难免会出现一些客户端需要等待后台开发联调的情景，等待的过程往往痛若而无奈（后台被催得痛苦，前端无奈等待）。通常解决办法是，客户端在某处 hardcode">
+<meta property="og:image" content="http://weread.qq.com/./img/HttpMock2.png">
+<meta property="og:image" content="http://weread.qq.com/./img/HttpMock2.png">
+<meta property="og:image" content="http://weread.qq.com/./img/HttpMock3.png">
+<meta property="og:updated_time" content="2016-06-30T03:27:58.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="GYHttpMock：iOS HTTP请求模拟工具">
+<meta name="twitter:description" content="GYHttpMock 是刚开源的 iOS 请求模拟工具，用于iOS App网络层开发，可以截获指定的 HTTP request，并根据规则，完全替换或部分修改真实的网络返回数据。
+背景iOS App开发过程中，前台开发过程通常都是并行进行的，因此难免会出现一些客户端需要等待后台开发联调的情景，等待的过程往往痛若而无奈（后台被催得痛苦，前端无奈等待）。通常解决办法是，客户端在某处 hardcode">
+
+
+
+<script type="text/javascript" id="hexo.configuration">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 0,
+      author: '博主'
+    }
+  };
+</script>
+
+  <title> GYHttpMock：iOS HTTP请求模拟工具 | WeRead团队博客 </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">WeRead团队博客</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+  <p class="site-subtitle"></p>
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu ">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-home fa-fw"></i> <br />
+            
+            首頁
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-archive fa-fw"></i> <br />
+            
+            歸檔
+          </a>
+        </li>
+      
+
+      
+      
+      
+    </ul>
+  
+
+  
+</nav>
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                GYHttpMock：iOS HTTP请求模拟工具
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">發表於</span>
+            <time itemprop="dateCreated" datetime="2016-02-25T20:17:11+08:00" content="2016-02-25">
+              2016-02-25
+            </time>
+          </span>
+
+          
+            <span class="post-category" >
+              &nbsp; | &nbsp;
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <!--span class="post-meta-item-text">分類於</span-->
+              
+                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                  <!--a href="/categories/hypo/" itemprop="url" rel="index"-->
+                    <span itemprop="name">hypo</span>
+                  <!--/a-->
+                </span>
+
+                
+                
+
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                &nbsp; | &nbsp;
+                <a href="/2016/02/25/GYHttpMock/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2016/02/25/GYHttpMock/" itemprop="commentsCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+
+          
+          
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p><a href="http://github.com/hypoyao/GYHttpMock" target="_blank" rel="external">GYHttpMock</a> 是刚开源的 iOS 请求模拟工具，用于iOS App网络层开发，可以截获指定的 HTTP request，并根据规则，完全替换或部分修改真实的网络返回数据。</p>
+<h2 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h2><p>iOS App开发过程中，前台开发过程通常都是并行进行的，因此难免会出现一些客户端需要等待后台开发联调的情景，等待的过程往往痛若而无奈（后台被催得痛苦，前端无奈等待）。通常解决办法是，客户端在某处 hardcode 网络返回数据，当然，一不小心，这种测试代码被提交到了线上也是常有的事情。还有更“高级”一点，通过设置代理，用抓包工具修改网络数据，但这种效率低得令人抓狂。</p>
+<p>引入一个可以模拟网络请求的工具似乎就可以轻松满足需求，但实践证明，“模拟网络请求”这个需求并不简单。例如对于全新的业务，后台如果还没有数据，前端完全可以根据协议自己制造假数据返回。但是，很多情况下，可能是对已有业务的变更，也就是需要修改后台已有的业务数据。</p>
+<a id="more"></a>
+<h2 id="业界解决方案"><a href="#业界解决方案" class="headerlink" title="业界解决方案"></a>业界解决方案</h2><p>为了满足开发过程中模拟网络请求的需求，HttpMock 工具应运而生，目前业界已经有许多不同的实现方式，基本可以分为两类：</p>
+<p><strong>1.自建HTTP Server</strong></p>
+<p>可以在本地搭建 HTTP Server 模拟返回客户端所需要的数据。以 <a href="https://www.nuget.org/packages/HttpMock/" target="_blank" rel="external">hibri/HttpMock</a> 为例，它就是在本地搭建了一个HTTP Mock Server，然后根据需求返回指定数据。对于不需要模拟的请求，直接到达真实的Server，需要模拟的请求就转向MockServer。</p>
+<p><img src="./img/HttpMock2.png" alt=""></p>
+<p>这种方案的优势在于可以应用于多平台，也可以用各种语言来实现。但是局限性在于，要建立一个 HTTP Server，一方面得自己搭建并维护这个 Server，对于使用者的门槛较高，另一方面，使用时需要一边修改客户端代码，一边切换到Server环境修改返回数据，比较麻烦。此外这种方案只能选择替换或不替换，无法做到替换某个请求返回的数据。</p>
+<p><strong>2.客户端截获</strong></p>
+<p>客户端可以在网络层截获自己的网络请求，然后返回指定数据。这种方式实现的 HttpMock 更加灵活，但是不同的客户端实现方式会完全不一样。实现原理是 Hook 系统网络层的请求分发，对于符合规则的 http request 进行拦截，然后用之前定义的数据直接回调给上层，并不发出真实的请求。</p>
+<p><img src="./img/HttpMock2.png" alt=""></p>
+<p>iOS 上目前应用比较广泛的是<a href="https://github.com/AliSoftware/OHHTTPStubs" target="_blank" rel="external">OHHTTPStubs</a>和<a href="https://github.com/luisobo/Nocilla" target="_blank" rel="external">Nocilla</a>，这两种实现的功能都类似。Nocilla选择用领域专用语言（DSL）的形式创建模拟请求，更容易理解，但是mock的功能需要应用中主动开启和关闭，一旦开启或关闭会影响应用中所有的HTTP请求。OHHTTPStubs 安装后自动启动，根据 request 自动判断是否需要截获。但目前这些开源库都未能做到灵活修改网络返回的数据。</p>
+<h2 id="GYHttpMock-优势"><a href="#GYHttpMock-优势" class="headerlink" title="GYHttpMock 优势"></a>GYHttpMock 优势</h2><p><a href="http://github.com/hypoyao/GYHttpMock" target="_blank" rel="external">GYHttpMock</a> 采用客户端截获的方式，在 Nocilla DSL 特性基础上，同时学习OHHTTPStubs的自动开启和识别，实现了 http response 的部分替换功能。具体优势：</p>
+<ul>
+<li>支持部分替换 HTTP Response，也就是可以修改真实网络返回的数据，这是相对于其它 HttpMock 独有的核心功能。</li>
+<li>客户端引入 GYHttpMock 后，只需一行代码就可以截获指定请求，并返回所需要的数据。不需服务端支持，也不需要建立本地HTTP Server。</li>
+<li>支持 NSURLConnection， NSURLSession，AFNetworking 以及所有采用 iOS Cocoa URL 加载方式的网络框架。</li>
+<li>支持正则匹配 HTTP Request，这样一条 httpMock 可以同时支持多个请求。</li>
+<li>mocked response 支持 json 内容的文件。一般情况下，mocked response 直接用 NSString 表达会比较清晰，但是返回内容比较多的情况下，因为转义符的原因，将内容以 json 格式写入文件会更容易些。</li>
+</ul>
+<h2 id="使用"><a href="#使用" class="headerlink" title="使用"></a>使用</h2><h4 id="安装"><a href="#安装" class="headerlink" title="安装"></a>安装</h4><p>直接将 <a href="http://github.com/hypoyao/GYHttpMock" target="_blank" rel="external">GYHttpMock</a> 的源文件加入项目中即可。也可以通过 CocoaPods 的方式接入。</p>
+<h4 id="应用"><a href="#应用" class="headerlink" title="应用"></a>应用</h4><p>在需要拦截的请求之前创建正确的mockRequest：</p>
+<p>1.创建一个最简单的 mockRequest。截获应用中访问 www.weread.com 的 get 请求，并返回一个 response body为空的数据。</p>
+<figure class="highlight objectivec"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">mockRequest(<span class="string">@"GET"</span>, <span class="string">@"http://www.weread.com"</span>);</span><br></pre></td></tr></table></figure>
+<p>2.创建一个拦截条件更复杂的 mockRequest。截获应用中 url 包含 weread.com，而且包含了 <code>name=abc</code> 的参数</p>
+<figure class="highlight objectivec"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">mockRequest(<span class="string">@"GET"</span>, <span class="string">@"(.*?)weread.com(.*?)"</span><span class="variable">.regex</span>).</span><br><span class="line">    withBody(<span class="string">@"&#123;\"name\":\"abc\"&#125;"</span><span class="variable">.regex</span>);</span><br></pre></td></tr></table></figure>
+<p>3.创建一个指定返回数据的 mockRequest。withBody的值也可以是某个 <code>xxx.json</code> 文件，不过这个 json 文件需要加入到项目中。</p>
+<figure class="highlight objectivec"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">mockRequest(<span class="string">@"POST"</span>, <span class="string">@"http://www.weread.com"</span>).</span><br><span class="line">    withBody(<span class="string">@"&#123;\"name\":\"abc\"&#125;"</span><span class="variable">.regex</span>);</span><br><span class="line">    andReturn(<span class="number">200</span>).</span><br><span class="line">    withBody(<span class="string">@"&#123;\"key\":\"value\"&#125;"</span>);</span><br></pre></td></tr></table></figure>
+<p>4.创建一个修改部分返回数据的 mockRequest。这里会根据 <code>weread.json</code> 的内容修改正常网络返回的数据</p>
+<figure class="highlight objectivec"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">mockRequest(<span class="string">@"POST"</span>, <span class="string">@"http://www.weread.com"</span>).</span><br><span class="line">    isUpdatePartResponseBody(<span class="literal">YES</span>).</span><br><span class="line">    withBody(<span class="string">@"&#123;\"name\":\"abc\"&#125;"</span><span class="variable">.regex</span>);</span><br><span class="line">    andReturn(<span class="number">200</span>).</span><br><span class="line">    withBody(@“weread<span class="variable">.json</span><span class="string">");</span></span><br></pre></td></tr></table></figure>
+<p> 假设正常网络返回的原始数据是这样：</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">&#123;"<span class="attribute">data</span>": <span class="value">[ &#123;</span><br><span class="line">      "<span class="attribute">bookId</span>":<span class="value"><span class="string">"0000001"</span></span>,</span><br><span class="line">      "<span class="attribute">updated</span>": <span class="value">[</span><br><span class="line">        &#123;</span><br><span class="line">          "<span class="attribute">chapterIdx</span>": <span class="value"><span class="number">1</span></span>,</span><br><span class="line">          "<span class="attribute">title</span>": <span class="value"><span class="string">"序言"</span></span>,</span><br><span class="line">        &#125;,</span><br><span class="line">        &#123;</span><br><span class="line">          "<span class="attribute">chapterIdx</span>": <span class="value"><span class="number">2</span></span>,</span><br><span class="line">          "<span class="attribute">title</span>": <span class="value"><span class="string">"第2章"</span></span>,</span><br><span class="line">        &#125;</span><br><span class="line">      ]</span><br><span class="line"></span>&#125;]</span>&#125;</span><br></pre></td></tr></table></figure>
+<p>   <code>weread.json</code>的内容是这样：</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">&#123;"<span class="attribute">data</span>": <span class="value">[&#123;</span><br><span class="line">      "<span class="attribute">updated</span>": <span class="value">[</span><br><span class="line">        &#123;</span><br><span class="line">           "<span class="attribute">hello</span>":<span class="value"><span class="string">"world"</span></span><br><span class="line">        </span>&#125;</span><br><span class="line">      ]</span><br><span class="line"></span>&#125;]</span>&#125;</span><br></pre></td></tr></table></figure>
+<p>修改后的数据就会就成这样：</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">&#123;"<span class="attribute">data</span>": <span class="value">[ &#123;</span><br><span class="line">      "<span class="attribute">bookId</span>":<span class="value"><span class="string">"0000001"</span></span>,</span><br><span class="line">      "<span class="attribute">updated</span>": <span class="value">[</span><br><span class="line">        &#123;</span><br><span class="line">          "<span class="attribute">chapterIdx</span>": <span class="value"><span class="number">1</span></span>,</span><br><span class="line">          "<span class="attribute">title</span>": <span class="value"><span class="string">"序言"</span></span>,</span><br><span class="line">           "<span class="attribute">hello</span>":<span class="value"><span class="string">"world"</span></span><br><span class="line">        </span>&#125;,</span><br><span class="line">        &#123;</span><br><span class="line">          "<span class="attribute">chapterIdx</span>": <span class="value"><span class="number">2</span></span>,</span><br><span class="line">          "<span class="attribute">title</span>": <span class="value"><span class="string">"第2章"</span></span>,</span><br><span class="line">          "<span class="attribute">hello</span>":<span class="value"><span class="string">"world"</span></span><br><span class="line">        </span>&#125;</span><br><span class="line">      ]</span><br><span class="line"></span>&#125;]</span>&#125;</span><br></pre></td></tr></table></figure>
+<p>GYHttpMock会根据 <code>weread.json</code>指定的层次结构来修改原始数据，前提是 <code>wearied.json</code>的数据结构需要和正常的返回数据一致，否则会导致修改失败或者不可预知的错误。</p>
+<h2 id="实现原理"><a href="#实现原理" class="headerlink" title="实现原理"></a>实现原理</h2><p>GYHttpMock的工作流程如下：<br><img src="./img/HttpMock3.png" alt=""></p>
+<p>其核心实现主要包括request匹配、request拦截、response替换三个部分。</p>
+<h3 id="request匹配"><a href="#request匹配" class="headerlink" title="request匹配"></a>request匹配</h3><p>用于判断应用中的某个HTTP Request是否应该被mock。判断的条件包括method、URL、Headers、Body，其中URL和Body都支持正规匹配的方式，一个httpMock可以同时匹配多个HTTP Request。</p>
+<h3 id="request拦截"><a href="#request拦截" class="headerlink" title="request拦截"></a>request拦截</h3><p>request拦截是通过继承<code>NSURLProtocol</code>的子类来实现。<code>NSURLProtocol</code>是iOS URL网络加载中功能非常强大的一个类,官方文档也有说明<a href="https://developer.apple.com/library/mac/documentation/Cocoa/Reference/Foundation/Classes/NSURLProtocol_Class/" target="_blank" rel="external">NSURLProtocol</a>，通过重写它的方法，可以重新定义系统网络加载行为。在此之前，对于<code>NSURLConnection</code>的网络请求，需要这样注册<code>NSURLProtocol</code>的子类<code>GYMockURLProtocol</code></p>
+<figure class="highlight objectivec"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">[<span class="built_in">NSURLProtocol</span> registerClass:[GYMockURLProtocol class]];</span><br></pre></td></tr></table></figure>
+<p>对于<code>NSURLSession</code>的网络请求，需要替换<code>protocolClasses</code>方法</p>
+<figure class="highlight objectivec"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">Class cls = <span class="built_in">NSClassFromString</span>(<span class="string">@"__NSCFURLSessionConfiguration"</span>) ?: <span class="built_in">NSClassFromString</span>(<span class="string">@"NSURLSessionConfiguration"</span>);</span><br><span class="line">[<span class="keyword">self</span> swizzleSelector:<span class="keyword">@selector</span>(protocolClasses) fromClass:cls toClass:[<span class="keyword">self</span> class]];</span><br></pre></td></tr></table></figure>
+<p>最后，重点是重写<code>NSURLProtocol</code>类的<code>canInitWithRequest</code>和<code>startLoading</code>方法。<code>canInitWithRequest</code>是用于判断是否可以发起网络请求，可以通过这个过滤不在拦截范围内的request，不影响App的正常网络请求。<code>startLoading</code>是替换response数据的核心所在，成功截拦的request会进入该方法，在这个方法中替换或修改response数据，再回调给上层。</p>
+<h3 id="response替换"><a href="#response替换" class="headerlink" title="response替换"></a>response替换</h3><p>对于需要全部替换的response，实现方式是在<code>startLoading</code>方法中调中<code>NSURLProtocol</code>的<code>URLProtocol:didReceiveResponse:cacheStoragePolicy:</code>方法，将替换好的response回调给上层。对于需要部分替换的response，GYHttpMock会用NSURLConnection的方式，发起一次真正的网络请求，待数据回来后，再与mockRequest中的response数据进行合并，最后将合并后的数据回调上层。部分替换过程中遇到两个问题:</p>
+<ol>
+<li><p>部分替换时要发出一个真实网络请求拿到原始数据，这个请求按照之前的规则又会被NSURLProtocol截获，从而进入死循环。解决办法是，start request前将这个GYHttpRequest打上标记，表明是不需要再次截获的，等拿到reponse后再将GYHttpRequest上的标记去掉，避免死循环。</p>
+</li>
+<li><p>两个response内容合并的问题。因为json的数据结构非常灵活，可以任意层次嵌套，如何指定修改或添加某个节点下的数据是比较困难的，尤其是json中数组的嵌套，导致要指定修改数组中某个位置的元素变得非常困难。GYHttpMock采用的方式是，在mockRequest的response中指出需要修改的节点完整位置，然后用这个数据结构去匹配目标数据（具体算法请查看<a href="http://github.com/hypoyao/GYHttpMock" target="_blank" rel="external">GYHttpMock源码</a>，好处在于可以支持比较复杂的数据结构，但这就要求使用者对目标数据结构非常清楚。</p>
+</li>
+</ol>
+<p>GYHttpMock已经在<a href="http://github.com/hypoyao/GYHttpMock" target="_blank" rel="external">GitHub</a>开源，目前已用于<a href="http://weread.qq.com">微信读书</a>项目中，使用过程如果有问题或者建议，欢迎提交 issue 和 pull request。</p>
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2016/02/22/MLeaksFinder/" rel="next" title="MLeaksFinder：精准 iOS 内存泄露检测工具">
+                <i class="fa fa-chevron-left"></i> MLeaksFinder：精准 iOS 内存泄露检测工具
+              </a>
+            
+          </div>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2016/03/19/iOS-Component/" rel="prev" title="iOS 组件化方案探索">
+                iOS 组件化方案探索 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目錄
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            本站概覽
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel ">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/default_avatar.png"
+               alt="" />
+          <p class="site-author-name" itemprop="name"></p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">11</span>
+              <span class="site-state-item-name">文章</span>
+            </a>
+          </div>
+          
+          
+            <div class="site-state-item site-state-categories">
+              
+                <span class="site-state-item-count">6</span>
+                <span class="site-state-item-name">分類</span>
+              
+            </div>
+          
+
+          
+
+        </nav>
+
+        
+        <div class="links">
+          <h4>开源项目</h4>
+          <div class="links-of-author motion-element">
+            
+              
+                <div class="links-of-author-item">
+                  <a href="https://github.com/bang590/JSPatch" target="_blank">
+                    
+                      <i class="fa fa-github"></i> JSPatch
+                    
+                  </a>
+                </div>
+              
+                <div class="links-of-author-item">
+                  <a href="https://github.com/Zepo/MLeaksFinder" target="_blank">
+                    
+                      <i class="fa fa-github"></i> MLeaksFinder
+                    
+                  </a>
+                </div>
+              
+                <div class="links-of-author-item">
+                  <a href="https://github.com/hypoyao/GYHttpMock" target="_blank">
+                    
+                      <i class="fa fa-github"></i> GYHttpMock
+                    
+                  </a>
+                </div>
+              
+                <div class="links-of-author-item">
+                  <a href="https://github.com/liuslevis/GYBootingProtection" target="_blank">
+                    
+                      <i class="fa fa-github"></i> GYBootingProtection
+                    
+                  </a>
+                </div>
+              
+            
+          </div>
+        </div>
+
+        
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+      </section>
+
+      
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc-indicator-top post-toc-indicator">
+            <i class="fa fa-angle-double-up"></i>
+          </div>
+          <div class="post-toc">
+            
+              
+            
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#背景"><span class="nav-number">1.</span> <span class="nav-text">背景</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#业界解决方案"><span class="nav-number">2.</span> <span class="nav-text">业界解决方案</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#GYHttpMock-优势"><span class="nav-number">3.</span> <span class="nav-text">GYHttpMock 优势</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#使用"><span class="nav-number">4.</span> <span class="nav-text">使用</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#安装"><span class="nav-number">4.0.1.</span> <span class="nav-text">安装</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#应用"><span class="nav-number">4.0.2.</span> <span class="nav-text">应用</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#实现原理"><span class="nav-number">5.</span> <span class="nav-text">实现原理</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#request匹配"><span class="nav-number">5.1.</span> <span class="nav-text">request匹配</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#request拦截"><span class="nav-number">5.2.</span> <span class="nav-text">request拦截</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#response替换"><span class="nav-number">5.3.</span> <span class="nav-text">response替换</span></a></li></ol></li></ol></div>
+            
+          </div>
+          <div class="post-toc-indicator-bottom post-toc-indicator">
+            <i class="fa fa-angle-double-down"></i>
+          </div>
+        </section>
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2016</span>
+  <span class="with-love">
+    <i class="icon-next-heart fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder"></span>
+</div>
+
+<div class="powered-by">
+  由 <a class="theme-link" href="http://hexo.io">Hexo</a> 強力驅動
+</div>
+
+<div class="theme-info">
+  主題 -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+<div class="footer-links">
+  <a href="http://weread.qq.com/">
+    微信读书
+  </a>
+</div>
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-1895639-12', 'auto');
+  ga('send', 'pageview');
+
+</script>
+
+
+
+      </div>
+    </footer>
+
+    <div class="back-to-top"></div>
+  </div>
+
+  
+
+
+  
+
+
+
+  <script type="text/javascript" src="/vendors/jquery/index.js?v=2.1.3"></script>
+
+  <script type="text/javascript" src="/vendors/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  <script type="text/javascript" src="/vendors/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  <script type="text/javascript" src="/vendors/velocity/velocity.min.js"></script>
+
+  <script type="text/javascript" src="/vendors/velocity/velocity.ui.min.js"></script>
+
+  <script type="text/javascript" src="/vendors/fancybox/source/jquery.fancybox.pack.js"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=0.5.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=0.5.0"></script>
+
+
+
+  
+  
+
+  
+  
+<script type="text/javascript" src="/js/src/scrollspy.js?v=0.5.0"></script>
+
+<script type="text/javascript" id="sidebar.toc.highlight">
+  $(document).ready(function () {
+    var tocSelector = '.post-toc';
+    var $tocSelector = $(tocSelector);
+    var activeCurrentSelector = '.active-current';
+
+    $tocSelector
+      .on('activate.bs.scrollspy', function () {
+        var $currentActiveElement = $(tocSelector + ' .active').last();
+
+        removeCurrentActiveClass();
+        $currentActiveElement.addClass('active-current');
+
+        $tocSelector[0].scrollTop = $currentActiveElement.position().top;
+      })
+      .on('clear.bs.scrollspy', function () {
+        removeCurrentActiveClass();
+      });
+
+    function removeCurrentActiveClass () {
+      $(tocSelector + ' ' + activeCurrentSelector)
+        .removeClass(activeCurrentSelector.substring(1));
+    }
+
+    function processTOC () {
+      getTOCMaxHeight();
+      toggleTOCOverflowIndicators();
+    }
+
+    function getTOCMaxHeight () {
+      var height = $('.sidebar').height() -
+                   $tocSelector.position().top -
+                   $('.post-toc-indicator-bottom').height();
+
+      $tocSelector.css('height', height);
+
+      return height;
+    }
+
+    function toggleTOCOverflowIndicators () {
+      tocOverflowIndicator(
+        '.post-toc-indicator-top',
+        $tocSelector.scrollTop() > 0 ? 'show' : 'hide'
+      );
+
+      tocOverflowIndicator(
+        '.post-toc-indicator-bottom',
+        $tocSelector.scrollTop() >= $tocSelector.find('ol').height() - $tocSelector.height() ? 'hide' : 'show'
+      )
+    }
+
+    $(document).on('sidebar.motion.complete', function () {
+      processTOC();
+    });
+
+    $('body').scrollspy({ target: tocSelector });
+    $(window).on('resize', function () {
+      if ( $('.sidebar').hasClass('sidebar-active') ) {
+        processTOC();
+      }
+    });
+
+    onScroll($tocSelector);
+
+    function onScroll (element) {
+      element.on('mousewheel DOMMouseScroll', function (event) {
+          var oe = event.originalEvent;
+          var delta = oe.wheelDelta || -oe.detail;
+
+          this.scrollTop += ( delta < 0 ? 1 : -1 ) * 30;
+          event.preventDefault();
+
+          toggleTOCOverflowIndicators();
+      });
+    }
+
+    function tocOverflowIndicator (indicator, action) {
+      var $indicator = $(indicator);
+      var opacity = action === 'show' ? 1 : 0;
+      $indicator.velocity ?
+        $indicator.velocity('stop').velocity({
+          opacity: opacity
+        }, { duration: 100 }) :
+        $indicator.stop().animate({
+          opacity: opacity
+        }, 100);
+    }
+
+  });
+</script>
+
+<script type="text/javascript" id="sidebar.nav">
+  $(document).ready(function () {
+    var html = $('html');
+    var TAB_ANIMATE_DURATION = 200;
+    var hasVelocity = $.isFunction(html.velocity);
+
+    $('.sidebar-nav li').on('click', function () {
+      var item = $(this);
+      var activeTabClassName = 'sidebar-nav-active';
+      var activePanelClassName = 'sidebar-panel-active';
+      if (item.hasClass(activeTabClassName)) {
+        return;
+      }
+
+      var currentTarget = $('.' + activePanelClassName);
+      var target = $('.' + item.data('target'));
+
+      hasVelocity ?
+        currentTarget.velocity('transition.slideUpOut', TAB_ANIMATE_DURATION, function () {
+          target
+            .velocity('stop')
+            .velocity('transition.slideDownIn', TAB_ANIMATE_DURATION)
+            .addClass(activePanelClassName);
+        }) :
+        currentTarget.animate({ opacity: 0 }, TAB_ANIMATE_DURATION, function () {
+          currentTarget.hide();
+          target
+            .stop()
+            .css({'opacity': 0, 'display': 'block'})
+            .animate({ opacity: 1 }, TAB_ANIMATE_DURATION, function () {
+              currentTarget.removeClass(activePanelClassName);
+              target.addClass(activePanelClassName);
+            });
+        });
+
+      item.siblings().removeClass(activeTabClassName);
+      item.addClass(activeTabClassName);
+    });
+
+    $('.post-toc a').on('click', function (e) {
+      e.preventDefault();
+      var targetSelector = NexT.utils.escapeSelector(this.getAttribute('href'));
+      var offset = $(targetSelector).offset().top;
+      hasVelocity ?
+        html.velocity('stop').velocity('scroll', {
+          offset: offset  + 'px',
+          mobileHA: false
+        }) :
+        $('html, body').stop().animate({
+          scrollTop: offset
+        }, 500);
+    });
+
+    // Expand sidebar on post detail page by default, when post has a toc.
+    NexT.motion.middleWares.sidebar = function () {
+      var $tocContent = $('.post-toc-content');
+
+      if (CONFIG.sidebar === 'post') {
+        if ($tocContent.length > 0 && $tocContent.html().trim().length > 0) {
+          NexT.utils.displaySidebar();
+        }
+      }
+    };
+  });
+</script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=0.5.0"></script>
+
+
+
+  
+
+
+
+  
+
+    <script type="text/javascript">
+      var disqus_shortname = 'wereadteam';
+      var disqus_identifier = '2016/02/25/GYHttpMock/';
+      var disqus_title = 'GYHttpMock：iOS HTTP请求模拟工具';
+      var disqus_url = 'http://weread.qq.com/2016/02/25/GYHttpMock/';
+
+      function run_disqus_script(disqus_script){
+        var dsq = document.createElement('script');
+        dsq.type = 'text/javascript';
+        dsq.async = true;
+        dsq.src = '//' + disqus_shortname + '.disqus.com/' + disqus_script;
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+      }
+
+      run_disqus_script('count.js');
+      
+        run_disqus_script('embed.js');
+      
+    </script>
+  
+
+
+
+  
+  
+
+  
+  
+
+
+</body>
+</html>

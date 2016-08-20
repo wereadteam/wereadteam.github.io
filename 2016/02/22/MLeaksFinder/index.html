@@ -1,0 +1,811 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  <link href="/vendors/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css"/>
+
+
+
+
+  <link href="//fonts.googleapis.com/css?family=Lato:300,400,700,400italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+
+
+
+<link href="/vendors/font-awesome/css/font-awesome.min.css?v=4.4.0" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=0.5.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="微信读书,iOS" />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=0.5.0" />
+
+
+
+
+
+
+<meta name="description" content="背景平常我们都会用 Instrument 的 Leaks / Allocations 或其他一些开源库进行内存泄露的排查，但它们都存在各种问题和不便，我们逐个来看这些工具的使用和存在的问题。
+Leaks先看看 Leaks，从苹果的开发者文档里可以看到，一个 app 的内存分三类：
+
+Leaked memory: Memory unreferenced by your application tha">
+<meta property="og:type" content="article">
+<meta property="og:title" content="MLeaksFinder：精准 iOS 内存泄露检测工具">
+<meta property="og:url" content="http://weread.qq.com/2016/02/22/MLeaksFinder/index.html">
+<meta property="og:site_name" content="WeRead团队博客">
+<meta property="og:description" content="背景平常我们都会用 Instrument 的 Leaks / Allocations 或其他一些开源库进行内存泄露的排查，但它们都存在各种问题和不便，我们逐个来看这些工具的使用和存在的问题。
+Leaks先看看 Leaks，从苹果的开发者文档里可以看到，一个 app 的内存分三类：
+
+Leaked memory: Memory unreferenced by your application tha">
+<meta property="og:updated_time" content="2016-06-30T03:28:17.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="MLeaksFinder：精准 iOS 内存泄露检测工具">
+<meta name="twitter:description" content="背景平常我们都会用 Instrument 的 Leaks / Allocations 或其他一些开源库进行内存泄露的排查，但它们都存在各种问题和不便，我们逐个来看这些工具的使用和存在的问题。
+Leaks先看看 Leaks，从苹果的开发者文档里可以看到，一个 app 的内存分三类：
+
+Leaked memory: Memory unreferenced by your application tha">
+
+
+
+<script type="text/javascript" id="hexo.configuration">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 0,
+      author: '博主'
+    }
+  };
+</script>
+
+  <title> MLeaksFinder：精准 iOS 内存泄露检测工具 | WeRead团队博客 </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">WeRead团队博客</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+  <p class="site-subtitle"></p>
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu ">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-home fa-fw"></i> <br />
+            
+            首頁
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-archive fa-fw"></i> <br />
+            
+            歸檔
+          </a>
+        </li>
+      
+
+      
+      
+      
+    </ul>
+  
+
+  
+</nav>
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                MLeaksFinder：精准 iOS 内存泄露检测工具
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">發表於</span>
+            <time itemprop="dateCreated" datetime="2016-02-22T11:45:13+08:00" content="2016-02-22">
+              2016-02-22
+            </time>
+          </span>
+
+          
+            <span class="post-category" >
+              &nbsp; | &nbsp;
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <!--span class="post-meta-item-text">分類於</span-->
+              
+                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                  <!--a href="/categories/zepo/" itemprop="url" rel="index"-->
+                    <span itemprop="name">zepo</span>
+                  <!--/a-->
+                </span>
+
+                
+                
+
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                &nbsp; | &nbsp;
+                <a href="/2016/02/22/MLeaksFinder/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2016/02/22/MLeaksFinder/" itemprop="commentsCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+
+          
+          
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h1 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h1><p>平常我们都会用 Instrument 的 Leaks / Allocations 或其他一些开源库进行内存泄露的排查，但它们都存在各种问题和不便，我们逐个来看这些工具的使用和存在的问题。</p>
+<h3 id="Leaks"><a href="#Leaks" class="headerlink" title="Leaks"></a>Leaks</h3><p>先看看 Leaks，从苹果的开发者文档里可以看到，一个 app 的内存分三类：</p>
+<ul>
+<li><p><strong>Leaked memory</strong>: Memory unreferenced by your application that cannot be used again or freed (also detectable by using the Leaks instrument).</p>
+</li>
+<li><p><strong>Abandoned memory</strong>: Memory still referenced by your application that has no useful purpose.</p>
+</li>
+<li><p><strong>Cached memory</strong>: Memory still referenced by your application that might be used again for better performance.</p>
+</li>
+</ul>
+<p>其中 Leaked memory 和 Abandoned memory 都属于应该释放而没释放的内存，都是内存泄露，而 Leaks 工具只负责检测 Leaked memory，而不管 Abandoned memory。在 MRC 时代 Leaked memory 很常见，因为很容易忘了调用 release，但在 ARC 时代更常见的内存泄露是循环引用导致的 Abandoned memory，Leaks 工具查不出这类内存泄露，应用有限。</p>
+<a id="more"></a>
+<h3 id="Allocations"><a href="#Allocations" class="headerlink" title="Allocations"></a>Allocations</h3><p>对于 Abandoned memory，可以用 Instrument 的 Allocations 检测出来。检测方法是用 Mark Generation 的方式，当你每次点击 Mark Generation 时，Allocations 会生成当前 App 的内存快照，而且 Allocations 会记录从上回内存快照到这次内存快照这个时间段内，新分配的内存信息。举一个最简单的例子：</p>
+<p>我们可以不断重复 push 和 pop 同一个 UIViewController，理论上来说，push 之前跟 pop 之后，app 会回到相同的状态。因此，在 push 过程中新分配的内存，在 pop 之后应该被 dealloc 掉，除了前几次 push 可能有预热数据和 cache 数据的情况。如果在数次 push 跟 pop 之后，内存还不断增长，则有内存泄露。因此，我们在每回 push 之前跟 pop 之后，都 Mark Generation 一下，以此观察内存是不是无限制增长。这个方法在 WWDC 的视频里：<a href="http://developer.apple.com/videos/wwdc/2010/" target="_blank" rel="external">Session 311 - Advanced Memory Analysis with Instruments</a>，以及苹果的开发者文档：<a href="https://developer.apple.com/library/mac/recipes/Instruments_help_articles/FindingAbandonedMemory/FindingAbandonedMemory.html" target="_blank" rel="external">Finding Abandoned Memory</a> 里有介绍。</p>
+<p>用这种方法来发现内存泄露还是很不方便的：</p>
+<ul>
+<li>首先，你得打开 Allocations</li>
+<li>其次，你得一个个场景去重复的操作</li>
+<li>无法及时得知泄露，得专门做一遍上述操作，十分繁琐</li>
+</ul>
+<h3 id="开源库"><a href="#开源库" class="headerlink" title="开源库"></a>开源库</h3><p>在 GitHub 上有一些内存泄露检测相关的项目，例如 <a href="https://github.com/tapwork/HeapInspector-for-iOS" target="_blank" rel="external">HeapInspector-for-iOS</a> 和 <a href="https://github.com/mindsnacks/MSLeakHunter" target="_blank" rel="external">MSLeakHunter</a>。</p>
+<p>HeapInspector-for-iOS 可以说是 Allocations 的改进。它通过 hook 掉 alloc，dealloc，retain，release 等方法，来记录对象的生命周期。具体的检测内存泄露的方法和原理，与 Instrument 的 Allocations 一致。然而它跟 Allocations 一样，存在的问题是，你需要一个个场景去重复的操作，还有检测不及时。</p>
+<p>MSLeakHunter 就简单得多，它只检测 UIViewController 和 UIView，通过 hook 掉 UIViewController 的 <code>-viewDidDisappear:</code> 方法，并认为 <code>-viewDidDisappear:</code> 后，UIViewController 将很快被释放，如果 UIViewController 没有被释放，则打个建议日志。这种做法其实不是很好，<code>-viewDidDisappear:</code> 被调用可能是因为又 push 进来一个新的 ViewController，把当前的 ViewController 挡住了，所以可能有很多错误的建议，需要结合你实际的操作去具体地分析日志。</p>
+<h1 id="MLeaksFinder"><a href="#MLeaksFinder" class="headerlink" title="MLeaksFinder"></a>MLeaksFinder</h1><p><a href="https://github.com/Zepo/MLeaksFinder" target="_blank" rel="external">MLeaksFinder</a> 提供了内存泄露检测更好的解决方案。只需要引入 MLeaksFinder，就可以自动在 App 运行过程检测到内存泄露的对象并立即提醒，无需打开额外的工具，也无需为了检测内存泄露而一个个场景去重复地操作。MLeaksFinder 目前能自动检测 UIViewController 和 UIView 对象的内存泄露，而且也可以扩展以检测其它类型的对象。</p>
+<p>MLeaksFinder 的使用很简单，参照 <a href="https://github.com/Zepo/MLeaksFinder" target="_blank" rel="external">https://github.com/Zepo/MLeaksFinder</a>，基本上就是把 MLeaksFinder 目录下的文件添加到你的项目中，就可以在运行时（debug 模式下）帮助你检测项目里的内存泄露了，无需修改任何业务逻辑代码，而且只在 debug 下开启，完全不影响你的 release 包。</p>
+<p>当发生内存泄露时，MLeaksFinder 会中断言，并准确的告诉你哪个对象泄露了。这里设计为中断言而不是打日志让程序继续跑，是因为很多人不会去看日志，断言则能强制开发者注意到并去修改，而不是犯拖延症。</p>
+<p>中断言时，控制台会有如下提示，View-ViewController stack 从上往下看，该 stack 告诉你，MyTableViewController 的 UITableView 的 subview UITableViewWrapperView 的 subview MyTableViewCell 没被释放。而且，这里我们可以肯定的是 MyTableViewController，UITableView，UITableViewWrapperView 这三个已经成功释放了。</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">*** Terminating app due to uncaught exception 'NSInternalInconsistencyException', reason: 'Possibly Memory Leak.</span><br><span class="line">In case that MyTableViewCell should not be dealloced, override -willDealloc in MyTableViewCell by returning NO.</span><br><span class="line">View-ViewController stack: (</span><br><span class="line">    MyTableViewController,</span><br><span class="line">    UITableView,</span><br><span class="line">    UITableViewWrapperView,</span><br><span class="line">    MyTableViewCell</span><br><span class="line">)'</span><br></pre></td></tr></table></figure>
+<p>从 MLeaksFinder 的使用方法可以看出，MLeaksFinder 具备以下优点：</p>
+<ul>
+<li>使用简单，不侵入业务逻辑代码，不用打开 Instrument</li>
+<li>不需要额外的操作，你只需开发你的业务逻辑，在你运行调试时就能帮你检测</li>
+<li>内存泄露发现及时，更改完代码后一运行即能发现（这点很重要，你马上就能意识到哪里写错了）</li>
+<li>精准，能准确地告诉你哪个对象没被释放</li>
+</ul>
+<h1 id="原理"><a href="#原理" class="headerlink" title="原理"></a>原理</h1><p>MLeaksFinder 一开始从 UIViewController 入手。我们知道，当一个 UIViewController 被 pop 或 dismiss 后，该 UIViewController 包括它的 view，view 的 subviews 等等将很快被释放（除非你把它设计成单例，或者持有它的强引用，但一般很少这样做）。于是，我们只需在一个 ViewController 被 pop 或 dismiss 一小段时间后，看看该 UIViewController，它的 view，view 的 subviews 等等是否还存在。</p>
+<p>具体的方法是，为基类 NSObject 添加一个方法 <code>-willDealloc</code> 方法，该方法的作用是，先用一个弱指针指向 self，并在一小段时间(3秒)后，通过这个弱指针调用 <code>-assertNotDealloc</code>，而 <code>-assertNotDealloc</code> 主要作用是直接中断言。</p>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">- (<span class="built_in">BOOL</span>)willDealloc &#123;</span><br><span class="line">    __<span class="keyword">weak</span> <span class="keyword">id</span> weakSelf = <span class="keyword">self</span>;</span><br><span class="line">    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(<span class="number">3</span> * <span class="built_in">NSEC_PER_SEC</span>)), dispatch_get_main_queue(), ^&#123;</span><br><span class="line">        [weakSelf assertNotDealloc];</span><br><span class="line">    &#125;);</span><br><span class="line">    <span class="keyword">return</span> <span class="literal">YES</span>;</span><br><span class="line">&#125;</span><br><span class="line">- (<span class="keyword">void</span>)assertNotDealloc &#123;</span><br><span class="line">     <span class="built_in">NSAssert</span>(<span class="literal">NO</span>, @“”);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这样，当我们认为某个对象应该要被释放了，在释放前调用这个方法，如果3秒后它被释放成功，weakSelf 就指向 nil，不会调用到 <code>-assertNotDealloc</code> 方法，也就不会中断言，如果它没被释放（泄露了），<code>-assertNotDealloc</code> 就会被调用中断言。这样，当一个 UIViewController 被 pop 或 dismiss 时（我们认为它应该要被释放了），我们遍历该 UIViewController 上的所有 view，依次调 <code>-willDealloc</code>，若3秒后没被释放，就会中断言。</p>
+<p>在这里，有几个问题需要解决：</p>
+<ol>
+<li><p>不入侵开发代码</p>
+<p>这里使用了 AOP 技术，hook 掉 UIViewController 和 UINavigationController 的 pop 跟 dismiss 方法，关于如何 hook，请参考 <a href="http://nshipster.com/method-swizzling/" target="_blank" rel="external">Method Swizzling</a>。</p>
+</li>
+<li><p>遍历相关对象</p>
+<p>在实际项目中，我们发现有时候一个 UIViewController 被释放了，但它的 view 没被释放，或者一个 UIView 被释放了，但它的某个 subview 没被释放。这种内存泄露的情况很常见，因此，我们有必要遍历基于 UIViewController 的整棵 View-ViewController 树。我们通过 UIViewController 的 presentedViewController 和 view 属性，UIView 的 subviews 属性等递归遍历。对于某些 ViewController，如 UINavigationController，UISplitViewController 等，我们还需要遍历 viewControllers 属性。</p>
+</li>
+<li><p>构建堆栈信息</p>
+<p>需要构建 View-ViewController stack 信息以告诉开发者是哪个对象没被释放。在递归遍历 View-ViewController 树时，子节点的 stack 信息由父节点的 stack 信息加上子结点信息即可。</p>
+</li>
+<li><p>例外机制</p>
+<p>对于有些 ViewController，在被 pop 或 dismiss 后，不会被释放（比如单例），因此需要提供机制让开发者指定哪个对象不会被释放，这里可以通过重载上面的 <code>-willDealloc</code> 方法，直接 return NO 即可。</p>
+</li>
+<li><p>特殊情况</p>
+<p>对于某些特殊情况，释放的时机不大一样（比如系统手势返回时，在划到一半时 hold 住，虽然已被 pop，但这时还不会被释放，ViewController 要等到完全 disappear 后才释放），需要做特殊处理，具体的特殊处理视具体情况而定。</p>
+</li>
+<li><p>系统View</p>
+<p>某些系统的私有 View，不会被释放（可能是系统 bug 或者是系统出于某些原因故意这样做的，这里就不去深究了），因此需要建立白名单</p>
+</li>
+<li><p>手动扩展</p>
+<p>MLeaksFinder目前只检测 ViewController 跟 View 对象。为此，MLeaksFinder 提供了一个手动扩展的机制，你可以从 UIViewController 跟 UIView 出发，去检测其它类型的对象的内存泄露。如下所示，我们可以检测 UIViewController 底下的 View Model：</p>
+</li>
+</ol>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">- (<span class="built_in">BOOL</span>)willDealloc &#123;</span><br><span class="line">    <span class="keyword">if</span> (![<span class="keyword">super</span> willDealloc]) &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">NO</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    MLCheck(<span class="keyword">self</span><span class="variable">.viewModel</span>);</span><br><span class="line">    <span class="keyword">return</span> <span class="literal">YES</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这里的原理跟上面的是一样的，宏 MLCheck() 做的事就是为传进来的对象建立 View-ViewController stack 信息，并对传进来的对象调用 <code>-willDealloc</code> 方法。</p>
+<h1 id="未来"><a href="#未来" class="headerlink" title="未来"></a>未来</h1><p>MLeaksFinder 目前还在起步阶段，它的内存泄露检测的想法是很简单，很直接的。虽然目前只能自动地检测 UIViewController 和 UIView 相关的对象，然而在我们几个大的项目中，已经起到很大的作用，帮助我们发现很多历史存在的内存泄露，而且确保新提交的 UI 相关代码不会引进新的问题。MLeaksFinder 会继续探索覆盖更广的情况，提供更全面的检测，包括网络层，数据存储层等等。</p>
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+          </div>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2016/02/25/GYHttpMock/" rel="prev" title="GYHttpMock：iOS HTTP请求模拟工具">
+                GYHttpMock：iOS HTTP请求模拟工具 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目錄
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            本站概覽
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel ">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/default_avatar.png"
+               alt="" />
+          <p class="site-author-name" itemprop="name"></p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">11</span>
+              <span class="site-state-item-name">文章</span>
+            </a>
+          </div>
+          
+          
+            <div class="site-state-item site-state-categories">
+              
+                <span class="site-state-item-count">6</span>
+                <span class="site-state-item-name">分類</span>
+              
+            </div>
+          
+
+          
+
+        </nav>
+
+        
+        <div class="links">
+          <h4>开源项目</h4>
+          <div class="links-of-author motion-element">
+            
+              
+                <div class="links-of-author-item">
+                  <a href="https://github.com/bang590/JSPatch" target="_blank">
+                    
+                      <i class="fa fa-github"></i> JSPatch
+                    
+                  </a>
+                </div>
+              
+                <div class="links-of-author-item">
+                  <a href="https://github.com/Zepo/MLeaksFinder" target="_blank">
+                    
+                      <i class="fa fa-github"></i> MLeaksFinder
+                    
+                  </a>
+                </div>
+              
+                <div class="links-of-author-item">
+                  <a href="https://github.com/hypoyao/GYHttpMock" target="_blank">
+                    
+                      <i class="fa fa-github"></i> GYHttpMock
+                    
+                  </a>
+                </div>
+              
+                <div class="links-of-author-item">
+                  <a href="https://github.com/liuslevis/GYBootingProtection" target="_blank">
+                    
+                      <i class="fa fa-github"></i> GYBootingProtection
+                    
+                  </a>
+                </div>
+              
+            
+          </div>
+        </div>
+
+        
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+      </section>
+
+      
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc-indicator-top post-toc-indicator">
+            <i class="fa fa-angle-double-up"></i>
+          </div>
+          <div class="post-toc">
+            
+              
+            
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#背景"><span class="nav-number">1.</span> <span class="nav-text">背景</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Leaks"><span class="nav-number">1.0.1.</span> <span class="nav-text">Leaks</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Allocations"><span class="nav-number">1.0.2.</span> <span class="nav-text">Allocations</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#开源库"><span class="nav-number">1.0.3.</span> <span class="nav-text">开源库</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#MLeaksFinder"><span class="nav-number">2.</span> <span class="nav-text">MLeaksFinder</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#原理"><span class="nav-number">3.</span> <span class="nav-text">原理</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#未来"><span class="nav-number">4.</span> <span class="nav-text">未来</span></a></li></ol></div>
+            
+          </div>
+          <div class="post-toc-indicator-bottom post-toc-indicator">
+            <i class="fa fa-angle-double-down"></i>
+          </div>
+        </section>
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2016</span>
+  <span class="with-love">
+    <i class="icon-next-heart fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder"></span>
+</div>
+
+<div class="powered-by">
+  由 <a class="theme-link" href="http://hexo.io">Hexo</a> 強力驅動
+</div>
+
+<div class="theme-info">
+  主題 -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+<div class="footer-links">
+  <a href="http://weread.qq.com/">
+    微信读书
+  </a>
+</div>
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-1895639-12', 'auto');
+  ga('send', 'pageview');
+
+</script>
+
+
+
+      </div>
+    </footer>
+
+    <div class="back-to-top"></div>
+  </div>
+
+  
+
+
+  
+
+
+
+  <script type="text/javascript" src="/vendors/jquery/index.js?v=2.1.3"></script>
+
+  <script type="text/javascript" src="/vendors/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  <script type="text/javascript" src="/vendors/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  <script type="text/javascript" src="/vendors/velocity/velocity.min.js"></script>
+
+  <script type="text/javascript" src="/vendors/velocity/velocity.ui.min.js"></script>
+
+  <script type="text/javascript" src="/vendors/fancybox/source/jquery.fancybox.pack.js"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=0.5.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=0.5.0"></script>
+
+
+
+  
+  
+
+  
+  
+<script type="text/javascript" src="/js/src/scrollspy.js?v=0.5.0"></script>
+
+<script type="text/javascript" id="sidebar.toc.highlight">
+  $(document).ready(function () {
+    var tocSelector = '.post-toc';
+    var $tocSelector = $(tocSelector);
+    var activeCurrentSelector = '.active-current';
+
+    $tocSelector
+      .on('activate.bs.scrollspy', function () {
+        var $currentActiveElement = $(tocSelector + ' .active').last();
+
+        removeCurrentActiveClass();
+        $currentActiveElement.addClass('active-current');
+
+        $tocSelector[0].scrollTop = $currentActiveElement.position().top;
+      })
+      .on('clear.bs.scrollspy', function () {
+        removeCurrentActiveClass();
+      });
+
+    function removeCurrentActiveClass () {
+      $(tocSelector + ' ' + activeCurrentSelector)
+        .removeClass(activeCurrentSelector.substring(1));
+    }
+
+    function processTOC () {
+      getTOCMaxHeight();
+      toggleTOCOverflowIndicators();
+    }
+
+    function getTOCMaxHeight () {
+      var height = $('.sidebar').height() -
+                   $tocSelector.position().top -
+                   $('.post-toc-indicator-bottom').height();
+
+      $tocSelector.css('height', height);
+
+      return height;
+    }
+
+    function toggleTOCOverflowIndicators () {
+      tocOverflowIndicator(
+        '.post-toc-indicator-top',
+        $tocSelector.scrollTop() > 0 ? 'show' : 'hide'
+      );
+
+      tocOverflowIndicator(
+        '.post-toc-indicator-bottom',
+        $tocSelector.scrollTop() >= $tocSelector.find('ol').height() - $tocSelector.height() ? 'hide' : 'show'
+      )
+    }
+
+    $(document).on('sidebar.motion.complete', function () {
+      processTOC();
+    });
+
+    $('body').scrollspy({ target: tocSelector });
+    $(window).on('resize', function () {
+      if ( $('.sidebar').hasClass('sidebar-active') ) {
+        processTOC();
+      }
+    });
+
+    onScroll($tocSelector);
+
+    function onScroll (element) {
+      element.on('mousewheel DOMMouseScroll', function (event) {
+          var oe = event.originalEvent;
+          var delta = oe.wheelDelta || -oe.detail;
+
+          this.scrollTop += ( delta < 0 ? 1 : -1 ) * 30;
+          event.preventDefault();
+
+          toggleTOCOverflowIndicators();
+      });
+    }
+
+    function tocOverflowIndicator (indicator, action) {
+      var $indicator = $(indicator);
+      var opacity = action === 'show' ? 1 : 0;
+      $indicator.velocity ?
+        $indicator.velocity('stop').velocity({
+          opacity: opacity
+        }, { duration: 100 }) :
+        $indicator.stop().animate({
+          opacity: opacity
+        }, 100);
+    }
+
+  });
+</script>
+
+<script type="text/javascript" id="sidebar.nav">
+  $(document).ready(function () {
+    var html = $('html');
+    var TAB_ANIMATE_DURATION = 200;
+    var hasVelocity = $.isFunction(html.velocity);
+
+    $('.sidebar-nav li').on('click', function () {
+      var item = $(this);
+      var activeTabClassName = 'sidebar-nav-active';
+      var activePanelClassName = 'sidebar-panel-active';
+      if (item.hasClass(activeTabClassName)) {
+        return;
+      }
+
+      var currentTarget = $('.' + activePanelClassName);
+      var target = $('.' + item.data('target'));
+
+      hasVelocity ?
+        currentTarget.velocity('transition.slideUpOut', TAB_ANIMATE_DURATION, function () {
+          target
+            .velocity('stop')
+            .velocity('transition.slideDownIn', TAB_ANIMATE_DURATION)
+            .addClass(activePanelClassName);
+        }) :
+        currentTarget.animate({ opacity: 0 }, TAB_ANIMATE_DURATION, function () {
+          currentTarget.hide();
+          target
+            .stop()
+            .css({'opacity': 0, 'display': 'block'})
+            .animate({ opacity: 1 }, TAB_ANIMATE_DURATION, function () {
+              currentTarget.removeClass(activePanelClassName);
+              target.addClass(activePanelClassName);
+            });
+        });
+
+      item.siblings().removeClass(activeTabClassName);
+      item.addClass(activeTabClassName);
+    });
+
+    $('.post-toc a').on('click', function (e) {
+      e.preventDefault();
+      var targetSelector = NexT.utils.escapeSelector(this.getAttribute('href'));
+      var offset = $(targetSelector).offset().top;
+      hasVelocity ?
+        html.velocity('stop').velocity('scroll', {
+          offset: offset  + 'px',
+          mobileHA: false
+        }) :
+        $('html, body').stop().animate({
+          scrollTop: offset
+        }, 500);
+    });
+
+    // Expand sidebar on post detail page by default, when post has a toc.
+    NexT.motion.middleWares.sidebar = function () {
+      var $tocContent = $('.post-toc-content');
+
+      if (CONFIG.sidebar === 'post') {
+        if ($tocContent.length > 0 && $tocContent.html().trim().length > 0) {
+          NexT.utils.displaySidebar();
+        }
+      }
+    };
+  });
+</script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=0.5.0"></script>
+
+
+
+  
+
+
+
+  
+
+    <script type="text/javascript">
+      var disqus_shortname = 'wereadteam';
+      var disqus_identifier = '2016/02/22/MLeaksFinder/';
+      var disqus_title = 'MLeaksFinder：精准 iOS 内存泄露检测工具';
+      var disqus_url = 'http://weread.qq.com/2016/02/22/MLeaksFinder/';
+
+      function run_disqus_script(disqus_script){
+        var dsq = document.createElement('script');
+        dsq.type = 'text/javascript';
+        dsq.async = true;
+        dsq.src = '//' + disqus_shortname + '.disqus.com/' + disqus_script;
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+      }
+
+      run_disqus_script('count.js');
+      
+        run_disqus_script('embed.js');
+      
+    </script>
+  
+
+
+
+  
+  
+
+  
+  
+
+
+</body>
+</html>

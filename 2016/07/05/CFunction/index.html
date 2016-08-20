@@ -1,0 +1,803 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  <link href="/vendors/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css"/>
+
+
+
+
+  <link href="//fonts.googleapis.com/css?family=Lato:300,400,700,400italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+
+
+
+<link href="/vendors/font-awesome/css/font-awesome.min.css?v=4.4.0" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=0.5.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="微信读书,iOS" />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=0.5.0" />
+
+
+
+
+
+
+<meta name="description" content="JSPatch 支持了动态调用 C 函数，无需在编译前桥接每个要调用的 C 函数，只需要在 JS 里调用前声明下这个函数，就可以直接调用：
+123require(&apos;JPEngine&apos;).addExtensions([&apos;JPCFunction&apos;])defineCFunction(&quot;malloc&quot;, &quot;void *, size_t&quot;)malloc(10)
+我们一步步来看看怎样可以做到动态调用 C 函数">
+<meta property="og:type" content="article">
+<meta property="og:title" content="如何动态调用 C 函数">
+<meta property="og:url" content="http://weread.qq.com/2016/07/05/CFunction/index.html">
+<meta property="og:site_name" content="WeRead团队博客">
+<meta property="og:description" content="JSPatch 支持了动态调用 C 函数，无需在编译前桥接每个要调用的 C 函数，只需要在 JS 里调用前声明下这个函数，就可以直接调用：
+123require(&apos;JPEngine&apos;).addExtensions([&apos;JPCFunction&apos;])defineCFunction(&quot;malloc&quot;, &quot;void *, size_t&quot;)malloc(10)
+我们一步步来看看怎样可以做到动态调用 C 函数">
+<meta property="og:image" content="http://weread.qq.com/./img/c1.png">
+<meta property="og:image" content="http://weread.qq.com/./img/c2.png">
+<meta property="og:updated_time" content="2016-07-05T13:06:39.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="如何动态调用 C 函数">
+<meta name="twitter:description" content="JSPatch 支持了动态调用 C 函数，无需在编译前桥接每个要调用的 C 函数，只需要在 JS 里调用前声明下这个函数，就可以直接调用：
+123require(&apos;JPEngine&apos;).addExtensions([&apos;JPCFunction&apos;])defineCFunction(&quot;malloc&quot;, &quot;void *, size_t&quot;)malloc(10)
+我们一步步来看看怎样可以做到动态调用 C 函数">
+
+
+
+<script type="text/javascript" id="hexo.configuration">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 0,
+      author: '博主'
+    }
+  };
+</script>
+
+  <title> 如何动态调用 C 函数 | WeRead团队博客 </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">WeRead团队博客</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+  <p class="site-subtitle"></p>
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu ">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-home fa-fw"></i> <br />
+            
+            首頁
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-archive fa-fw"></i> <br />
+            
+            歸檔
+          </a>
+        </li>
+      
+
+      
+      
+      
+    </ul>
+  
+
+  
+</nav>
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                如何动态调用 C 函数
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">發表於</span>
+            <time itemprop="dateCreated" datetime="2016-07-05T20:46:48+08:00" content="2016-07-05">
+              2016-07-05
+            </time>
+          </span>
+
+          
+            <span class="post-category" >
+              &nbsp; | &nbsp;
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <!--span class="post-meta-item-text">分類於</span-->
+              
+                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                  <!--a href="/categories/bang/" itemprop="url" rel="index"-->
+                    <span itemprop="name">bang</span>
+                  <!--/a-->
+                </span>
+
+                
+                
+
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                &nbsp; | &nbsp;
+                <a href="/2016/07/05/CFunction/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2016/07/05/CFunction/" itemprop="commentsCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+
+          
+          
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p><a href="https://github.com/bang590/JSPatch" target="_blank" rel="external">JSPatch</a> 支持了动态调用 C 函数，无需在编译前桥接每个要调用的 C 函数，只需要在 JS 里调用前声明下这个函数，就可以直接调用：</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">require</span>(<span class="string">'JPEngine'</span>).addExtensions([<span class="string">'JPCFunction'</span>])</span><br><span class="line">defineCFunction(<span class="string">"malloc"</span>, <span class="string">"void *, size_t"</span>)</span><br><span class="line">malloc(<span class="number">10</span>)</span><br></pre></td></tr></table></figure>
+<p>我们一步步来看看怎样可以做到动态调用 C 函数。</p>
+<h2 id="函数地址"><a href="#函数地址" class="headerlink" title="函数地址"></a>函数地址</h2><p>首先若要动态调用 C 函数，第一步就是需要通过传入一个函数名字符串找到这个函数地址，这里一个必要的前提条件就是 C 编译后的可执行文件里必须有原函数名的信息，才有可能做到通过函数名字符串找到函数地址。我们写个简单的程序来看看它编译后可执行文件的内容有没有这个信息：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//main.m</span></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">test</span><span class="params">()</span> </span>&#123;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>编译这个文件，并用otool看下它的汇编：</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">gcc main.m -o main.o&#10;otool -tV main.o</span><br></pre></td></tr></table></figure>
+<p>输出：</p>
+<a id="more"></a>
+<figure class="highlight r"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">main.o:</span><br><span class="line">(__TEXT,__text) section</span><br><span class="line">_test:</span><br><span class="line">0000000100000f90  pushq %rbp</span><br><span class="line">0000000100000f91  movq  %rsp, %rbp</span><br><span class="line">0000000100000f94  popq  %rbp</span><br><span class="line">0000000100000f95  retq</span><br><span class="line">0000000100000f96  nopw  %cs:(%rax,%rax)</span><br><span class="line">_main:</span><br><span class="line">0000000100000fa0  pushq %rbp</span><br><span class="line">0000000100000fa1  movq  %rsp, %rbp</span><br><span class="line">0000000100000fa4  xorl  %eax, %eax</span><br><span class="line">0000000100000fa6  movl  $<span class="number">0x0</span>, -<span class="number">0x4</span>(%rbp)</span><br><span class="line">0000000100000fad  popq  %rbp</span><br><span class="line">0000000100000fae  retq</span><br></pre></td></tr></table></figure>
+<p>可以看到函数名 test 和 main 都清楚地记录在可执行文件里，只不过前面多了个下划线_，所以完全可以在运行时通过函数名字符串查到这个函数地址。</p>
+<h2 id="dlsym"><a href="#dlsym" class="headerlink" title="dlsym()"></a>dlsym()</h2><p>实际上动态链接器已经提供一个 API：<code>dlsym()</code>，本来是用于动态加载库(DLL)，然后通过这个接口拿到函数地址，它也可以应用于当前可执行文件镜像，原理是一样的。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">test</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">"testFunc"</span>);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">void</span> (*funcPointer)() = dlsym(RTLD_DEFAULT, <span class="string">"test"</span>);</span><br><span class="line">    funcPointer();</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>好了现在我们可以通过函数名拿到对应的函数地址了，这样就可以自由动态调用所有 C 函数了吗？还不行，这样只能动态调用返回值和参数都为空的 C 函数，上面 <code>funcPointer</code> 指针只能在指向参数返回值都为空的函数时才能正确调用到。对于有返回值和有参数的 C 函数，这里定义时需要指明参数和返回值类型才能使用：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">testFunc</span><span class="params">(<span class="keyword">int</span> n, <span class="keyword">int</span> m)</span> </span>&#123;</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">"testFunc"</span>);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">1</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="comment">// ①</span></span><br><span class="line">    <span class="keyword">int</span> (*funcPointer)(<span class="keyword">int</span>, <span class="keyword">int</span>) = dlsym(RTLD_DEFAULT, <span class="string">"testFunc"</span>);</span><br><span class="line">    funcPointer(<span class="number">1</span>, <span class="number">2</span>);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// ②</span></span><br><span class="line">    <span class="keyword">void</span> (*funcPointer)() = dlsym(RTLD_DEFAULT, <span class="string">"testFunc"</span>);</span><br><span class="line">    funcPointer(<span class="number">1</span>, <span class="number">2</span>);  <span class="comment">//error</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>（这里①和②两个调用方式下文会多次提到，①表示调用正确定义了函数参数/返回值类型的函数指针，②表示调用没有正确定义参数/返回值类型的函数指针）</p>
+<p>这个例子中 dlsym 返回了 testFunc 的函数指针，必须像 ① 那样指明它的返回类型和参数类型后，才能调用成功，如果像 ② 那样定义这个指针，没有正确的参数类型和返回值类型，在调用时就会出现crash。</p>
+<p>也就是说我们没法通过定义一个万能的函数指针去支持所有函数的动态调用，这里必须让函数的参数/返回值类型都对应上才能调用，为什么必须要对应上呢？因为函数的调用方和被调用方是会遵循一种叫调用惯例(Calling Convention)的约定的。</p>
+<h2 id="Calling-Convention"><a href="#Calling-Convention" class="headerlink" title="Calling Convention"></a>Calling Convention</h2><p>一个函数的调用过程中，函数的参数既可以使用栈传递，也可以使用寄存器传递，参数压栈的顺序可以从左到右也可以从右到左，函数调用后参数从栈弹出这个工作可以由函数调用方完成，也可以由被调用方完成。如果函数的调用方和被调用方(函数本身)不遵循统一的约定，有这么多分歧这个函数调用就没法完成。这个双方必须遵守的统一约定就叫做调用惯例(Calling Convention)，调用惯例规定了参数的传递的顺序和方式，以及栈的维护方式。</p>
+<p>函数调用者和被调用者需要遵循这同一套约定，上述②这样的情况，就是函数本身遵循了这个约定，而调用者没有遵守，导致调用出错。</p>
+<p>再简单分析下，如果按①那样正确的定义方式定义funcPointer，然后调用它，这里编译成汇编后，在调用处会有相应指令把参数 n,m 的值 1 和 2 入栈，然后跳过去 <code>testFunc()</code> 函数实体执行，这个函数执行时，按约定它知道n,m两个参数值已经在栈上，就可以取出来使用了。</p>
+<p><img src="./img/c1.png" alt=""></p>
+<p>而如果按②那样定义，编译后这里不会把参数 n,m 的值 1 和 2 入栈，因为这里编译器把它当成了没有参数和没有返回值的函数，也就不需要进行参数入栈的操作，然后在 <code>testFunc()</code> 函数实体里按约定去栈上取参数时就会发现栈上本来应该存参数 n 和 m 的地方并没有数据，或者是其他错误的数据，导致调用出错。</p>
+<p><img src="./img/c2.png" alt=""></p>
+<p>所以你需要在调用前明确告诉编译器这个函数的参数和返回值类型是什么，编译器才能生成对应的正确的汇编代码，让被调用的函数执行时能正常取到参数。</p>
+<p>也就是说如果需要动态调用任意 C 函数，就得先准备好任意 参数类型/参数个数/返回值类型 排列组合的 C 函数指针，让最终的汇编把所有情况都准备好，最后调用时通过 switch 去找到正确的那个去执行就可以了。但显然这是很糟糕的主意。</p>
+<p>在 C 语言这个层面上是解决不了这个问题的，要解决只能再往底层走，靠汇编。</p>
+<p>（P.S. 在不同 CPU 架构上调用惯例不同，例如arm32位所有参数都通过栈传递，arm64位会让部分参数通过寄存器传递，超出寄存器大小的参数才通过栈传递，因为64位机器多出了寄存器，通过寄存器传递比栈快。不过就算所有CPU架构调用惯例相同，也不影响我们碰到的这个问题，你可以忽略这点。）</p>
+<h2 id="objc-msgSend"><a href="#objc-msgSend" class="headerlink" title="objc_msgSend"></a>objc_msgSend</h2><p>实际上你会发现 OC 上有个函数脱离了上述限制，就是 <code>objc_msgSend</code>。OC 所有方法调用最终都会走到 <code>objc_msgSend</code> 去调用，这个神奇的方法支持任意返回值任意参数类型和个数，而它的定义仅是这样：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">objc_msgSend</span><span class="params">(<span class="keyword">void</span> <span class="comment">/* id self, SEL op, ... */</span> )</span></span></span><br></pre></td></tr></table></figure>
+<p>为什么它就可以支持所有函数调用呢，不是说调用者和函数本身要遵循调用惯例吗，这个函数跟我们上述的②有什么区别？</p>
+<p>答案是在C语言层面上没区别，但人家在汇编上做了手脚，<code>objc_msgSend</code> 是用汇编写的，在调用这个函数之前，会把栈/寄存器等数据都准备好，相当于调用前对参数入栈等处理由这个函数自己写的汇编代码接管了，不需要编译器在调用处去生成这些指令。</p>
+<p>这里会在调用真正的函数之前，根据 Calling Convention 准备好栈帧/寄存器数据和状态，最后再 jump/call 到函数实体执行就可以了，这时函数实体按约定去取参数是取得到的，可以正常执行。于是 objc 就做到了在编译前只需要定义一个简单的 <code>objc_msgSend</code>，就支持运行时动态调用任意类型的 C 函数（所有 OC 方法的 IMP）。</p>
+<p>所以我们要仿照 <code>objc_msgSend</code> 做一遍这个事情吗？难度好高:(。不用怕， libffi 这个神器已经帮你做了。</p>
+<h2 id="libffi"><a href="#libffi" class="headerlink" title="libffi"></a>libffi</h2><p>对 libffi 的介绍可以看 <a href="http://www.oschina.net/p/libffi" target="_blank" rel="external">[这里]</a>，简单来说它就是提供了动态调用任意 C 函数的功能。</p>
+<p>先来看看怎样通过 libffi 动态调用一个 C 函数：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">testFunc</span><span class="params">(<span class="keyword">int</span> m, <span class="keyword">int</span> n)</span> </span>&#123;</span><br><span class="line">  <span class="built_in">printf</span>(<span class="string">"params: %d %d \n"</span>, n, m);</span><br><span class="line">  <span class="keyword">return</span> n+m;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="comment">//拿函数指针</span></span><br><span class="line">    <span class="keyword">void</span>* functionPtr = dlsym(RTLD_DEFAULT, <span class="string">"testFunc"</span>);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">int</span> argCount = <span class="number">2</span>;</span><br><span class="line"></span><br><span class="line">    <span class="comment">//按ffi要求组装好参数类型数组</span></span><br><span class="line">    ffi_type **ffiArgTypes = alloca(<span class="keyword">sizeof</span>(ffi_type *) *argCount);</span><br><span class="line">    ffiArgTypes[<span class="number">0</span>] = &amp;ffi_type_sint;</span><br><span class="line">    ffiArgTypes[<span class="number">1</span>] = &amp;ffi_type_sint;</span><br><span class="line"></span><br><span class="line">    <span class="comment">//按ffi要求组装好参数数据数组</span></span><br><span class="line">    <span class="keyword">void</span> **ffiArgs = alloca(<span class="keyword">sizeof</span>(<span class="keyword">void</span> *) *argCount);</span><br><span class="line">    <span class="keyword">void</span> *ffiArgPtr = alloca(ffiArgTypes[<span class="number">0</span>]-&gt;size);</span><br><span class="line">    <span class="keyword">int</span> *argPtr = ffiArgPtr;</span><br><span class="line">    *argPtr = <span class="number">1</span>;</span><br><span class="line">    ffiArgs[<span class="number">0</span>] = ffiArgPtr;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">void</span> *ffiArgPtr2 = alloca(ffiArgTypes[<span class="number">1</span>]-&gt;size);</span><br><span class="line">    <span class="keyword">int</span> *argPtr2 = ffiArgPtr2;</span><br><span class="line">    *argPtr2 = <span class="number">2</span>;</span><br><span class="line">    ffiArgs[<span class="number">1</span>] = ffiArgPtr2;</span><br><span class="line"></span><br><span class="line">    <span class="comment">//生成 ffi_cfi 对象，保存函数参数个数/类型等信息，相当于一个函数原型</span></span><br><span class="line">    ffi_cif cif;</span><br><span class="line">    ffi_type *returnFfiType = &amp;ffi_type_sint;</span><br><span class="line">    ffi_status ffiPrepStatus = ffi_prep_cif_var(&amp;cif, FFI_DEFAULT_ABI, (<span class="keyword">unsigned</span> <span class="keyword">int</span>)<span class="number">0</span>, (<span class="keyword">unsigned</span> <span class="keyword">int</span>)argCount, returnFfiType, ffiArgTypes);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (ffiPrepStatus == FFI_OK) &#123;</span><br><span class="line">        <span class="comment">//生成用于保存返回值的内存</span></span><br><span class="line">        <span class="keyword">void</span> *returnPtr = <span class="literal">NULL</span>;</span><br><span class="line">        <span class="keyword">if</span> (returnFfiType-&gt;size) &#123;</span><br><span class="line">            returnPtr = alloca(returnFfiType-&gt;size);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">//根据cif函数原型，函数指针，返回值内存指针，函数参数数据调用这个函数</span></span><br><span class="line">        ffi_call(&amp;cif, functionPtr, returnPtr, ffiArgs);</span><br><span class="line"></span><br><span class="line">        <span class="comment">//拿到返回值</span></span><br><span class="line">        <span class="keyword">int</span> returnValue = *(<span class="keyword">int</span> *)returnPtr;</span><br><span class="line">        <span class="built_in">printf</span>(<span class="string">"ret: %d \n"</span>, returnValue);</span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>看起来挺复杂的，梳理一下就这几步：</p>
+<ol>
+<li>通过 dlsym 拿到函数指针。</li>
+<li>给每个参数申请内存空间，按 ffi 要求把参数数据组装成数组。（用<code>alloca()</code>申请空间，不需要<code>free()</code>去释放）</li>
+<li>用函数参数个数/参数类型/返回值类型组装成 cif 对象，表示这个函数原型。（有点像OC的methodSignature）</li>
+<li>申请内存空间用于保存函数返回值。</li>
+<li>把 cif 函数原型，函数指针，返回值内存指针，参数数据 传入 <code>ffi_call</code> 调用这个函数。</li>
+</ol>
+<p>这里每一步都是可以在运行时动态去做的，也就可以做到在运行时动态调用任意 C 函数了。</p>
+<p>这里最终 libffi 能调用任意 C 函数的原理按我理解跟上面说的 <code>objc_msgSend</code> 的原理差不多，<code>ffi_call</code> 底层是用汇编实现的，它在调用我们传入的函数之前，会根据上面提到的函数原型 cif 和参数数据，把参数都按规则塞到栈/寄存器里，准备好数据和状态，这样调用的函数实体里就可以按规则取到这些参数，正常执行了。调用完再获取返回值，清理这些栈帧/寄存器数据。libffi 针对每个架构不同的 Calling Convention 写了不同的汇编代码去做这个事。可以参见 libffi 里的 <code>sysv_arm64.S</code> <code>sysv_arm.S</code> 等汇编源码。<a href="http://blog.csdn.net/ayu_ag/article/details/50706429" target="_blank" rel="external">[这篇文章]</a> 有一些细节解析，可以看看。</p>
+<p>到这里已经完成了动态调用 C 函数，接下来的工作就只是在 JS 和 libffi 之间加一层转换，就可以让 JSPatch 支持动态调用 C 函数了，JPCFunction 就是做这层转换的。</p>
+<h2 id="JPCFunction"><a href="#JPCFunction" class="headerlink" title="JPCFunction"></a>JPCFunction</h2><p>目前 <a href="https://github.com/bang590/JSPatch/blob/master/Extensions/JPCFunction/JPCFunction.m" target="_blank" rel="external">JPCFunction</a> 比较简单，直接看代码就可以了，简单说下流程：</p>
+<ol>
+<li>调用 C 函数之前需要通过 <code>defineCFunction</code> 定义这个函数的各参数类型和返回值类型，defineCFunction 里解析了类型字符串，转换成一个 <code>JPCFunctionSignature</code> 对象，每个函数对应一个 <code>JPCFunctionSignature</code>对象，这里模拟了 OC 方法的<code>NSMethodSignature</code>。</li>
+<li>调用函数时根据函数名拿到 <code>JPCFunctionSignature</code> 对象，集齐了 参数个数/各参数类型/返回值类型/各参数数据 这些信息，组装成 ffi 需要的格式进行调用。</li>
+</ol>
+<p>这里第二步的处理中对于 struct 类型会比较麻烦，目前还未支持参数/返回值类型为 struct 的 C 函数，后续会补上。</p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>回顾下动态调用 C 函数的探索过程，先是通过 <code>dlsym()</code> 拿到函数指针，然后需要告诉编译器这个函数的参数/返回值类型，编译器才会根据 Calling Convention 约定生成对应的汇编代码，在调用函数时对参数进行正确的入栈/存入寄存器等操作，让函数成功调用，这一步在运行时在 C 语言层面上无法做到，所以 <code>objc_msgSend</code> 和 libffi 都用汇编模拟了这一过程，达到动态调用 C 函数的目的。</p>
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2016/06/30/Aspects/" rel="next" title="面向切面编程之 Aspects 源码解析及应用">
+                <i class="fa fa-chevron-left"></i> 面向切面编程之 Aspects 源码解析及应用
+              </a>
+            
+          </div>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2016/07/06/GYDataCenter/" rel="prev" title="GYDataCenter：高性能数据库框架">
+                GYDataCenter：高性能数据库框架 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目錄
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            本站概覽
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel ">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/default_avatar.png"
+               alt="" />
+          <p class="site-author-name" itemprop="name"></p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">11</span>
+              <span class="site-state-item-name">文章</span>
+            </a>
+          </div>
+          
+          
+            <div class="site-state-item site-state-categories">
+              
+                <span class="site-state-item-count">6</span>
+                <span class="site-state-item-name">分類</span>
+              
+            </div>
+          
+
+          
+
+        </nav>
+
+        
+        <div class="links">
+          <h4>开源项目</h4>
+          <div class="links-of-author motion-element">
+            
+              
+                <div class="links-of-author-item">
+                  <a href="https://github.com/bang590/JSPatch" target="_blank">
+                    
+                      <i class="fa fa-github"></i> JSPatch
+                    
+                  </a>
+                </div>
+              
+                <div class="links-of-author-item">
+                  <a href="https://github.com/Zepo/MLeaksFinder" target="_blank">
+                    
+                      <i class="fa fa-github"></i> MLeaksFinder
+                    
+                  </a>
+                </div>
+              
+                <div class="links-of-author-item">
+                  <a href="https://github.com/hypoyao/GYHttpMock" target="_blank">
+                    
+                      <i class="fa fa-github"></i> GYHttpMock
+                    
+                  </a>
+                </div>
+              
+                <div class="links-of-author-item">
+                  <a href="https://github.com/liuslevis/GYBootingProtection" target="_blank">
+                    
+                      <i class="fa fa-github"></i> GYBootingProtection
+                    
+                  </a>
+                </div>
+              
+            
+          </div>
+        </div>
+
+        
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+      </section>
+
+      
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc-indicator-top post-toc-indicator">
+            <i class="fa fa-angle-double-up"></i>
+          </div>
+          <div class="post-toc">
+            
+              
+            
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#函数地址"><span class="nav-number">1.</span> <span class="nav-text">函数地址</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#dlsym"><span class="nav-number">2.</span> <span class="nav-text">dlsym()</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Calling-Convention"><span class="nav-number">3.</span> <span class="nav-text">Calling Convention</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#objc-msgSend"><span class="nav-number">4.</span> <span class="nav-text">objc_msgSend</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#libffi"><span class="nav-number">5.</span> <span class="nav-text">libffi</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#JPCFunction"><span class="nav-number">6.</span> <span class="nav-text">JPCFunction</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#总结"><span class="nav-number">7.</span> <span class="nav-text">总结</span></a></li></ol></div>
+            
+          </div>
+          <div class="post-toc-indicator-bottom post-toc-indicator">
+            <i class="fa fa-angle-double-down"></i>
+          </div>
+        </section>
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2016</span>
+  <span class="with-love">
+    <i class="icon-next-heart fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder"></span>
+</div>
+
+<div class="powered-by">
+  由 <a class="theme-link" href="http://hexo.io">Hexo</a> 強力驅動
+</div>
+
+<div class="theme-info">
+  主題 -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+<div class="footer-links">
+  <a href="http://weread.qq.com/">
+    微信读书
+  </a>
+</div>
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-1895639-12', 'auto');
+  ga('send', 'pageview');
+
+</script>
+
+
+
+      </div>
+    </footer>
+
+    <div class="back-to-top"></div>
+  </div>
+
+  
+
+
+  
+
+
+
+  <script type="text/javascript" src="/vendors/jquery/index.js?v=2.1.3"></script>
+
+  <script type="text/javascript" src="/vendors/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  <script type="text/javascript" src="/vendors/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  <script type="text/javascript" src="/vendors/velocity/velocity.min.js"></script>
+
+  <script type="text/javascript" src="/vendors/velocity/velocity.ui.min.js"></script>
+
+  <script type="text/javascript" src="/vendors/fancybox/source/jquery.fancybox.pack.js"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=0.5.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=0.5.0"></script>
+
+
+
+  
+  
+
+  
+  
+<script type="text/javascript" src="/js/src/scrollspy.js?v=0.5.0"></script>
+
+<script type="text/javascript" id="sidebar.toc.highlight">
+  $(document).ready(function () {
+    var tocSelector = '.post-toc';
+    var $tocSelector = $(tocSelector);
+    var activeCurrentSelector = '.active-current';
+
+    $tocSelector
+      .on('activate.bs.scrollspy', function () {
+        var $currentActiveElement = $(tocSelector + ' .active').last();
+
+        removeCurrentActiveClass();
+        $currentActiveElement.addClass('active-current');
+
+        $tocSelector[0].scrollTop = $currentActiveElement.position().top;
+      })
+      .on('clear.bs.scrollspy', function () {
+        removeCurrentActiveClass();
+      });
+
+    function removeCurrentActiveClass () {
+      $(tocSelector + ' ' + activeCurrentSelector)
+        .removeClass(activeCurrentSelector.substring(1));
+    }
+
+    function processTOC () {
+      getTOCMaxHeight();
+      toggleTOCOverflowIndicators();
+    }
+
+    function getTOCMaxHeight () {
+      var height = $('.sidebar').height() -
+                   $tocSelector.position().top -
+                   $('.post-toc-indicator-bottom').height();
+
+      $tocSelector.css('height', height);
+
+      return height;
+    }
+
+    function toggleTOCOverflowIndicators () {
+      tocOverflowIndicator(
+        '.post-toc-indicator-top',
+        $tocSelector.scrollTop() > 0 ? 'show' : 'hide'
+      );
+
+      tocOverflowIndicator(
+        '.post-toc-indicator-bottom',
+        $tocSelector.scrollTop() >= $tocSelector.find('ol').height() - $tocSelector.height() ? 'hide' : 'show'
+      )
+    }
+
+    $(document).on('sidebar.motion.complete', function () {
+      processTOC();
+    });
+
+    $('body').scrollspy({ target: tocSelector });
+    $(window).on('resize', function () {
+      if ( $('.sidebar').hasClass('sidebar-active') ) {
+        processTOC();
+      }
+    });
+
+    onScroll($tocSelector);
+
+    function onScroll (element) {
+      element.on('mousewheel DOMMouseScroll', function (event) {
+          var oe = event.originalEvent;
+          var delta = oe.wheelDelta || -oe.detail;
+
+          this.scrollTop += ( delta < 0 ? 1 : -1 ) * 30;
+          event.preventDefault();
+
+          toggleTOCOverflowIndicators();
+      });
+    }
+
+    function tocOverflowIndicator (indicator, action) {
+      var $indicator = $(indicator);
+      var opacity = action === 'show' ? 1 : 0;
+      $indicator.velocity ?
+        $indicator.velocity('stop').velocity({
+          opacity: opacity
+        }, { duration: 100 }) :
+        $indicator.stop().animate({
+          opacity: opacity
+        }, 100);
+    }
+
+  });
+</script>
+
+<script type="text/javascript" id="sidebar.nav">
+  $(document).ready(function () {
+    var html = $('html');
+    var TAB_ANIMATE_DURATION = 200;
+    var hasVelocity = $.isFunction(html.velocity);
+
+    $('.sidebar-nav li').on('click', function () {
+      var item = $(this);
+      var activeTabClassName = 'sidebar-nav-active';
+      var activePanelClassName = 'sidebar-panel-active';
+      if (item.hasClass(activeTabClassName)) {
+        return;
+      }
+
+      var currentTarget = $('.' + activePanelClassName);
+      var target = $('.' + item.data('target'));
+
+      hasVelocity ?
+        currentTarget.velocity('transition.slideUpOut', TAB_ANIMATE_DURATION, function () {
+          target
+            .velocity('stop')
+            .velocity('transition.slideDownIn', TAB_ANIMATE_DURATION)
+            .addClass(activePanelClassName);
+        }) :
+        currentTarget.animate({ opacity: 0 }, TAB_ANIMATE_DURATION, function () {
+          currentTarget.hide();
+          target
+            .stop()
+            .css({'opacity': 0, 'display': 'block'})
+            .animate({ opacity: 1 }, TAB_ANIMATE_DURATION, function () {
+              currentTarget.removeClass(activePanelClassName);
+              target.addClass(activePanelClassName);
+            });
+        });
+
+      item.siblings().removeClass(activeTabClassName);
+      item.addClass(activeTabClassName);
+    });
+
+    $('.post-toc a').on('click', function (e) {
+      e.preventDefault();
+      var targetSelector = NexT.utils.escapeSelector(this.getAttribute('href'));
+      var offset = $(targetSelector).offset().top;
+      hasVelocity ?
+        html.velocity('stop').velocity('scroll', {
+          offset: offset  + 'px',
+          mobileHA: false
+        }) :
+        $('html, body').stop().animate({
+          scrollTop: offset
+        }, 500);
+    });
+
+    // Expand sidebar on post detail page by default, when post has a toc.
+    NexT.motion.middleWares.sidebar = function () {
+      var $tocContent = $('.post-toc-content');
+
+      if (CONFIG.sidebar === 'post') {
+        if ($tocContent.length > 0 && $tocContent.html().trim().length > 0) {
+          NexT.utils.displaySidebar();
+        }
+      }
+    };
+  });
+</script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=0.5.0"></script>
+
+
+
+  
+
+
+
+  
+
+    <script type="text/javascript">
+      var disqus_shortname = 'wereadteam';
+      var disqus_identifier = '2016/07/05/CFunction/';
+      var disqus_title = '如何动态调用 C 函数';
+      var disqus_url = 'http://weread.qq.com/2016/07/05/CFunction/';
+
+      function run_disqus_script(disqus_script){
+        var dsq = document.createElement('script');
+        dsq.type = 'text/javascript';
+        dsq.async = true;
+        dsq.src = '//' + disqus_shortname + '.disqus.com/' + disqus_script;
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+      }
+
+      run_disqus_script('count.js');
+      
+        run_disqus_script('embed.js');
+      
+    </script>
+  
+
+
+
+  
+  
+
+  
+  
+
+
+</body>
+</html>

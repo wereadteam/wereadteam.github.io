@@ -1,0 +1,784 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  <link href="/vendors/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css"/>
+
+
+
+
+  <link href="//fonts.googleapis.com/css?family=Lato:300,400,700,400italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+
+
+
+<link href="/vendors/font-awesome/css/font-awesome.min.css?v=4.4.0" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=0.5.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="微信读书,iOS" />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=0.5.0" />
+
+
+
+
+
+
+<meta name="description" content="MLeaksFinder 是 iOS 平台的自动内存泄漏检测工具，引进 MLeaksFinder 后，就可以在日常的开发，调试业务逻辑的过程中自动地发现并警告内存泄漏。开发者无需打开 instrument 等工具，也无需为了找内存泄漏而去跑额外的流程。并且，由于开发者是在修改代码之后一跑业务逻辑就能发现内存泄漏的，这使得开发者能很快地意识到是哪里的代码写得问题。这种及时的内存泄漏的发现在很大的程度">
+<meta property="og:type" content="article">
+<meta property="og:title" content="MLeaksFinder 新特性">
+<meta property="og:url" content="http://weread.qq.com/2016/07/20/MLeaksFinder2/index.html">
+<meta property="og:site_name" content="WeRead团队博客">
+<meta property="og:description" content="MLeaksFinder 是 iOS 平台的自动内存泄漏检测工具，引进 MLeaksFinder 后，就可以在日常的开发，调试业务逻辑的过程中自动地发现并警告内存泄漏。开发者无需打开 instrument 等工具，也无需为了找内存泄漏而去跑额外的流程。并且，由于开发者是在修改代码之后一跑业务逻辑就能发现内存泄漏的，这使得开发者能很快地意识到是哪里的代码写得问题。这种及时的内存泄漏的发现在很大的程度">
+<meta property="og:updated_time" content="2016-07-20T06:39:38.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="MLeaksFinder 新特性">
+<meta name="twitter:description" content="MLeaksFinder 是 iOS 平台的自动内存泄漏检测工具，引进 MLeaksFinder 后，就可以在日常的开发，调试业务逻辑的过程中自动地发现并警告内存泄漏。开发者无需打开 instrument 等工具，也无需为了找内存泄漏而去跑额外的流程。并且，由于开发者是在修改代码之后一跑业务逻辑就能发现内存泄漏的，这使得开发者能很快地意识到是哪里的代码写得问题。这种及时的内存泄漏的发现在很大的程度">
+
+
+
+<script type="text/javascript" id="hexo.configuration">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 0,
+      author: '博主'
+    }
+  };
+</script>
+
+  <title> MLeaksFinder 新特性 | WeRead团队博客 </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">WeRead团队博客</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+  <p class="site-subtitle"></p>
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu ">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-home fa-fw"></i> <br />
+            
+            首頁
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-archive fa-fw"></i> <br />
+            
+            歸檔
+          </a>
+        </li>
+      
+
+      
+      
+      
+    </ul>
+  
+
+  
+</nav>
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                MLeaksFinder 新特性
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">發表於</span>
+            <time itemprop="dateCreated" datetime="2016-07-20T14:35:26+08:00" content="2016-07-20">
+              2016-07-20
+            </time>
+          </span>
+
+          
+            <span class="post-category" >
+              &nbsp; | &nbsp;
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <!--span class="post-meta-item-text">分類於</span-->
+              
+                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                  <!--a href="/categories/zepo/" itemprop="url" rel="index"-->
+                    <span itemprop="name">zepo</span>
+                  <!--/a-->
+                </span>
+
+                
+                
+
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                &nbsp; | &nbsp;
+                <a href="/2016/07/20/MLeaksFinder2/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2016/07/20/MLeaksFinder2/" itemprop="commentsCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+
+          
+          
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p><a href="https://github.com/Zepo/MLeaksFinder" target="_blank" rel="external">MLeaksFinder</a> 是 iOS 平台的自动内存泄漏检测工具，引进 MLeaksFinder 后，就可以在日常的开发，调试业务逻辑的过程中自动地发现并警告内存泄漏。开发者无需打开 instrument 等工具，也无需为了找内存泄漏而去跑额外的流程。并且，由于开发者是在修改代码之后一跑业务逻辑就能发现内存泄漏的，这使得开发者能很快地意识到是哪里的代码写得问题。这种及时的内存泄漏的发现在很大的程度上降低了修复内存泄漏的成本。</p>
+<p>MLeaksFinder 0.1 开源已经有一段时间，关于 MLeaksFinder 的基本原理，可以参考这篇<a href="http://wereadteam.github.io/2016/02/22/MLeaksFinder/" target="_blank" rel="external">文章</a>。在 MLeaksFinder 开源之后，收到的最多的反馈是：MLeaksFinder 帮忙发现了内存泄漏，但是要去修复这些内存泄漏，找到造成问题的代码很难，特别是对于历史遗留的内存泄漏。</p>
+<p>现在，MLeaksFinder 0.2 来了。如果说 0.1 版本旨在帮助开发者发现内存泄漏，那么 0.2 版本的新特性，正是旨在帮助开发者更好地解决内存泄漏。MLeaksFinder 0.2 包括以下几个新特性：</p>
+<ul>
+<li>assert 改为 alert</li>
+<li>追踪对象的生命周期</li>
+<li>查找循环引用链</li>
+</ul>
+<p>下面，我们来逐一看一下这几个特性。</p>
+<a id="more"></a>
+<h1 id="assert-改为-alert"><a href="#assert-改为-alert" class="headerlink" title="assert 改为 alert"></a>assert 改为 alert</h1><p>在 MLeaksFiner 0.1 版本，当 MLeaksFinder 发现内存泄漏时，会直接中 assert 并打出内存泄漏的信息。Assert 能迫使开发者及时地去修复内存泄漏，并且，如果只是打日志，内存泄漏的日志很可能会被淹没在众多的日志中。这种 assert 的方法在我们实际的项目取得了不错的效果。</p>
+<p>然而，assert 确实也有不好的一面。当开发者在调试业务逻辑的过程中，如果由于内存泄漏中 assert 而使得整个程序挂掉了，那么开发者的思维会因此被打断，并不得不在修复完内存泄漏之后，从头开始调试业务逻辑。有时候开发者更希望的是连贯地调完整个业务逻辑之后，再回过头来修复内存泄漏。</p>
+<p>因此，MLeaksFinder 0.2 把 assert 改成了 alert。当发现内存泄漏之后，开发者可以把 alert 框关掉，并继续调试业务逻辑。而且，把 assert 改成 alert 之后，也使得进一步分析内存成为可能，为下面两个新特性垫定基础。</p>
+<h1 id="追踪对象的生命周期"><a href="#追踪对象的生命周期" class="headerlink" title="追踪对象的生命周期"></a>追踪对象的生命周期</h1><p>当发现可能的内存泄漏对象并给出 alert 之后，MLeaksFinder 会进一步地追踪该对象的生命周期，并在该对象释放时给出 <code>Object Deallocated</code> 的 alert。</p>
+<p>为什么认为一个对象内存泄漏之后，还要进一步去追踪该对象后续会不会释放呢？MLeaksFinder 的基本原理是这样的，当一个 ViewController 被 pop 或 dismiss 之后，我们认为该 ViewController，包括它上面的子 ViewController，以及它的 View，View 的 subView 等等，都很快会被释放，如果某个 View 或者 ViewController 没释放，我们就认为该对象泄漏了。然而，这样的判断内存泄漏的方法存在两个可能的“误判”：</p>
+<p><strong>1) 单例或者被 cache 起来复用的 View 或 ViewController</strong></p>
+<p>对于这样的 View 或 ViewController，在被 pop 或 dismiss 之后是不会被释放的。然而，由于 View 相关的对象一般都占用了较多了内存，这样的设计通常来说不是好的设计。如果开发者由于性能问题等原因而不得不这样设计的时候，开发者可以在报泄漏的类里重载 <code>- (BOOL)willDealloc</code> 方法，直接 <code>return NO;</code> 以消除内存泄漏的警告，这个消除内存泄漏警告的方法与 MLeaksFinder 0.1 版本一致。</p>
+<p><strong>2) 释放不及时的 View 或 ViewController</strong></p>
+<p>例如，发起网络请求的时候，在网络请求回调的 block 里强引用 ViewController，以便在网络请求回来的时候刷新界面。在网络请求比较慢的情况下，这种做法存在两个问题：</p>
+<ul>
+<li>ViewController 被 pop 之后，由于被 block 强引用导致释放不及时</li>
+<li>ViewController 被 pop 之后，如果网络请求回来了，不应该继续做刷新界面的事，浪费 CPU</li>
+</ul>
+<p>所以，对于这种情况，我们应该在 block 里弱引用 ViewController，而不是强引用。</p>
+<p>下面我们来看如何利用对象的生命周期来分析内存的真正使用情况，分三种情况：</p>
+<p><strong>1) 单例或者被 cache 起来复用</strong></p>
+<p>如下面所示，在第一次 pop 的时候报 Memory Leak，在之后的重复 push 并 pop 同一个 ViewController 过程中，即不报 Object Deallocated，也不报 Memory Leak。这种情况下我们可以确定该对象被设计成单例或者 cache 起来了。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">    pop             push           pop           push          pop&#10;----------&#62; Leak ----------&#62; | ----------&#62; | ----------&#62; | ----------&#62;</span><br></pre></td></tr></table></figure>
+<p><strong>2) 释放不及时</strong></p>
+<p>如下面所示，在第一次 pop 的时候报 Memory Leak，在之后的重复 push 并 pop 同一个 ViewController 过程中，对于同一个类不断地报 Object Deallocated 和 Memory Leak。这种情况属于释放不及时的情况。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">    pop             push                 pop             push                 pop&#10;----------&#62; Leak ----------&#62; Dealloc ----------&#62; Leak ----------&#62; Dealloc ----------&#62; Leak</span><br></pre></td></tr></table></figure>
+<p><strong>3) 真正的内存泄漏</strong></p>
+<p>如下面所示，在第一次 pop 的时候报 Memory Leak，在之后的重复 push 并 pop 同一个 ViewController 过程中，不报 Object Deallocated，但每次 pop 之后又报 Memory Leak。这种情况下每回进入并退出一个页面后，就报有新的内存泄漏，同时被报泄漏的对象又从来没有释放过，可以确定是真正的内存泄漏。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">    pop             push           pop             push           pop&#10;----------&#62; Leak ----------&#62; | ----------&#62; Leak ----------&#62; | ----------&#62; Leak</span><br></pre></td></tr></table></figure>
+<h1 id="查找循环引用链"><a href="#查找循环引用链" class="headerlink" title="查找循环引用链"></a>查找循环引用链</h1><p>Facebook 在前阵子开源了一个循环引用检测工具 <a href="https://github.com/facebook/FBRetainCycleDetector" target="_blank" rel="external">FBRetainCycleDetector</a>。当传入内存中的任意一个 OC 对象，FBRetainCycleDetector 会递归遍历该对象的所有强引用的对象，以检测以该对象为根结点的强引用树有没有循环引用。</p>
+<p>我们知道，很多循环引用是 block 的使用不当造成的。而 FBRetainCycleDetector 最大的技术亮点，正在于如何找出一个 block 的所有强引用对象。对于这个感兴趣的，可以看 facebook 的这篇<a href="https://code.facebook.com/posts/583946315094347/automatic-memory-leak-detection-on-ios/" target="_blank" rel="external">文章</a>。</p>
+<p>然而，FBRetainCycleDetector 的使用存在两个问题：</p>
+<ul>
+<li>需要找到候选的检测对象</li>
+<li>检测循环引用比较耗时</li>
+</ul>
+<p>正是由于这两个问题，FBRetainCycleDetector 通常是结合其它工具一起使用，通过其它工具先找出候选的检测对象，然后进行有选择的检测。当 MLeaksFinder 与 FBRetainCycleDetector 结合使用时，正好能达到很好的效果。我们先通过 MLeaksFinder 找到内存泄漏的对象，然后再过 FBRetainCycleDetector 检测该对象有没有循环引用即可。</p>
+<p>循环引用的输出信息如下：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">(&#10;    &#34;-&#62; MyTableViewCell &#34;,&#10;    &#34;-&#62; _callback -&#62; __NSMallocBlock__ &#34;&#10;)</span><br></pre></td></tr></table></figure></p>
+<p>上面的信息表示，<code>MyTableViewCell</code> 有一个强引用的成员变量 <code>_callback</code>，该变量的类型是 <code>__NSMallocBlock__</code>，在 <code>_callback</code> 里，又强引用了 <code>MyTableViewCell</code> 造成循环引用。</p>
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2016/07/06/GYDataCenter/" rel="next" title="GYDataCenter：高性能数据库框架">
+                <i class="fa fa-chevron-left"></i> GYDataCenter：高性能数据库框架
+              </a>
+            
+          </div>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2016/07/26/AndroidPatch/" rel="prev" title="Android Patch 方案与持续交付">
+                Android Patch 方案与持续交付 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目錄
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            本站概覽
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel ">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/default_avatar.png"
+               alt="" />
+          <p class="site-author-name" itemprop="name"></p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">11</span>
+              <span class="site-state-item-name">文章</span>
+            </a>
+          </div>
+          
+          
+            <div class="site-state-item site-state-categories">
+              
+                <span class="site-state-item-count">6</span>
+                <span class="site-state-item-name">分類</span>
+              
+            </div>
+          
+
+          
+
+        </nav>
+
+        
+        <div class="links">
+          <h4>开源项目</h4>
+          <div class="links-of-author motion-element">
+            
+              
+                <div class="links-of-author-item">
+                  <a href="https://github.com/bang590/JSPatch" target="_blank">
+                    
+                      <i class="fa fa-github"></i> JSPatch
+                    
+                  </a>
+                </div>
+              
+                <div class="links-of-author-item">
+                  <a href="https://github.com/Zepo/MLeaksFinder" target="_blank">
+                    
+                      <i class="fa fa-github"></i> MLeaksFinder
+                    
+                  </a>
+                </div>
+              
+                <div class="links-of-author-item">
+                  <a href="https://github.com/hypoyao/GYHttpMock" target="_blank">
+                    
+                      <i class="fa fa-github"></i> GYHttpMock
+                    
+                  </a>
+                </div>
+              
+                <div class="links-of-author-item">
+                  <a href="https://github.com/liuslevis/GYBootingProtection" target="_blank">
+                    
+                      <i class="fa fa-github"></i> GYBootingProtection
+                    
+                  </a>
+                </div>
+              
+            
+          </div>
+        </div>
+
+        
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+      </section>
+
+      
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc-indicator-top post-toc-indicator">
+            <i class="fa fa-angle-double-up"></i>
+          </div>
+          <div class="post-toc">
+            
+              
+            
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#assert-改为-alert"><span class="nav-number">1.</span> <span class="nav-text">assert 改为 alert</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#追踪对象的生命周期"><span class="nav-number">2.</span> <span class="nav-text">追踪对象的生命周期</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#查找循环引用链"><span class="nav-number">3.</span> <span class="nav-text">查找循环引用链</span></a></li></ol></div>
+            
+          </div>
+          <div class="post-toc-indicator-bottom post-toc-indicator">
+            <i class="fa fa-angle-double-down"></i>
+          </div>
+        </section>
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2016</span>
+  <span class="with-love">
+    <i class="icon-next-heart fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder"></span>
+</div>
+
+<div class="powered-by">
+  由 <a class="theme-link" href="http://hexo.io">Hexo</a> 強力驅動
+</div>
+
+<div class="theme-info">
+  主題 -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+<div class="footer-links">
+  <a href="http://weread.qq.com/">
+    微信读书
+  </a>
+</div>
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-1895639-12', 'auto');
+  ga('send', 'pageview');
+
+</script>
+
+
+
+      </div>
+    </footer>
+
+    <div class="back-to-top"></div>
+  </div>
+
+  
+
+
+  
+
+
+
+  <script type="text/javascript" src="/vendors/jquery/index.js?v=2.1.3"></script>
+
+  <script type="text/javascript" src="/vendors/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  <script type="text/javascript" src="/vendors/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  <script type="text/javascript" src="/vendors/velocity/velocity.min.js"></script>
+
+  <script type="text/javascript" src="/vendors/velocity/velocity.ui.min.js"></script>
+
+  <script type="text/javascript" src="/vendors/fancybox/source/jquery.fancybox.pack.js"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=0.5.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=0.5.0"></script>
+
+
+
+  
+  
+
+  
+  
+<script type="text/javascript" src="/js/src/scrollspy.js?v=0.5.0"></script>
+
+<script type="text/javascript" id="sidebar.toc.highlight">
+  $(document).ready(function () {
+    var tocSelector = '.post-toc';
+    var $tocSelector = $(tocSelector);
+    var activeCurrentSelector = '.active-current';
+
+    $tocSelector
+      .on('activate.bs.scrollspy', function () {
+        var $currentActiveElement = $(tocSelector + ' .active').last();
+
+        removeCurrentActiveClass();
+        $currentActiveElement.addClass('active-current');
+
+        $tocSelector[0].scrollTop = $currentActiveElement.position().top;
+      })
+      .on('clear.bs.scrollspy', function () {
+        removeCurrentActiveClass();
+      });
+
+    function removeCurrentActiveClass () {
+      $(tocSelector + ' ' + activeCurrentSelector)
+        .removeClass(activeCurrentSelector.substring(1));
+    }
+
+    function processTOC () {
+      getTOCMaxHeight();
+      toggleTOCOverflowIndicators();
+    }
+
+    function getTOCMaxHeight () {
+      var height = $('.sidebar').height() -
+                   $tocSelector.position().top -
+                   $('.post-toc-indicator-bottom').height();
+
+      $tocSelector.css('height', height);
+
+      return height;
+    }
+
+    function toggleTOCOverflowIndicators () {
+      tocOverflowIndicator(
+        '.post-toc-indicator-top',
+        $tocSelector.scrollTop() > 0 ? 'show' : 'hide'
+      );
+
+      tocOverflowIndicator(
+        '.post-toc-indicator-bottom',
+        $tocSelector.scrollTop() >= $tocSelector.find('ol').height() - $tocSelector.height() ? 'hide' : 'show'
+      )
+    }
+
+    $(document).on('sidebar.motion.complete', function () {
+      processTOC();
+    });
+
+    $('body').scrollspy({ target: tocSelector });
+    $(window).on('resize', function () {
+      if ( $('.sidebar').hasClass('sidebar-active') ) {
+        processTOC();
+      }
+    });
+
+    onScroll($tocSelector);
+
+    function onScroll (element) {
+      element.on('mousewheel DOMMouseScroll', function (event) {
+          var oe = event.originalEvent;
+          var delta = oe.wheelDelta || -oe.detail;
+
+          this.scrollTop += ( delta < 0 ? 1 : -1 ) * 30;
+          event.preventDefault();
+
+          toggleTOCOverflowIndicators();
+      });
+    }
+
+    function tocOverflowIndicator (indicator, action) {
+      var $indicator = $(indicator);
+      var opacity = action === 'show' ? 1 : 0;
+      $indicator.velocity ?
+        $indicator.velocity('stop').velocity({
+          opacity: opacity
+        }, { duration: 100 }) :
+        $indicator.stop().animate({
+          opacity: opacity
+        }, 100);
+    }
+
+  });
+</script>
+
+<script type="text/javascript" id="sidebar.nav">
+  $(document).ready(function () {
+    var html = $('html');
+    var TAB_ANIMATE_DURATION = 200;
+    var hasVelocity = $.isFunction(html.velocity);
+
+    $('.sidebar-nav li').on('click', function () {
+      var item = $(this);
+      var activeTabClassName = 'sidebar-nav-active';
+      var activePanelClassName = 'sidebar-panel-active';
+      if (item.hasClass(activeTabClassName)) {
+        return;
+      }
+
+      var currentTarget = $('.' + activePanelClassName);
+      var target = $('.' + item.data('target'));
+
+      hasVelocity ?
+        currentTarget.velocity('transition.slideUpOut', TAB_ANIMATE_DURATION, function () {
+          target
+            .velocity('stop')
+            .velocity('transition.slideDownIn', TAB_ANIMATE_DURATION)
+            .addClass(activePanelClassName);
+        }) :
+        currentTarget.animate({ opacity: 0 }, TAB_ANIMATE_DURATION, function () {
+          currentTarget.hide();
+          target
+            .stop()
+            .css({'opacity': 0, 'display': 'block'})
+            .animate({ opacity: 1 }, TAB_ANIMATE_DURATION, function () {
+              currentTarget.removeClass(activePanelClassName);
+              target.addClass(activePanelClassName);
+            });
+        });
+
+      item.siblings().removeClass(activeTabClassName);
+      item.addClass(activeTabClassName);
+    });
+
+    $('.post-toc a').on('click', function (e) {
+      e.preventDefault();
+      var targetSelector = NexT.utils.escapeSelector(this.getAttribute('href'));
+      var offset = $(targetSelector).offset().top;
+      hasVelocity ?
+        html.velocity('stop').velocity('scroll', {
+          offset: offset  + 'px',
+          mobileHA: false
+        }) :
+        $('html, body').stop().animate({
+          scrollTop: offset
+        }, 500);
+    });
+
+    // Expand sidebar on post detail page by default, when post has a toc.
+    NexT.motion.middleWares.sidebar = function () {
+      var $tocContent = $('.post-toc-content');
+
+      if (CONFIG.sidebar === 'post') {
+        if ($tocContent.length > 0 && $tocContent.html().trim().length > 0) {
+          NexT.utils.displaySidebar();
+        }
+      }
+    };
+  });
+</script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=0.5.0"></script>
+
+
+
+  
+
+
+
+  
+
+    <script type="text/javascript">
+      var disqus_shortname = 'wereadteam';
+      var disqus_identifier = '2016/07/20/MLeaksFinder2/';
+      var disqus_title = 'MLeaksFinder 新特性';
+      var disqus_url = 'http://weread.qq.com/2016/07/20/MLeaksFinder2/';
+
+      function run_disqus_script(disqus_script){
+        var dsq = document.createElement('script');
+        dsq.type = 'text/javascript';
+        dsq.async = true;
+        dsq.src = '//' + disqus_shortname + '.disqus.com/' + disqus_script;
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+      }
+
+      run_disqus_script('count.js');
+      
+        run_disqus_script('embed.js');
+      
+    </script>
+  
+
+
+
+  
+  
+
+  
+  
+
+
+</body>
+</html>

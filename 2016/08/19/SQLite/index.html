@@ -1,0 +1,812 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  <link href="/vendors/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css"/>
+
+
+
+
+  <link href="//fonts.googleapis.com/css?family=Lato:300,400,700,400italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+
+
+
+<link href="/vendors/font-awesome/css/font-awesome.min.css?v=4.4.0" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=0.5.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="微信读书,iOS" />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=0.5.0" />
+
+
+
+
+
+
+<meta name="description" content="背景最近微信 iOS 团队发表了一篇文章《微信iOS SQLite源码优化实践》，该文章介绍了微信 iOS 客户端对 SQLite 进行的源码层级的优化，以及其所取得的成果。优化点包括：
+
+多线程并发优化（Busy Retry 的优化）
+I/O 性能优化（保留 WAL 文件大小，mmap 优化）
+其他优化（禁用文件锁，禁用内存统计锁）
+
+其中，单是禁用内存统计锁这点优化，就取得了非常显著的效果，这">
+<meta property="og:type" content="article">
+<meta property="og:title" content="SQLite线程模式探讨">
+<meta property="og:url" content="http://weread.qq.com/2016/08/19/SQLite/index.html">
+<meta property="og:site_name" content="WeRead团队博客">
+<meta property="og:description" content="背景最近微信 iOS 团队发表了一篇文章《微信iOS SQLite源码优化实践》，该文章介绍了微信 iOS 客户端对 SQLite 进行的源码层级的优化，以及其所取得的成果。优化点包括：
+
+多线程并发优化（Busy Retry 的优化）
+I/O 性能优化（保留 WAL 文件大小，mmap 优化）
+其他优化（禁用文件锁，禁用内存统计锁）
+
+其中，单是禁用内存统计锁这点优化，就取得了非常显著的效果，这">
+<meta property="og:image" content="http://weread.qq.com/./img/wechat_stutter.png">
+<meta property="og:image" content="http://weread.qq.com/./img/memstatus_performance.png">
+<meta property="og:image" content="http://weread.qq.com/./img/concurrence.png">
+<meta property="og:updated_time" content="2016-08-20T08:46:45.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="SQLite线程模式探讨">
+<meta name="twitter:description" content="背景最近微信 iOS 团队发表了一篇文章《微信iOS SQLite源码优化实践》，该文章介绍了微信 iOS 客户端对 SQLite 进行的源码层级的优化，以及其所取得的成果。优化点包括：
+
+多线程并发优化（Busy Retry 的优化）
+I/O 性能优化（保留 WAL 文件大小，mmap 优化）
+其他优化（禁用文件锁，禁用内存统计锁）
+
+其中，单是禁用内存统计锁这点优化，就取得了非常显著的效果，这">
+
+
+
+<script type="text/javascript" id="hexo.configuration">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 0,
+      author: '博主'
+    }
+  };
+</script>
+
+  <title> SQLite线程模式探讨 | WeRead团队博客 </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">WeRead团队博客</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+  <p class="site-subtitle"></p>
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu ">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-home fa-fw"></i> <br />
+            
+            首頁
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-archive fa-fw"></i> <br />
+            
+            歸檔
+          </a>
+        </li>
+      
+
+      
+      
+      
+    </ul>
+  
+
+  
+</nav>
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                SQLite线程模式探讨
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">發表於</span>
+            <time itemprop="dateCreated" datetime="2016-08-19T11:50:55+08:00" content="2016-08-19">
+              2016-08-19
+            </time>
+          </span>
+
+          
+            <span class="post-category" >
+              &nbsp; | &nbsp;
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <!--span class="post-meta-item-text">分類於</span-->
+              
+                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                  <!--a href="/categories/zepo/" itemprop="url" rel="index"-->
+                    <span itemprop="name">zepo</span>
+                  <!--/a-->
+                </span>
+
+                
+                
+
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                &nbsp; | &nbsp;
+                <a href="/2016/08/19/SQLite/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2016/08/19/SQLite/" itemprop="commentsCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+
+          
+          
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h1 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h1><p>最近微信 iOS 团队发表了一篇文章<a href="http://mp.weixin.qq.com/s?__biz=MzAwNDY1ODY2OQ==&amp;mid=2649286361&amp;idx=1&amp;sn=78bbcda7f41a14291ad71289e4821f71&amp;scene=4#wechat_redirect" target="_blank" rel="external">《微信iOS SQLite源码优化实践》</a>，该文章介绍了微信 iOS 客户端对 SQLite 进行的源码层级的优化，以及其所取得的成果。优化点包括：</p>
+<ol>
+<li>多线程并发优化（Busy Retry 的优化）</li>
+<li>I/O 性能优化（保留 WAL 文件大小，mmap 优化）</li>
+<li>其他优化（禁用文件锁，禁用内存统计锁）</li>
+</ol>
+<p>其中，单是<strong>禁用内存统计锁</strong>这点优化，就取得了非常显著的效果，这里引用原文：</p>
+<blockquote>
+<p>该优化上线后，卡顿监控系统监测到</p>
+<ul>
+<li>DB写操作造成的卡顿下降超过80%</li>
+<li>DB读操作造成的卡顿下降超过85%</li>
+</ul>
+</blockquote>
+<a id="more"></a>
+<blockquote>
+<p><img src="/./img/wechat_stutter.png" alt=""></p>
+</blockquote>
+<p>看到这结果，首先是满怀惊喜，仅仅是禁用 SQLite 的内存统计这一点，就能使 DB 的卡顿下降超过80%，如果再加上其他优化，那么 SQLite 的性能将实现一次突破！但冷静下来之后，也很快产生怀疑，<strong>SQLite 这么成熟的开源数据库，怎么会为了一个内存统计牺牲这么大的性能，要知道，性能是任何一个数据库都极力追求的目标</strong>。</p>
+<p>所有的猜测都是没用的，实际测一下便知道孰是孰非。为了测试方便，使用自己的开源框架 GYDataCenter，每一行数据包括 NSInteger，double，BOOL，NSDate(double)，NSString 5列，测试机器为 iPhone 6s 64G，测试过程如下：</p>
+<ol>
+<li>打开 SQLite 内存统计，分别测试写入 10, 100, 1000，10000，100000 条数据所需时间；</li>
+<li>关闭 SQLite 内存统计，分别测试写入 10, 100, 1000，10000，100000 条数据所需时间；</li>
+<li>对比结果如下，横轴是数据量，纵轴是时间，单位秒；</li>
+</ol>
+<p><img src="/./img/memstatus_performance.png" alt=""></p>
+<p>从结果我们可以看出，<strong>打开或关闭 SQLite 的内存统计，性能基本没差别</strong>，仅有的一点点差别都是在误差范围内的。我们又对读操作进行了同样的测试，结果依然没有差别。</p>
+<p>问题出在于哪？究竟是哪个数据有问题？又或者是两个数据都没问题，只是我们打开的方式不对？于是，又重读了一遍微信的文章，发现该文章给出了这样的解释：</p>
+<blockquote>
+<p>多线程并发时，各线程很容易互相阻塞。<br>阻塞虽然也很短暂，但频繁地切换线程，却是个很影响性能的操作，尤其是单核设备。<br>因此，如果不需要内存统计的特性，可以通过sqlite3_config(SQLITE_CONFIG_MEMSTATUS, 0)进行关闭。</p>
+</blockquote>
+<p><strong>加锁和释放锁本身是有性能损耗，但这种损耗是很小的，基本上可以忽略，通常锁所带来的性能损耗正是在于等待其他线程释放锁的时间上</strong>。这正是两者的区别所在：</p>
+<ol>
+<li><strong>GYDataCenter 使用的是单线程单句柄的模式</strong>。对于同一个 db 的所有操作，都放到同一个队列同一个数据库句柄上，排队执行。并通过定时事务自动地把多个操作包在一起，批量地写入磁盘。</li>
+<li><strong>微信 iOS 客户端采用的是多线程多句柄的模式</strong>。对于每一个 db，会开多个数据库句柄。对于同一个数据库句柄，同一时间只能在一个队列运行。多个句柄间可以做到读与读，读与写的并发。</li>
+</ol>
+<p>GYDataCenter 在关闭 SQLite 的内存统计后，性能没有得到提升，正是因为 GYDataCenter 使用的是单线程模式，不会有多线程间等待锁的问题。GYDataCenter 从设计上根本地避免了多线程间等待锁的问题。而反观微信的文章，大部分的优化都是在解决多线程间等待锁所引起的性能损耗问题，解决 Busy Retry 使<code>等待线程锁的造成的卡顿下降超过90%</code>，解决内存统计的锁使<code>卡顿下降超过 80%</code>。这似乎也说明了<strong>多线程模式带来了很严重的竞争锁的问题</strong>。并且，Busy Retry 的线程锁，内存统计的锁只是其中两种锁，可能还有其他各种各样的锁急需优化。</p>
+<p>然而，单从这点就说单线程单句柄模式比多线程多句柄模式好是不正确的，多线程多句柄模式有它自己的优点，其中最明显的一点正是这种模式支持读与读，读与写的并发（WAL 模式下）。那么，我们就来具体分析一下，在移动客户端这个场景下，哪种模式可能更适用。</p>
+<h1 id="多线程多句柄-vs-单线程单句柄"><a href="#多线程多句柄-vs-单线程单句柄" class="headerlink" title="多线程多句柄 vs 单线程单句柄"></a>多线程多句柄 vs 单线程单句柄</h1><h2 id="并发的需求"><a href="#并发的需求" class="headerlink" title="并发的需求"></a>并发的需求</h2><p>要回答这个问题，首先我们要问，<strong>在移动客户端下，数据库的读与读，读与写的并发的需求有多强</strong>？</p>
+<p>还是拿数据说话。在 iPhone 6s 上对微信读书 app 的主要场景进行了数据库并发性的统计。由于不同 app 不尽相同，不同机器性能也不一样，因此下面的统计数据只能做参考意义。</p>
+<p><img src="/./img/concurrence.png" alt=""></p>
+<p>在上面的结果中，对于<strong>n读0写</strong>跟<strong>n读1写</strong>的情况，多线程模式能起到优化作用。这两种情况分别占了 2% 跟 7%。我们进一步分析发现，出现这两种情况的场景，大多数是在网络请求回来时处理数据。</p>
+<p><strong>分析：移动客户端 app 的运行，都是用户操作驱动的。用户在界面上进行一系列操作，从主线程发起请求，app 响应请求，处理数据，显示结果，一般来说这一系列动作是一条线串起来执行的，没有并发的需求。移动客户端出现的最多的并发情况，在于发起网络请求，和网络请求回来后的数据处理。然而，在网络请求回来的情况下，数据库执行最多的操作是存储返回的数据。对于这种情况，我们都知道，通过事务把多个写操作包在一起能极大地提升性能。</strong>下面，我们分析一下两种方案在这种情况下的表现：</p>
+<ol>
+<li>多线程多句柄：如果把写操作放在一个事务中，在事务结束前，其他线程其他句柄的操作都会被卡住，返回 Busy Retry，造成空等待。</li>
+<li>单线程单句柄：自动地把多个写操作包在一个事务中，由于所有操作都放到一个队列，其他的读写操作可以穿插其中，不会被卡住。</li>
+</ol>
+<p>当然，如果你对返回的数据的存储有原子性要求，即要求在存储期间不能有其他任何的读写操作，那么其他读写操作是一定会被卡住的，两种方案都是无法解决的。</p>
+<h2 id="Cache-的管理"><a href="#Cache-的管理" class="headerlink" title="Cache 的管理"></a>Cache 的管理</h2><p>我们都知道，cache 能很好地提升性能。如果采用单线程的方案，cache 的实现就比较简单了。由于所有操作都是在一个队列上排队操作，cache 的维护与查询也在一个队列上排队进行即可，cache 与 db 数据的一致性可以得到保证。</p>
+<p>而如果在多线程多句柄方案上做 cache，可能会有以下两个难点：</p>
+<ol>
+<li>保证 cache 与 db 数据的一到性；</li>
+<li>由于 cache 也是在多线程访问的，因此也需要加锁，也有可能引进竞争锁的性能问题；</li>
+</ol>
+<h1 id="结语"><a href="#结语" class="headerlink" title="结语"></a>结语</h1><p>通过上面的分析，我个人更偏向于使用单线程单句柄的模式。然而，世事无绝对，还是要具体情况具体分析。</p>
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2016/07/26/AndroidPatch/" rel="next" title="Android Patch 方案与持续交付">
+                <i class="fa fa-chevron-left"></i> Android Patch 方案与持续交付
+              </a>
+            
+          </div>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目錄
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            本站概覽
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel ">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/default_avatar.png"
+               alt="" />
+          <p class="site-author-name" itemprop="name"></p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">11</span>
+              <span class="site-state-item-name">文章</span>
+            </a>
+          </div>
+          
+          
+            <div class="site-state-item site-state-categories">
+              
+                <span class="site-state-item-count">6</span>
+                <span class="site-state-item-name">分類</span>
+              
+            </div>
+          
+
+          
+
+        </nav>
+
+        
+        <div class="links">
+          <h4>开源项目</h4>
+          <div class="links-of-author motion-element">
+            
+              
+                <div class="links-of-author-item">
+                  <a href="https://github.com/bang590/JSPatch" target="_blank">
+                    
+                      <i class="fa fa-github"></i> JSPatch
+                    
+                  </a>
+                </div>
+              
+                <div class="links-of-author-item">
+                  <a href="https://github.com/Zepo/MLeaksFinder" target="_blank">
+                    
+                      <i class="fa fa-github"></i> MLeaksFinder
+                    
+                  </a>
+                </div>
+              
+                <div class="links-of-author-item">
+                  <a href="https://github.com/hypoyao/GYHttpMock" target="_blank">
+                    
+                      <i class="fa fa-github"></i> GYHttpMock
+                    
+                  </a>
+                </div>
+              
+                <div class="links-of-author-item">
+                  <a href="https://github.com/liuslevis/GYBootingProtection" target="_blank">
+                    
+                      <i class="fa fa-github"></i> GYBootingProtection
+                    
+                  </a>
+                </div>
+              
+            
+          </div>
+        </div>
+
+        
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+      </section>
+
+      
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc-indicator-top post-toc-indicator">
+            <i class="fa fa-angle-double-up"></i>
+          </div>
+          <div class="post-toc">
+            
+              
+            
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#背景"><span class="nav-number">1.</span> <span class="nav-text">背景</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#多线程多句柄-vs-单线程单句柄"><span class="nav-number">2.</span> <span class="nav-text">多线程多句柄 vs 单线程单句柄</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#并发的需求"><span class="nav-number">2.1.</span> <span class="nav-text">并发的需求</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Cache-的管理"><span class="nav-number">2.2.</span> <span class="nav-text">Cache 的管理</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#结语"><span class="nav-number">3.</span> <span class="nav-text">结语</span></a></li></ol></div>
+            
+          </div>
+          <div class="post-toc-indicator-bottom post-toc-indicator">
+            <i class="fa fa-angle-double-down"></i>
+          </div>
+        </section>
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2016</span>
+  <span class="with-love">
+    <i class="icon-next-heart fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder"></span>
+</div>
+
+<div class="powered-by">
+  由 <a class="theme-link" href="http://hexo.io">Hexo</a> 強力驅動
+</div>
+
+<div class="theme-info">
+  主題 -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+<div class="footer-links">
+  <a href="http://weread.qq.com/">
+    微信读书
+  </a>
+</div>
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-1895639-12', 'auto');
+  ga('send', 'pageview');
+
+</script>
+
+
+
+      </div>
+    </footer>
+
+    <div class="back-to-top"></div>
+  </div>
+
+  
+
+
+  
+
+
+
+  <script type="text/javascript" src="/vendors/jquery/index.js?v=2.1.3"></script>
+
+  <script type="text/javascript" src="/vendors/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  <script type="text/javascript" src="/vendors/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  <script type="text/javascript" src="/vendors/velocity/velocity.min.js"></script>
+
+  <script type="text/javascript" src="/vendors/velocity/velocity.ui.min.js"></script>
+
+  <script type="text/javascript" src="/vendors/fancybox/source/jquery.fancybox.pack.js"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=0.5.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=0.5.0"></script>
+
+
+
+  
+  
+
+  
+  
+<script type="text/javascript" src="/js/src/scrollspy.js?v=0.5.0"></script>
+
+<script type="text/javascript" id="sidebar.toc.highlight">
+  $(document).ready(function () {
+    var tocSelector = '.post-toc';
+    var $tocSelector = $(tocSelector);
+    var activeCurrentSelector = '.active-current';
+
+    $tocSelector
+      .on('activate.bs.scrollspy', function () {
+        var $currentActiveElement = $(tocSelector + ' .active').last();
+
+        removeCurrentActiveClass();
+        $currentActiveElement.addClass('active-current');
+
+        $tocSelector[0].scrollTop = $currentActiveElement.position().top;
+      })
+      .on('clear.bs.scrollspy', function () {
+        removeCurrentActiveClass();
+      });
+
+    function removeCurrentActiveClass () {
+      $(tocSelector + ' ' + activeCurrentSelector)
+        .removeClass(activeCurrentSelector.substring(1));
+    }
+
+    function processTOC () {
+      getTOCMaxHeight();
+      toggleTOCOverflowIndicators();
+    }
+
+    function getTOCMaxHeight () {
+      var height = $('.sidebar').height() -
+                   $tocSelector.position().top -
+                   $('.post-toc-indicator-bottom').height();
+
+      $tocSelector.css('height', height);
+
+      return height;
+    }
+
+    function toggleTOCOverflowIndicators () {
+      tocOverflowIndicator(
+        '.post-toc-indicator-top',
+        $tocSelector.scrollTop() > 0 ? 'show' : 'hide'
+      );
+
+      tocOverflowIndicator(
+        '.post-toc-indicator-bottom',
+        $tocSelector.scrollTop() >= $tocSelector.find('ol').height() - $tocSelector.height() ? 'hide' : 'show'
+      )
+    }
+
+    $(document).on('sidebar.motion.complete', function () {
+      processTOC();
+    });
+
+    $('body').scrollspy({ target: tocSelector });
+    $(window).on('resize', function () {
+      if ( $('.sidebar').hasClass('sidebar-active') ) {
+        processTOC();
+      }
+    });
+
+    onScroll($tocSelector);
+
+    function onScroll (element) {
+      element.on('mousewheel DOMMouseScroll', function (event) {
+          var oe = event.originalEvent;
+          var delta = oe.wheelDelta || -oe.detail;
+
+          this.scrollTop += ( delta < 0 ? 1 : -1 ) * 30;
+          event.preventDefault();
+
+          toggleTOCOverflowIndicators();
+      });
+    }
+
+    function tocOverflowIndicator (indicator, action) {
+      var $indicator = $(indicator);
+      var opacity = action === 'show' ? 1 : 0;
+      $indicator.velocity ?
+        $indicator.velocity('stop').velocity({
+          opacity: opacity
+        }, { duration: 100 }) :
+        $indicator.stop().animate({
+          opacity: opacity
+        }, 100);
+    }
+
+  });
+</script>
+
+<script type="text/javascript" id="sidebar.nav">
+  $(document).ready(function () {
+    var html = $('html');
+    var TAB_ANIMATE_DURATION = 200;
+    var hasVelocity = $.isFunction(html.velocity);
+
+    $('.sidebar-nav li').on('click', function () {
+      var item = $(this);
+      var activeTabClassName = 'sidebar-nav-active';
+      var activePanelClassName = 'sidebar-panel-active';
+      if (item.hasClass(activeTabClassName)) {
+        return;
+      }
+
+      var currentTarget = $('.' + activePanelClassName);
+      var target = $('.' + item.data('target'));
+
+      hasVelocity ?
+        currentTarget.velocity('transition.slideUpOut', TAB_ANIMATE_DURATION, function () {
+          target
+            .velocity('stop')
+            .velocity('transition.slideDownIn', TAB_ANIMATE_DURATION)
+            .addClass(activePanelClassName);
+        }) :
+        currentTarget.animate({ opacity: 0 }, TAB_ANIMATE_DURATION, function () {
+          currentTarget.hide();
+          target
+            .stop()
+            .css({'opacity': 0, 'display': 'block'})
+            .animate({ opacity: 1 }, TAB_ANIMATE_DURATION, function () {
+              currentTarget.removeClass(activePanelClassName);
+              target.addClass(activePanelClassName);
+            });
+        });
+
+      item.siblings().removeClass(activeTabClassName);
+      item.addClass(activeTabClassName);
+    });
+
+    $('.post-toc a').on('click', function (e) {
+      e.preventDefault();
+      var targetSelector = NexT.utils.escapeSelector(this.getAttribute('href'));
+      var offset = $(targetSelector).offset().top;
+      hasVelocity ?
+        html.velocity('stop').velocity('scroll', {
+          offset: offset  + 'px',
+          mobileHA: false
+        }) :
+        $('html, body').stop().animate({
+          scrollTop: offset
+        }, 500);
+    });
+
+    // Expand sidebar on post detail page by default, when post has a toc.
+    NexT.motion.middleWares.sidebar = function () {
+      var $tocContent = $('.post-toc-content');
+
+      if (CONFIG.sidebar === 'post') {
+        if ($tocContent.length > 0 && $tocContent.html().trim().length > 0) {
+          NexT.utils.displaySidebar();
+        }
+      }
+    };
+  });
+</script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=0.5.0"></script>
+
+
+
+  
+
+
+
+  
+
+    <script type="text/javascript">
+      var disqus_shortname = 'wereadteam';
+      var disqus_identifier = '2016/08/19/SQLite/';
+      var disqus_title = 'SQLite线程模式探讨';
+      var disqus_url = 'http://weread.qq.com/2016/08/19/SQLite/';
+
+      function run_disqus_script(disqus_script){
+        var dsq = document.createElement('script');
+        dsq.type = 'text/javascript';
+        dsq.async = true;
+        dsq.src = '//' + disqus_shortname + '.disqus.com/' + disqus_script;
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+      }
+
+      run_disqus_script('count.js');
+      
+        run_disqus_script('embed.js');
+      
+    </script>
+  
+
+
+
+  
+  
+
+  
+  
+
+
+</body>
+</html>
