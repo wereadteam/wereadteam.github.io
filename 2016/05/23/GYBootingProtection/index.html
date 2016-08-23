@@ -77,7 +77,7 @@ iOS App 有时可能遇到启动必 crash 的绝境：每次打开 App 都闪退
 <meta property="og:image" content="http://weread.qq.com/img/GYBootingProtection.png">
 <meta property="og:image" content="http://weread.qq.com/img/GYBootingProtectionTips.png">
 <meta property="og:image" content="http://weread.qq.com/img/GYBootingProtectionAfter.png">
-<meta property="og:updated_time" content="2016-08-20T11:23:35.000Z">
+<meta property="og:updated_time" content="2016-08-23T03:50:31.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="iOS 启动连续闪退保护方案">
 <meta name="twitter:description" content="引言
@@ -357,12 +357,12 @@ iOS App 有时可能遇到启动必 crash 的绝境：每次打开 App 都闪退
 <li><p>下载 <a href="https://github.com/liuslevis/GYBootingProtection" target="_blank" rel="external">(github)</a> 源码 ，将 <code>src</code> 目录下所有文件拖拽到你的 Xcode 项目</p>
 </li>
 <li><p>在 <code>AppDelegate+GYBootingProtection.m</code> 的 <code>onBeforeBootingProtection</code> 方法中添加检测前需要执行的代码，比如设置crash上报：</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">- (void)onBeforeBootingProtection &#123;&#10;  [GYBootingProtection setLogger:^(NSString *msg) &#123;&#10;      // setup logger&#10;      NSLog(@&#34;%@&#34;, msg);&#10;  &#125;];&#10;  &#10;  [GYBootingProtection setReportBlock:^(NSInteger crashCounts) &#123;&#10;      // setup crash report&#10;  &#125;];&#10;&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">- (<span class="keyword">void</span>)onBeforeBootingProtection &#123;</span><br><span class="line">  [GYBootingProtection setLogger:^(<span class="built_in">NSString</span> *msg) &#123;</span><br><span class="line">      <span class="comment">// setup logger</span></span><br><span class="line">      <span class="built_in">NSLog</span>(<span class="string">@"%@"</span>, msg);</span><br><span class="line">  &#125;];</span><br><span class="line">  </span><br><span class="line">  [GYBootingProtection setReportBlock:^(<span class="built_in">NSInteger</span> crashCounts) &#123;</span><br><span class="line">      <span class="comment">// setup crash report</span></span><br><span class="line">  &#125;];</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 </li>
 <li><p>在 <code>onBootingProtection</code> 方法中添加修复逻辑，比如删除文件：</p>
- <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">- (void)onBootingProtection &#123;&#10;&#9;// &#26816;&#26597; JSPatch &#26356;&#26032;&#10;&#9;...&#10;&#9;// &#21024;&#38500; Documents Library Caches &#30446;&#24405;&#19979;&#25152;&#26377;&#25991;&#20214;&#10;&#9;[GYBootingProtection deleteAllFilesUnderDocumentsLibraryCaches];&#10;   &#9;...&#10;&#125;</span><br></pre></td></tr></table></figure>
+ <figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">- (<span class="keyword">void</span>)onBootingProtection &#123;</span><br><span class="line">	<span class="comment">// 检查 JSPatch 更新</span></span><br><span class="line">	...</span><br><span class="line">	<span class="comment">// 删除 Documents Library Caches 目录下所有文件</span></span><br><span class="line">	[GYBootingProtection deleteAllFilesUnderDocumentsLibraryCaches];</span><br><span class="line">   	...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 <p> 如需执行异步的修复逻辑，在 <code>onBootingProtectionWithCompletion:</code> 方法添加修复逻辑，并在完成修复后调用 completion ：</p>
- <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">- (void)onBootingProtectionWithCompletion:(BoolCompletionBlock)completion &#123;&#10;  &#9;&#9;[self onBootingProtection];&#10;   &#9;// &#24322;&#27493;&#20462;&#22797;&#10;  &#9;&#9;[self asyncRepairWithCompletion:^(void) &#123;&#10;    &#9;// &#27491;&#24120;&#21551;&#21160;&#27969;&#31243;&#10;  &#9;&#9;&#9;if (completion) completion();&#10;  &#9;&#9;&#125;];&#10;&#125;</span><br></pre></td></tr></table></figure>
+ <figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">- (<span class="keyword">void</span>)onBootingProtectionWithCompletion:(BoolCompletionBlock)completion &#123;</span><br><span class="line">  		[<span class="keyword">self</span> onBootingProtection];</span><br><span class="line">   	<span class="comment">// 异步修复</span></span><br><span class="line">  		[<span class="keyword">self</span> asyncRepairWithCompletion:^(<span class="keyword">void</span>) &#123;</span><br><span class="line">    	<span class="comment">// 正常启动流程</span></span><br><span class="line">  			<span class="keyword">if</span> (completion) completion();</span><br><span class="line">  		&#125;];</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 </li>
 </ol>
 <h3 id="测试"><a href="#测试" class="headerlink" title="测试"></a>测试</h3><ol>
@@ -473,7 +473,7 @@ iOS App 有时可能遇到启动必 crash 的绝境：每次打开 App 都闪退
         <nav class="site-state motion-element">
           <div class="site-state-item site-state-posts">
             <a href="/archives">
-              <span class="site-state-item-count">11</span>
+              <span class="site-state-item-count">12</span>
               <span class="site-state-item-name">日志</span>
             </a>
           </div>
