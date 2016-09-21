@@ -211,6 +211,125 @@
             
               
                 
+                <a class="post-title-link" href="/2016/09/21/RichEditor/" itemprop="url">
+                  基于 UIWebView 的富文本编辑器实践
+                </a>
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">发表于</span>
+            <time itemprop="dateCreated" datetime="2016-09-21T20:01:36+08:00" content="2016-09-21">
+              2016-09-21
+            </time>
+          </span>
+
+          
+            <span class="post-category" >
+              &nbsp; | &nbsp;
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <!--span class="post-meta-item-text">分类于</span-->
+              
+                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                  <!--a href="/categories/zach/" itemprop="url" rel="index"-->
+                    <span itemprop="name">zach</span>
+                  <!--/a-->
+                </span>
+
+                
+                
+
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                &nbsp; | &nbsp;
+                <a href="/2016/09/21/RichEditor/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count ds-thread-count" data-thread-key="2016/09/21/RichEditor/" itemprop="commentsCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+
+          
+          
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          <h2 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h2><p>最近我们微信读书将写想法换成了基于 webview 的富文本编辑器，遇到了不少问题，这里我将简单的介绍一下我们在开发过程中踩到的坑。</p>
+<p>实现富文本编辑器有两个基本思路：</p>
+<ol>
+<li>基于 Native 实现：比如 CoreText 或者 TextKit</li>
+<li>基于 UIWebView 实现</li>
+</ol>
+<p>第一种方案，你需要自己去实现很多在 webview 已经很成熟的效果，比如链接，字体加粗，标题，引用样式，列表样式等等，这些的工作量都比较可观，而且还有 iOS / Android 两端的对齐问题。还有一个问题，这个可能是我们项目相关的问题，我们在原来还没有很多富文本要求的情况下，在 textView 上做了一些我们对链接的处理工作，仅仅这一个方面，当时就觉得不是很方便。</p>
+<p>第二种方案，你可以借助 webview 省掉很多在第一种方案里面提到的工作，同时webview相对而言，开源的可供参考的项目也更多一点，不过 webview 也会存在光标的控制，css 的冲突处理以及兼容性的问题，不过在最终选择方案的时候，我们几经权衡，最终选择了 webview 的方案。</p>
+          <div class="post-more-link text-center">
+            <a class="btn" href="/2016/09/21/RichEditor/#more" rel="contents">
+              阅读全文 &raquo;
+            </a>
+          </div>
+        
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                
                 <a class="post-title-link" href="/2016/08/23/Typesetter/" itemprop="url">
                   微信读书排版引擎自动化测试方案
                 </a>
@@ -1258,121 +1377,6 @@
 
 
     
-      
-
-  
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-            
-            
-              
-                
-                <a class="post-title-link" href="/2016/03/19/iOS-Component/" itemprop="url">
-                  iOS 组件化方案探索
-                </a>
-              
-            
-          </h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            <span class="post-meta-item-icon">
-              <i class="fa fa-calendar-o"></i>
-            </span>
-            <span class="post-meta-item-text">发表于</span>
-            <time itemprop="dateCreated" datetime="2016-03-19T10:03:29+08:00" content="2016-03-19">
-              2016-03-19
-            </time>
-          </span>
-
-          
-            <span class="post-category" >
-              &nbsp; | &nbsp;
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <!--span class="post-meta-item-text">分类于</span-->
-              
-                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
-                  <!--a href="/categories/bang/" itemprop="url" rel="index"-->
-                    <span itemprop="name">bang</span>
-                  <!--/a-->
-                </span>
-
-                
-                
-
-              
-            </span>
-          
-
-          
-            
-              <span class="post-comments-count">
-                &nbsp; | &nbsp;
-                <a href="/2016/03/19/iOS-Component/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count ds-thread-count" data-thread-key="2016/03/19/iOS-Component/" itemprop="commentsCount"></span>
-                </a>
-              </span>
-            
-          
-
-          
-
-          
-          
-        </div>
-      </header>
-    
-
-
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          <p>看了 Limboy(<a href="http://limboy.me/ios/2016/03/10/mgj-components.html">文章1</a> <a href="http://limboy.me/ios/2016/03/14/mgj-components-continued.html">文章2</a>) 和 Casa (<a href="http://casatwy.com/iOS-Modulization.html">文章</a>) 对 iOS 组件化方案的讨论，写篇文章梳理下思路。</p>
-<p>首先我觉得”组件”在这里不太合适，因为按我理解组件是指比较小的功能块，这些组件不需要多少组件间通信，没什么依赖，也就不需要做什么其他处理，面向对象就能搞定。而这里提到的是较大粒度的业务功能，我们习惯称为”模块”。为了方便表述，下面模块和组件代表同一个意思，都是指较大粒度的业务模块。</p>
-<p>一个 APP 有多个模块，模块之间会通信，互相调用，例如微信读书有 书籍详情  想法列表  阅读器  发现卡片  等等模块，这些模块会互相调用，例如 书籍详情要调起阅读器和想法列表，阅读器要调起想法列表和书籍详情，等等，一般我们是怎样调用呢，以阅读器为例，会这样写：</p>
-<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="preprocessor">#import <span class="title">"WRBookDetailViewController.h"</span></span></span><br><span class="line"><span class="preprocessor">#import <span class="title">"WRReviewViewController.h"</span></span></span><br><span class="line"><span class="class"><span class="keyword">@implementation</span> <span class="title">Mediator</span></span></span><br><span class="line">- (<span class="keyword">void</span>)gotoDetail &#123;</span><br><span class="line">    WRBookDetailViewController *detailVC = [[WRBookDetailViewController alloc] initWithBookId:<span class="keyword">self</span><span class="variable">.bookId</span>];</span><br><span class="line">    [<span class="keyword">self</span><span class="variable">.navigationController</span><span class="variable">.pushViewController</span>:detailVC animated:<span class="literal">YES</span>];</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">- (<span class="keyword">void</span>)gotoReview &#123;</span><br><span class="line">    WRReviewViewController *reviewVC = [[WRReviewViewController alloc] initWithBookId:<span class="keyword">self</span><span class="variable">.bookId</span> reviewType:<span class="number">1</span>];</span><br><span class="line">    [<span class="keyword">self</span><span class="variable">.navigationController</span><span class="variable">.pushViewController</span>:reviewVC animated:<span class="literal">YES</span>];</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">@end</span></span><br></pre></td></tr></table></figure>
-          <div class="post-more-link text-center">
-            <a class="btn" href="/2016/03/19/iOS-Component/#more" rel="contents">
-              阅读全文 &raquo;
-            </a>
-          </div>
-        
-      
-    </div>
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-
-
-    
 
   </section>
 
@@ -1419,7 +1423,7 @@
         <nav class="site-state motion-element">
           <div class="site-state-item site-state-posts">
             <a href="/archives">
-              <span class="site-state-item-count">12</span>
+              <span class="site-state-item-count">13</span>
               <span class="site-state-item-name">日志</span>
             </a>
           </div>
