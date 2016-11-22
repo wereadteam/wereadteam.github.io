@@ -57,34 +57,37 @@
 
 
 
-<meta name="description" content="背景最近我们微信读书将写想法换成了基于 webview 的富文本编辑器，遇到了不少问题，这里我将简单的介绍一下我们在开发过程中踩到的坑。
+<meta name="description" content="背景
+最近我们微信读书将写想法换成了基于 webview 的富文本编辑器，遇到了不少问题，这里我将简单的介绍一下我们在开发过程中踩到的坑。
 实现富文本编辑器有两个基本思路：
 
 基于 Native 实现：比如 CoreText 或者 TextKit
 基于 UIWebView 实现
 
-第一种方案，你需要自己去实现很多在 webview 已经很成熟的效果，比如链接，字体加粗，标题，引用样式，列表样式等等，">
+第一种方案，你需要自己去实现很多在 webview 已经很成熟的效果，比如链接，字体加粗，标题，引用样式，列表样式等等">
 <meta property="og:type" content="article">
 <meta property="og:title" content="基于 UIWebView 的富文本编辑器实践">
 <meta property="og:url" content="http://weread.qq.com/2016/09/21/RichEditor/index.html">
 <meta property="og:site_name" content="WeRead团队博客">
-<meta property="og:description" content="背景最近我们微信读书将写想法换成了基于 webview 的富文本编辑器，遇到了不少问题，这里我将简单的介绍一下我们在开发过程中踩到的坑。
+<meta property="og:description" content="背景
+最近我们微信读书将写想法换成了基于 webview 的富文本编辑器，遇到了不少问题，这里我将简单的介绍一下我们在开发过程中踩到的坑。
 实现富文本编辑器有两个基本思路：
 
 基于 Native 实现：比如 CoreText 或者 TextKit
 基于 UIWebView 实现
 
-第一种方案，你需要自己去实现很多在 webview 已经很成熟的效果，比如链接，字体加粗，标题，引用样式，列表样式等等，">
+第一种方案，你需要自己去实现很多在 webview 已经很成熟的效果，比如链接，字体加粗，标题，引用样式，列表样式等等">
 <meta property="og:updated_time" content="2016-09-21T12:24:57.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="基于 UIWebView 的富文本编辑器实践">
-<meta name="twitter:description" content="背景最近我们微信读书将写想法换成了基于 webview 的富文本编辑器，遇到了不少问题，这里我将简单的介绍一下我们在开发过程中踩到的坑。
+<meta name="twitter:description" content="背景
+最近我们微信读书将写想法换成了基于 webview 的富文本编辑器，遇到了不少问题，这里我将简单的介绍一下我们在开发过程中踩到的坑。
 实现富文本编辑器有两个基本思路：
 
 基于 Native 实现：比如 CoreText 或者 TextKit
 基于 UIWebView 实现
 
-第一种方案，你需要自己去实现很多在 webview 已经很成熟的效果，比如链接，字体加粗，标题，引用样式，列表样式等等，">
+第一种方案，你需要自己去实现很多在 webview 已经很成熟的效果，比如链接，字体加粗，标题，引用样式，列表样式等等">
 
 
 
@@ -276,7 +279,8 @@
       
 
       
-        <h2 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h2><p>最近我们微信读书将写想法换成了基于 webview 的富文本编辑器，遇到了不少问题，这里我将简单的介绍一下我们在开发过程中踩到的坑。</p>
+        <h2>背景</h2>
+<p>最近我们微信读书将写想法换成了基于 webview 的富文本编辑器，遇到了不少问题，这里我将简单的介绍一下我们在开发过程中踩到的坑。</p>
 <p>实现富文本编辑器有两个基本思路：</p>
 <ol>
 <li>基于 Native 实现：比如 CoreText 或者 TextKit</li>
@@ -284,8 +288,9 @@
 </ol>
 <p>第一种方案，你需要自己去实现很多在 webview 已经很成熟的效果，比如链接，字体加粗，标题，引用样式，列表样式等等，这些的工作量都比较可观，而且还有 iOS / Android 两端的对齐问题。还有一个问题，这个可能是我们项目相关的问题，我们在原来还没有很多富文本要求的情况下，在 textView 上做了一些我们对链接的处理工作，仅仅这一个方面，当时就觉得不是很方便。</p>
 <p>第二种方案，你可以借助 webview 省掉很多在第一种方案里面提到的工作，同时webview相对而言，开源的可供参考的项目也更多一点，不过 webview 也会存在光标的控制，css 的冲突处理以及兼容性的问题，不过在最终选择方案的时候，我们几经权衡，最终选择了 webview 的方案。</p>
-<a id="more"></a>
-<h2 id="基于-webview-的富文本编辑器的光标及样式问题"><a href="#基于-webview-的富文本编辑器的光标及样式问题" class="headerlink" title="基于 webview 的富文本编辑器的光标及样式问题"></a>基于 webview 的富文本编辑器的光标及样式问题</h2><p>用 UIWebView 实现富文本编辑器，一个大麻烦在于光标的处理，另一个大麻烦就是 css 样式的兼容，具体体现为如下几个方面：</p>
+<p>&lt;!--more--&gt;</p>
+<h2>基于 webview 的富文本编辑器的光标及样式问题</h2>
+<p>用 UIWebView 实现富文本编辑器，一个大麻烦在于光标的处理，另一个大麻烦就是 css 样式的兼容，具体体现为如下几个方面：</p>
 <ol>
 <li>如何保持光标在可见区域。</li>
 <li>插入表情的时候 UIWebView 会失焦问题。</li>
@@ -293,31 +298,37 @@
 <li>样式的兼容性。</li>
 <li>at以及话题的链接处理。</li>
 </ol>
-<h3 id="1-如何保持光标在可见区域"><a href="#1-如何保持光标在可见区域" class="headerlink" title="1.如何保持光标在可见区域"></a>1.如何保持光标在可见区域</h3><p>这里有很多情况，如我们在当前可见区域的最后一行的时候，再进行换行时，光标会跑到可见区域的下面，webview不会把光标所在位置自动滚动到可见区域，需要手动触发 webview 的滚动机制.</p>
+<h3>1.如何保持光标在可见区域</h3>
+<p>这里有很多情况，如我们在当前可见区域的最后一行的时候，再进行换行时，光标会跑到可见区域的下面，webview不会把光标所在位置自动滚动到可见区域，需要手动触发 webview 的滚动机制.</p>
 <p>解决这个问题有两个思路，一种思路就是 hack native 的滚动逻辑，对滚动进行修正处理，这样做，能使得webview滚动表现的像native一样，但是需要hack的地方会比较多，实现起来可能会踩吭。另外一种思路就是直接在js里面操作scrollview，这样相对比较简单。我们使用的是后者的做法，通过监听光标位置的变化，来进行修正，代码如下：</p>
-<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">document</span>.addEventListener(<span class="string">"selectionchange"</span>, <span class="function"><span class="keyword">function</span>(<span class="params">e</span>) </span>&#123;</span><br><span class="line">  RE.calculateEditorHeightWithCaretPosition();<span class="comment">//矫正位置</span></span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure>
+<p><figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">document</span>.addEventListener(<span class="string">"selectionchange"</span>, <span class="function"><span class="keyword">function</span>(<span class="params">e</span>) </span>&#123;</span><br><span class="line">  RE.calculateEditorHeightWithCaretPosition();<span class="comment">//矫正位置</span></span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure></p>
 <p>这里矫正的具体逻辑是，每次光标位置发生变化时首先计算当前光标的位置，然后判断当前光标是否在可见区域范围内，如果不在，那么执行 <code>window.scrollTo</code> 滚动到响应区域。这里有个小点需要注意，就是在判断光标位置的时候，顶部以及底部的判断有稍微的区别，如果判断光标是在可见区域上面，需要判断光标的顶部是否在可见区域范围内，如果断光标是在可见区域下面，需要判断光标的底部是否在可见区域范围内。</p>
-<p> 这里还有一个问题，在最后一行，换行到新的一行进行输入的时候，如果是汉字输入，会产生联想输入条，在还没有确定输入内容的时候，UIWebView是不知道你需要的高度的，这个时候，由于触发了selectionchange，会导致输入时候，整个界面不断的抖动，因此在这里使用了一个奇技淫巧的方案。我们监听input的输入，并在在webview的最后面，强制插入一个空白的div，使得输入始终是在已有的区域范围内的。</p>
+<p>这里还有一个问题，在最后一行，换行到新的一行进行输入的时候，如果是汉字输入，会产生联想输入条，在还没有确定输入内容的时候，UIWebView是不知道你需要的高度的，这个时候，由于触发了selectionchange，会导致输入时候，整个界面不断的抖动，因此在这里使用了一个奇技淫巧的方案。我们监听input的输入，并在在webview的最后面，强制插入一个空白的div，使得输入始终是在已有的区域范围内的。</p>
 <p>另外切记不要在js,以及native两端都由scroll的操作，这样会导致滚动的逻辑很混乱。</p>
-<h3 id="2-插入表情，光标的变化"><a href="#2-插入表情，光标的变化" class="headerlink" title="2.插入表情，光标的变化"></a>2.插入表情，光标的变化</h3><p>在我们的场景中，插入表情会弹出一个表情面板（这应该也是主流的做法），这个表情面板会覆盖键盘，这样会导致UIWebView失焦。这就意味着，我们在插入表情的时候，不能直接使用Inserthtml命令插入，因为在失焦状态下这个命令会失效，因此在这里需要手动找到正在操作的node，手动执行Insertnode的操作，并且要记录光标的变化位置，以便退出面板退出后，重新foucus找到正确的光标位置。简单的伪代码如下代码</p>
-<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 这时候光标直接parent是editor，需要判断光标所在的node的nodeIndex，然后将imgNode 插入到parent[nodeIndex]之前</span></span><br><span class="line"><span class="keyword">if</span>(currentOffset == currentNode.childNodes.length)&#123;</span><br><span class="line">    <span class="comment">// 光标在editor最后或者editor内容为空，直接append</span></span><br><span class="line">    currentNode.appendChild(imgNode);</span><br><span class="line">&#125;<span class="keyword">else</span>&#123;</span><br><span class="line">    currentNode.insertBefore(imgNode, currentNode.childNodes[currentOffset]);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3>2.插入表情，光标的变化</h3>
+<p>在我们的场景中，插入表情会弹出一个表情面板（这应该也是主流的做法），这个表情面板会覆盖键盘，这样会导致UIWebView失焦。这就意味着，我们在插入表情的时候，不能直接使用Inserthtml命令插入，因为在失焦状态下这个命令会失效，因此在这里需要手动找到正在操作的node，手动执行Insertnode的操作，并且要记录光标的变化位置，以便退出面板退出后，重新foucus找到正确的光标位置。简单的伪代码如下代码</p>
+<p><figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 这时候光标直接parent是editor，需要判断光标所在的node的nodeIndex，然后将imgNode 插入到parent[nodeIndex]之前</span></span><br><span class="line"><span class="keyword">if</span>(currentOffset == currentNode.childNodes.length)&#123;</span><br><span class="line">    <span class="comment">// 光标在editor最后或者editor内容为空，直接append</span></span><br><span class="line">    currentNode.appendChild(imgNode);</span><br><span class="line">&#125;<span class="keyword">else</span>&#123;</span><br><span class="line">    currentNode.insertBefore(imgNode, currentNode.childNodes[currentOffset]);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
 <p>然后更新一下当前selection，同时在表情面板删除表情的时候，也需要做类似的操作。</p>
 <p>表情还有一个问题，就是在webview里面插入表情之后，传给后台的时候，因为ios/android两个平台的表情本地文件名，样式有所区别，因此要转化成[发呆]这个格式。</p>
-<h3 id="3-原生-API-的坑"><a href="#3-原生-API-的坑" class="headerlink" title="3.原生 API 的坑"></a>3.原生 API 的坑</h3><p>前面在提到 webview 的优点的时候说过，webview 很吸引人的一个地方在于其提供了很多原生的接口来实现一样样式，但是，真正操作起来才发现，套路远比我们想象的要深。</p>
+<h3>3.原生 API 的坑</h3>
+<p>前面在提到 webview 的优点的时候说过，webview 很吸引人的一个地方在于其提供了很多原生的接口来实现一样样式，但是，真正操作起来才发现，套路远比我们想象的要深。</p>
 <p>举一个简单的例子你要实现加粗以及取消加粗，那么一个命令就能搞定。</p>
-<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">document</span>.execCommand(<span class="string">'bold'</span>, <span class="literal">false</span>, <span class="literal">null</span>);</span><br></pre></td></tr></table></figure>
+<p><figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">document</span>.execCommand(<span class="string">'bold'</span>, <span class="literal">false</span>, <span class="literal">null</span>);</span><br></pre></td></tr></table></figure></p>
 <p>同样的，按照文档的介绍，如果如果你想要操作quote格式，改成一下命令就好了</p>
-<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">document</span>.execCommand(<span class="string">'formatBlock'</span>, <span class="literal">false</span>, <span class="string">"&lt;blockquote&gt;"</span>)</span><br></pre></td></tr></table></figure>
+<p><figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">document</span>.execCommand(<span class="string">'formatBlock'</span>, <span class="literal">false</span>, <span class="string">"&lt;blockquote&gt;"</span>)</span><br></pre></td></tr></table></figure></p>
 <p>然而上面这个命令只能让你添加引用格式，如果要取消引用格式，你会发现然而并没有卵用，就需要自己另外想办法了。这里有一个哥们对于quote的<a href="https://zrz0f.com/2015/04/23/editor2/" target="_blank" rel="external">悲催经历</a> ，不过我们最后的处理方案和他略有不同，我们是通过判断当前光标所在的Node是不是有blockquote标签或者是不是含有blockquote标签的Node的子node来决定是添加引用还是取消引用，伪代码如下：</p>
-<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> (inQuoteBlock.is) &#123;</span><br><span class="line">  <span class="built_in">document</span>.execCommand(<span class="string">'formatBlock'</span>, <span class="literal">false</span>, <span class="string">"&lt;div&gt;"</span>)</span><br><span class="line">&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">  <span class="built_in">document</span>.execCommand(<span class="string">'formatBlock'</span>, <span class="literal">false</span>, <span class="string">"&lt;blockquote&gt;"</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> (inQuoteBlock.is) &#123;</span><br><span class="line">  <span class="built_in">document</span>.execCommand(<span class="string">'formatBlock'</span>, <span class="literal">false</span>, <span class="string">"&lt;div&gt;"</span>)</span><br><span class="line">&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">  <span class="built_in">document</span>.execCommand(<span class="string">'formatBlock'</span>, <span class="literal">false</span>, <span class="string">"&lt;blockquote&gt;"</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
 <p>同样的还有标题设置等等都有这样的问题。</p>
-<h3 id="4-样式的兼容性"><a href="#4-样式的兼容性" class="headerlink" title="4.样式的兼容性"></a>4.样式的兼容性</h3><p>这个问题发生在多个样式并存的情况，比如引用、标题、序列格式、高亮链接混在一起用会发现各种奇奇怪怪的问题。</p>
+<h3>4.样式的兼容性</h3>
+<p>这个问题发生在多个样式并存的情况，比如引用、标题、序列格式、高亮链接混在一起用会发现各种奇奇怪怪的问题。</p>
 <p>以我们碰到的一个引用和高亮链接混用的例子来说明。我们先使用引用格式 blockquote,然后在引用文字里面插入一个a标签，接下来再次输入其他文字的时候，会发现系统帮我们偷偷的加了一个span标签，这个标签有它自己的style,导致后面样式跟前面的不一致了。</p>
 <p>再举一个例子，我们开发的时候测试发现一个bug，就是当引用、标题、序列格式同时运用到一段文字的时候，会发现系统默默的帮你插入了一个div标签，这个也会导致一些莫名奇妙的格式问题。</p>
 <p>当然还有一些其他奇奇怪怪的问题，这些其实是css样式的问题，对于这些问题的处理，要么自己维护一套css格式库，然后不要使用系统的document.execCommand命令，自己去封装，这个当然是最彻底的，但是也是最费工作量的，另外一个方法就是去限定某些组合的可能性，或者对某些场景的场景进行特殊处理，当然这个只是不补救的方案啦，具体怎么做，取决于使用场景，毕竟我们不是做一个word，所以未必需要考虑的那么全面。</p>
-<h3 id="5-at以及话题的链接处理"><a href="#5-at以及话题的链接处理" class="headerlink" title="5.at以及话题的链接处理"></a>5.at以及话题的链接处理</h3><p>其实这里就是对webview的链接处理问题了。以@为例，我们的需求要求点击@之后，生成一个搜索框，能够搜索想要@的用户，如果使用textview，我们完全能够在textView的delegate里面，根据当前的位置以及输入的内容进行搜索，但是webview你是很难去获取用户一段时间输入的内容的，因此，我们直接使用链接代替，当输入一个@之后就生成一个链接，然后搜索操作就在链接中进行（这里有个小技巧，如果只是输入一个@字符然后将其变成一个Link，那么光标默认的会处在link的外面，因此接下来的输入，不会成为链接的一部分，因此在这里我们生成的是一个 “@ “加一个空格的链接，并把光标手动移动到@之后）。不过这里还有一个光标的坑，因为我们选择一个用户之后需要替换掉已经输入的部分，也就是将link内容替换掉，会发现光标会移动到link的最前面去,光标又乱跳了！所以其实这里还需要自己去移动光标！</p>
+<h3>5.at以及话题的链接处理</h3>
+<p>其实这里就是对webview的链接处理问题了。以@为例，我们的需求要求点击@之后，生成一个搜索框，能够搜索想要@的用户，如果使用textview，我们完全能够在textView的delegate里面，根据当前的位置以及输入的内容进行搜索，但是webview你是很难去获取用户一段时间输入的内容的，因此，我们直接使用链接代替，当输入一个@之后就生成一个链接，然后搜索操作就在链接中进行（这里有个小技巧，如果只是输入一个@字符然后将其变成一个Link，那么光标默认的会处在link的外面，因此接下来的输入，不会成为链接的一部分，因此在这里我们生成的是一个 &quot;@ &quot;加一个空格的链接，并把光标手动移动到@之后）。不过这里还有一个光标的坑，因为我们选择一个用户之后需要替换掉已经输入的部分，也就是将link内容替换掉，会发现光标会移动到link的最前面去,光标又乱跳了！所以其实这里还需要自己去移动光标！</p>
 <p>另外这里在进行搜索的时候还有个问题，就是在使用系统输入法输入中文的时候，会出现联想输入条(quicktype)，如果这个时候，用户没有选择输入条的内容，而是直接选择了用户名进行替换，那么我们会自动将当前的link替换成选择后的内容，并将光标移动到Link的后面，但是这个时候，其实系统输入法的联想输入还没结束，因此当用户再次点击输入的时候，系统会默认找原来开始联想输入时候的Node位置，但是由于这个已经被我们替换掉了，会找不到，从而使得光标跑到webview的外面去，因此我们还需要在这里通过监听compositionupdate，进行修正光标的位置</p>
-<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>总得来说，基于 webview 的富文本，虽然系统帮我们做了很多事情，但是真正实践起来还是会发现问题远比我们想象的多，所以永远不要怀疑 word 开发那么多年的工作！另外要基于 webview 做富文本编辑器，那么一定要对 JS 有一定的了解，要不然会发现很鬼头痛！不过对于大多数app而言，其实我们的要求是没那么高的，所以找一个适合自己的webview的开源方案还是能很大的减少自己的工作量。</p>
+<h2>总结</h2>
+<p>总得来说，基于 webview 的富文本，虽然系统帮我们做了很多事情，但是真正实践起来还是会发现问题远比我们想象的多，所以永远不要怀疑 word 开发那么多年的工作！另外要基于 webview 做富文本编辑器，那么一定要对 JS 有一定的了解，要不然会发现很鬼头痛！不过对于大多数app而言，其实我们的要求是没那么高的，所以找一个适合自己的webview的开源方案还是能很大的减少自己的工作量。</p>
 
       
     </div>
@@ -467,6 +478,14 @@
                   </a>
                 </div>
               
+                <div class="links-of-author-item">
+                  <a href="https://github.com/Zepo/GYDataCenter" target="_blank">
+                    
+                      <i class="fa fa-github"></i> GYDataCenter
+                    
+                  </a>
+                </div>
+              
             
           </div>
         </div>
@@ -490,7 +509,7 @@
               
             
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#背景"><span class="nav-number">1.</span> <span class="nav-text">背景</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#基于-webview-的富文本编辑器的光标及样式问题"><span class="nav-number">2.</span> <span class="nav-text">基于 webview 的富文本编辑器的光标及样式问题</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-如何保持光标在可见区域"><span class="nav-number">2.1.</span> <span class="nav-text">1.如何保持光标在可见区域</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-插入表情，光标的变化"><span class="nav-number">2.2.</span> <span class="nav-text">2.插入表情，光标的变化</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-原生-API-的坑"><span class="nav-number">2.3.</span> <span class="nav-text">3.原生 API 的坑</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-样式的兼容性"><span class="nav-number">2.4.</span> <span class="nav-text">4.样式的兼容性</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-at以及话题的链接处理"><span class="nav-number">2.5.</span> <span class="nav-text">5.at以及话题的链接处理</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#总结"><span class="nav-number">3.</span> <span class="nav-text">总结</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#undefined"><span class="nav-number">1.</span> <span class="nav-text">背景</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#undefined"><span class="nav-number">2.</span> <span class="nav-text">基于 webview 的富文本编辑器的光标及样式问题</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#undefined"><span class="nav-number">2.1.</span> <span class="nav-text">1.如何保持光标在可见区域</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#undefined"><span class="nav-number">2.2.</span> <span class="nav-text">2.插入表情，光标的变化</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#undefined"><span class="nav-number">2.3.</span> <span class="nav-text">3.原生 API 的坑</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#undefined"><span class="nav-number">2.4.</span> <span class="nav-text">4.样式的兼容性</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#undefined"><span class="nav-number">2.5.</span> <span class="nav-text">5.at以及话题的链接处理</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#undefined"><span class="nav-number">3.</span> <span class="nav-text">总结</span></a></li></ol></div>
             
           </div>
           <div class="post-toc-indicator-bottom post-toc-indicator">
