@@ -278,76 +278,21 @@
 
       
         
-          
-            <h2>问题</h2>
-<p>一般一个 iOS APP 做的事就是：请求数据-&gt;保存数据-&gt;展示数据，一般用 Sqlite 作为持久存储层，保存从网络拉取的数据，下次读取可以直接从 Sqlite DB 读取。我们先忽略从网络请求数据这一环节，假设数据已经保存在 DB 里，那我们要做的事就是，ViewController 从 DB 取数据，再传给 view 渲染：</p>
-<p>&lt;img src=&quot;/img/cache1.png&quot; width=&quot;400px&quot;/&gt;</p>
+          <h2 id="问题"><a href="#问题" class="headerlink" title="问题"></a>问题</h2><p>一般一个 iOS APP 做的事就是：请求数据-&gt;保存数据-&gt;展示数据，一般用 Sqlite 作为持久存储层，保存从网络拉取的数据，下次读取可以直接从 Sqlite DB 读取。我们先忽略从网络请求数据这一环节，假设数据已经保存在 DB 里，那我们要做的事就是，ViewController 从 DB 取数据，再传给 view 渲染：</p>
+<img src="/img/cache1.png" width="400">
 <p>这是最简单的情况，随着程序变复杂，多个 ViewController 都要向 DB 取数据，ViewController本身也会因为数据变化重新去 DB 取数据，会有两个问题：</p>
 <ul>
-<li>
-<p>数据每次有变动，ViewController 都要重新去DB读取，做 IO 操作。</p>
+<li><p>数据每次有变动，ViewController 都要重新去DB读取，做 IO 操作。</p>
 </li>
-<li>
-<p>多个 ViewController 之间可能会共用数据，例如同一份数据，本来在 Controller1 已经从 DB 取出来了，在 Controller2 要使用得重新去 DB 读取，浪费 IO。</p>
+<li><p>多个 ViewController 之间可能会共用数据，例如同一份数据，本来在 Controller1 已经从 DB 取出来了，在 Controller2 要使用得重新去 DB 读取，浪费 IO。</p>
 </li>
 </ul>
-<p>&lt;img src=&quot;/img/cache2.png&quot; width=&quot;400px&quot;/&gt;</p>
-<p>&lt;!--more--&gt;</p>
-<p>对这里做优化，自然会想到在 DB 和 VC 层之间再加一层 cache，把从 DB 读取出来的数据 cache 在内存里，下次来取同样的数据就不需要再去磁盘读取 DB 了。</p>
-<p>&lt;img src=&quot;/img/cache3.png&quot; width=&quot;500px&quot;/&gt;</p>
-<p>几乎所有的数据库框架都做了这个事情，包括微信读书开源的 GYDataCenter，CoreData，Realm 等。但这样做会导致一个问题，就是数据的线程安全问题。</p>
-<p>按上面的设计，Cache层会有一个集合，持有从DB读取的数据。</p>
-<p>&lt;img src=&quot;/img/cache4.png&quot; width=&quot;170px&quot;/&gt;</p>
-<p>除了 VC 层，其他层也会从cache取数据，例如网络层。上层拿到的数据都是对 cache 层这里数据的引用：</p>
-<p>&lt;img src=&quot;/img/cache5.png&quot; width=&quot;500px&quot;/&gt;</p>
-<p>可能还会在网络层子线程，或其他一些用于预加载的子线程使用到，如果某个时候一条子线程对这个 Book1 对象的属性进行修改，同时主线程在读这个对象的属性，就会 crash，因为一般我们为了性能会把对象属性设为nonatomic，是非线程安全的，多线程读写时会有问题：</p>
-<p><figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//Network</span></span><br><span class="line">WRBook *book = [WRCache bookWithId:@“<span class="number">10000</span>”];</span><br><span class="line">book<span class="variable">.fav</span> = <span class="literal">YES</span>;   <span class="comment">//子线程在写</span></span><br><span class="line">[book save];</span><br><span class="line"></span><br><span class="line"><span class="comment">//VC1</span></span><br><span class="line">WRBook *book = [WRCache bookWithId:@“<span class="number">10000</span>”];</span><br><span class="line"><span class="keyword">self</span><span class="variable">.view</span><span class="variable">.title</span> = book<span class="variable">.title</span>;   <span class="comment">//主线程在读</span></span><br></pre></td></tr></table></figure></p>
-<p>可以通过这个测试看到 crash 场景：</p>
-<p><figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">@interface TestMultiThread : NSObject</span><br><span class="line">@property (nonatomic) NSArray *arr;</span><br><span class="line">@end</span><br><span class="line"></span><br><span class="line">@implementation TestMultiThread</span><br><span class="line">@end</span><br><span class="line"></span><br><span class="line">TestMultiThread *obj = [[TestMultiThread alloc] init];</span><br><span class="line">for (int i = 0; i &lt; 1000; i ++) &#123;</span><br><span class="line">    dispatch_async(dispatch_get_global_queue(0, 0), ^&#123;</span><br><span class="line">        NSLog(@"%@", obj.arr);</span><br><span class="line">    &#125;);</span><br><span class="line">&#125;</span><br><span class="line">for (int i = 0; i &lt; 1000; i ++) &#123;</span><br><span class="line">    dispatch_async(dispatch_get_global_queue(0, 0), ^&#123;</span><br><span class="line">        obj.arr = [NSArray arrayWithObject:@“b"];</span><br><span class="line">    &#125;);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
-<h2>解决方案</h2>
-<p>对这种情况，一般有三种解决方案：</p>
-<h3>1. 加锁</h3>
-<p>既然这个对象的属性是非线程安全的，那加锁让它变成线程安全就行了。可以给每个对象自定义一个锁，也可以直接用 OC 里支持的属性指示符 atomic：</p>
-<p><figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">@property</span> (atomic) <span class="built_in">NSArray</span> *arr;</span><br></pre></td></tr></table></figure></p>
-<p>这样就不用担心多线程同时读写的问题了。但在APP里大规模使用锁很可能会导致出现各种不可预测的问题，锁竞争，优先级反转，死锁等，会让整个APP复杂性增大，问题难以排查，并不是一个好的解决方案。</p>
-<h3>2. 分线程cache</h3>
-<p>另一种方案是一条线程创建一个 cache，每条线程只对这条线程对应的 cache 进行读写，这样就没有线程安全问题了。CoreData 和 Realm 都是这种做法，但这个方案有两个缺点：</p>
-<blockquote>
-<p>a.使用者需要知道当前代码在哪条线程执行。
-b.多条线程里的 cache 数据需要同步。</p>
-</blockquote>
-<p>CoreData 在不同线程要创建自己的 NSManagedObjectContext，这个 context 里维护了自己的 cache，如果某条子线程没有创建 NSManagedObjectContext，要读取数据就需要通过 <code>performBlockAndWait:</code> 等接口跑到其他线程去读取。如果多个 context 需要同步 cache 数据，就要调用它的 merge 方法，或者通过 parent-children context 层级结构去做。这导致它多线程使用起来很麻烦，API 友好度极低。</p>
-<p>Realm 做得好一点，会在线程 runloop 开始执行时自动去同步数据，但如果线程没有 runloop 就需要手动去调 <code>Realm.refresh()</code> 同步。使用者还是需要明确知道代码在哪条线程执行，避免在多线程之间传递对象。</p>
-<h3>3.数据不可变</h3>
-<p>我们的问题是多线程同时读写导致，那如果只读不写，是不是就没有问题了？数据不可变指的就是一个数据对象生成后，对象里的属性值不会再发生改变，不允许像上述例子那样 <code>book.fav = YES</code> 直接设置，若一个对象属性值变了，那就新建一个对象，直接整个替换掉这个旧的对象：</p>
-<p><figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//WRCache</span></span><br><span class="line"><span class="class"><span class="keyword">@implementation</span> <span class="title">WRCache</span></span></span><br><span class="line">+(<span class="keyword">void</span>) updateBookWithId:(<span class="built_in">NSString</span> *)bookId params:(<span class="built_in">NSDictionary</span> *)params</span><br><span class="line">&#123;</span><br><span class="line">    [WRDBCenter updateBookWithId:@“<span class="number">10000</span>” params:&#123;@“fav”: @(<span class="literal">YES</span>)&#125;]; <span class="comment">//更新DB数据</span></span><br><span class="line">    WRBook *book = [WRDBCenter readBookWithId:bookId]; <span class="comment">//重新从DB读取，新对象</span></span><br><span class="line">    [<span class="keyword">self</span><span class="variable">.cache</span> setObject:book forKey:bookId];  <span class="comment">//整个替换cache里的对象</span></span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">@end</span></span><br></pre></td></tr></table></figure></p>
-<p><figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">self</span><span class="variable">.book</span> = [WRCache bookWithId:@“<span class="number">10000</span>”];</span><br><span class="line"><span class="comment">// book.fav = YES;   //不这样写</span></span><br><span class="line">[WRCache updateBookWithId:@“<span class="number">10000</span>” params:&#123;@“fav”: @(<span class="literal">YES</span>)&#125;]; <span class="comment">//在cache里整个更新</span></span><br><span class="line"><span class="keyword">self</span><span class="variable">.book</span> = [WRCache bookWithId:@“<span class="number">10000</span>”];   <span class="comment">//重新读取对象</span></span><br></pre></td></tr></table></figure></p>
-<p>这样就不会再有线程安全问题，一旦属性有修改，就整个数据重新从DB读取，这些对象的属性都不会再有写操作，而多线程同时读是没问题的。</p>
-<p>但这种方案有个缺陷，就是数据修改后，会在 cache 层整个替换掉这个对象，但这时上层扔持有着旧的对象，并不会自动把对象更新过来：</p>
-<p>&lt;img src=&quot;/img/cache6.png&quot; width=&quot;500px&quot;/&gt;</p>
-<p>所以怎样让上层更新数据呢？有两种方式，push 和 pull。</p>
-<h4>a. push</h4>
-<p>push 的方式就是 cache 层把更新 push 给上层，cache对整个对象更新替换掉时，发送广播通知上层，这里发通知的粒度可以按需求斟酌，上层监听自己关心的通知，如果发现自己持有的对象更新了，就要更新自己的数据，但这里的更新数据也是件挺麻烦的事。</p>
-<p>举个例子，读书有一个想法列表WRReviewController，存着一个数组 reviews，保存着想法 review 数据对象，数组里的每一个 review 会持有这个这个想法对应的一本书，也就是 review.book 持有一个 WRBook 数据对象。然后这时 cache 层通知这个 WRReviewController，某个 book 对象有属性变了，这时这个 WRReviewController 要怎样处理呢？有两个选择：</p>
-<ul>
-<li>
-<p>遍历 reviews 数组，再遍历每一个 review 里的 book 对象，如果更新的是这个 book 对象，就把这个 book 对象替换更新。</p>
-</li>
-<li>
-<p>什么都不管，只要有数据更新的通知过来，所有数据都重新往 cache 层读一遍，重新组装数据，界面全部刷新。</p>
-</li>
-</ul>
-<p>第一种是精细化的做法，优点是不影响性能，缺点是蛋疼，工作量增多，还容易漏更新，需要清楚知道当前模块持有了哪些数据，有哪些需要更新。第二种是粗犷的做法，优点是省事省心，全部大刷一遍就行了，缺点是在一些复杂页面需要组装数据，会对性能造成较大影响。</p>
-<h4>b. pull</h4>
-<p>另一种 pull 的方式是指上层在特定时机自己去判断数据有没有更新。</p>
-<p>首先所有数据对象都会有一个属性，暂时命名为 <code>dirty</code>，在 cache 层更新替换数据对象前，先把旧对象的 dirty 属性设为 <code>YES</code>，表示这个旧对象已经从 cache 里被抛弃了，属于脏数据，需要更新。然后上层在合适的时候自行去判断自己持有的对象的 <code>dirty</code> 属性是否为 <code>YES</code>，若是则重新在 cache 里取最新数据。</p>
-<p>实际上这样做发生了多线程读写 <code>dirty</code> 属性，是有线程安全问题的，但因为 <code>dirty</code> 属性读取不频繁，可以直接给这个属性的读写加锁，不会像对所有属性加锁那样引发各种问题，解决对这个 <code>dirty</code> 属性读写的线程安全问题。</p>
-<p>这里主要的问题是上层应该在什么时机去 pull 数据更新。可以在每次界面显示 <code>-viewWillAppear</code> 或用户操作后去检查，例如用户点个赞，就可以触发一次检查，去更新赞的数据，在这两个地方做检查已经可以解决90%的问题，剩下的就是同个界面联动的问题，例如 iPad 邮件左右两栏两个 controller，右边详情点个收藏，左边列表收藏图标也要高亮，这种情况可以做特殊处理，也可以结合上面 push 的方式去做通知。</p>
-<p>push 和 pull 两种是可以结合在一起用的，pull 的方式弥补了 push 后数据全部重新读取大刷导致的性能低下问题，push 弥补了 pull 更新时机的问题，实际使用中配合一些事先制定的规则或框架一起使用效果更佳。</p>
-<h2>总结</h2>
-<p>对于 APP 缓存数据线程安全问题，分线程 cache 和数据不可变是比较常见的解决方案，都有着不同的实现代价，分线程 cache 接口不友好，数据不可变需要配合单向数据流之类的规则或框架才会变得好用，可以按需选择合适的方案。</p>
-
-          
+<img src="/img/cache2.png" width="400">
+          <div class="post-more-link text-center">
+            <a class="btn" href="/2016/11/22/DataCache/#more" rel="contents">
+              阅读全文 &raquo;
+            </a>
+          </div>
         
       
     </div>
@@ -454,9 +399,7 @@ b.多条线程里的 cache 数据需要同步。</p>
 
       
         
-          
-            <h2>背景</h2>
-<p>最近我们微信读书将写想法换成了基于 webview 的富文本编辑器，遇到了不少问题，这里我将简单的介绍一下我们在开发过程中踩到的坑。</p>
+          <h2 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h2><p>最近我们微信读书将写想法换成了基于 webview 的富文本编辑器，遇到了不少问题，这里我将简单的介绍一下我们在开发过程中踩到的坑。</p>
 <p>实现富文本编辑器有两个基本思路：</p>
 <ol>
 <li>基于 Native 实现：比如 CoreText 或者 TextKit</li>
@@ -464,49 +407,11 @@ b.多条线程里的 cache 数据需要同步。</p>
 </ol>
 <p>第一种方案，你需要自己去实现很多在 webview 已经很成熟的效果，比如链接，字体加粗，标题，引用样式，列表样式等等，这些的工作量都比较可观，而且还有 iOS / Android 两端的对齐问题。还有一个问题，这个可能是我们项目相关的问题，我们在原来还没有很多富文本要求的情况下，在 textView 上做了一些我们对链接的处理工作，仅仅这一个方面，当时就觉得不是很方便。</p>
 <p>第二种方案，你可以借助 webview 省掉很多在第一种方案里面提到的工作，同时webview相对而言，开源的可供参考的项目也更多一点，不过 webview 也会存在光标的控制，css 的冲突处理以及兼容性的问题，不过在最终选择方案的时候，我们几经权衡，最终选择了 webview 的方案。</p>
-<p>&lt;!--more--&gt;</p>
-<h2>基于 webview 的富文本编辑器的光标及样式问题</h2>
-<p>用 UIWebView 实现富文本编辑器，一个大麻烦在于光标的处理，另一个大麻烦就是 css 样式的兼容，具体体现为如下几个方面：</p>
-<ol>
-<li>如何保持光标在可见区域。</li>
-<li>插入表情的时候 UIWebView 会失焦问题。</li>
-<li>原生命令会有bug,需要自己处理。</li>
-<li>样式的兼容性。</li>
-<li>at以及话题的链接处理。</li>
-</ol>
-<h3>1.如何保持光标在可见区域</h3>
-<p>这里有很多情况，如我们在当前可见区域的最后一行的时候，再进行换行时，光标会跑到可见区域的下面，webview不会把光标所在位置自动滚动到可见区域，需要手动触发 webview 的滚动机制.</p>
-<p>解决这个问题有两个思路，一种思路就是 hack native 的滚动逻辑，对滚动进行修正处理，这样做，能使得webview滚动表现的像native一样，但是需要hack的地方会比较多，实现起来可能会踩吭。另外一种思路就是直接在js里面操作scrollview，这样相对比较简单。我们使用的是后者的做法，通过监听光标位置的变化，来进行修正，代码如下：</p>
-<p><figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">document</span>.addEventListener(<span class="string">"selectionchange"</span>, <span class="function"><span class="keyword">function</span>(<span class="params">e</span>) </span>&#123;</span><br><span class="line">  RE.calculateEditorHeightWithCaretPosition();<span class="comment">//矫正位置</span></span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure></p>
-<p>这里矫正的具体逻辑是，每次光标位置发生变化时首先计算当前光标的位置，然后判断当前光标是否在可见区域范围内，如果不在，那么执行 <code>window.scrollTo</code> 滚动到响应区域。这里有个小点需要注意，就是在判断光标位置的时候，顶部以及底部的判断有稍微的区别，如果判断光标是在可见区域上面，需要判断光标的顶部是否在可见区域范围内，如果断光标是在可见区域下面，需要判断光标的底部是否在可见区域范围内。</p>
-<p>这里还有一个问题，在最后一行，换行到新的一行进行输入的时候，如果是汉字输入，会产生联想输入条，在还没有确定输入内容的时候，UIWebView是不知道你需要的高度的，这个时候，由于触发了selectionchange，会导致输入时候，整个界面不断的抖动，因此在这里使用了一个奇技淫巧的方案。我们监听input的输入，并在在webview的最后面，强制插入一个空白的div，使得输入始终是在已有的区域范围内的。</p>
-<p>另外切记不要在js,以及native两端都由scroll的操作，这样会导致滚动的逻辑很混乱。</p>
-<h3>2.插入表情，光标的变化</h3>
-<p>在我们的场景中，插入表情会弹出一个表情面板（这应该也是主流的做法），这个表情面板会覆盖键盘，这样会导致UIWebView失焦。这就意味着，我们在插入表情的时候，不能直接使用Inserthtml命令插入，因为在失焦状态下这个命令会失效，因此在这里需要手动找到正在操作的node，手动执行Insertnode的操作，并且要记录光标的变化位置，以便退出面板退出后，重新foucus找到正确的光标位置。简单的伪代码如下代码</p>
-<p><figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 这时候光标直接parent是editor，需要判断光标所在的node的nodeIndex，然后将imgNode 插入到parent[nodeIndex]之前</span></span><br><span class="line"><span class="keyword">if</span>(currentOffset == currentNode.childNodes.length)&#123;</span><br><span class="line">    <span class="comment">// 光标在editor最后或者editor内容为空，直接append</span></span><br><span class="line">    currentNode.appendChild(imgNode);</span><br><span class="line">&#125;<span class="keyword">else</span>&#123;</span><br><span class="line">    currentNode.insertBefore(imgNode, currentNode.childNodes[currentOffset]);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
-<p>然后更新一下当前selection，同时在表情面板删除表情的时候，也需要做类似的操作。</p>
-<p>表情还有一个问题，就是在webview里面插入表情之后，传给后台的时候，因为ios/android两个平台的表情本地文件名，样式有所区别，因此要转化成[发呆]这个格式。</p>
-<h3>3.原生 API 的坑</h3>
-<p>前面在提到 webview 的优点的时候说过，webview 很吸引人的一个地方在于其提供了很多原生的接口来实现一样样式，但是，真正操作起来才发现，套路远比我们想象的要深。</p>
-<p>举一个简单的例子你要实现加粗以及取消加粗，那么一个命令就能搞定。</p>
-<p><figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">document</span>.execCommand(<span class="string">'bold'</span>, <span class="literal">false</span>, <span class="literal">null</span>);</span><br></pre></td></tr></table></figure></p>
-<p>同样的，按照文档的介绍，如果如果你想要操作quote格式，改成一下命令就好了</p>
-<p><figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">document</span>.execCommand(<span class="string">'formatBlock'</span>, <span class="literal">false</span>, <span class="string">"&lt;blockquote&gt;"</span>)</span><br></pre></td></tr></table></figure></p>
-<p>然而上面这个命令只能让你添加引用格式，如果要取消引用格式，你会发现然而并没有卵用，就需要自己另外想办法了。这里有一个哥们对于quote的<a href="https://zrz0f.com/2015/04/23/editor2/" target="_blank" rel="external">悲催经历</a> ，不过我们最后的处理方案和他略有不同，我们是通过判断当前光标所在的Node是不是有blockquote标签或者是不是含有blockquote标签的Node的子node来决定是添加引用还是取消引用，伪代码如下：</p>
-<p><figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> (inQuoteBlock.is) &#123;</span><br><span class="line">  <span class="built_in">document</span>.execCommand(<span class="string">'formatBlock'</span>, <span class="literal">false</span>, <span class="string">"&lt;div&gt;"</span>)</span><br><span class="line">&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">  <span class="built_in">document</span>.execCommand(<span class="string">'formatBlock'</span>, <span class="literal">false</span>, <span class="string">"&lt;blockquote&gt;"</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
-<p>同样的还有标题设置等等都有这样的问题。</p>
-<h3>4.样式的兼容性</h3>
-<p>这个问题发生在多个样式并存的情况，比如引用、标题、序列格式、高亮链接混在一起用会发现各种奇奇怪怪的问题。</p>
-<p>以我们碰到的一个引用和高亮链接混用的例子来说明。我们先使用引用格式 blockquote,然后在引用文字里面插入一个a标签，接下来再次输入其他文字的时候，会发现系统帮我们偷偷的加了一个span标签，这个标签有它自己的style,导致后面样式跟前面的不一致了。</p>
-<p>再举一个例子，我们开发的时候测试发现一个bug，就是当引用、标题、序列格式同时运用到一段文字的时候，会发现系统默默的帮你插入了一个div标签，这个也会导致一些莫名奇妙的格式问题。</p>
-<p>当然还有一些其他奇奇怪怪的问题，这些其实是css样式的问题，对于这些问题的处理，要么自己维护一套css格式库，然后不要使用系统的document.execCommand命令，自己去封装，这个当然是最彻底的，但是也是最费工作量的，另外一个方法就是去限定某些组合的可能性，或者对某些场景的场景进行特殊处理，当然这个只是不补救的方案啦，具体怎么做，取决于使用场景，毕竟我们不是做一个word，所以未必需要考虑的那么全面。</p>
-<h3>5.at以及话题的链接处理</h3>
-<p>其实这里就是对webview的链接处理问题了。以@为例，我们的需求要求点击@之后，生成一个搜索框，能够搜索想要@的用户，如果使用textview，我们完全能够在textView的delegate里面，根据当前的位置以及输入的内容进行搜索，但是webview你是很难去获取用户一段时间输入的内容的，因此，我们直接使用链接代替，当输入一个@之后就生成一个链接，然后搜索操作就在链接中进行（这里有个小技巧，如果只是输入一个@字符然后将其变成一个Link，那么光标默认的会处在link的外面，因此接下来的输入，不会成为链接的一部分，因此在这里我们生成的是一个 &quot;@ &quot;加一个空格的链接，并把光标手动移动到@之后）。不过这里还有一个光标的坑，因为我们选择一个用户之后需要替换掉已经输入的部分，也就是将link内容替换掉，会发现光标会移动到link的最前面去,光标又乱跳了！所以其实这里还需要自己去移动光标！</p>
-<p>另外这里在进行搜索的时候还有个问题，就是在使用系统输入法输入中文的时候，会出现联想输入条(quicktype)，如果这个时候，用户没有选择输入条的内容，而是直接选择了用户名进行替换，那么我们会自动将当前的link替换成选择后的内容，并将光标移动到Link的后面，但是这个时候，其实系统输入法的联想输入还没结束，因此当用户再次点击输入的时候，系统会默认找原来开始联想输入时候的Node位置，但是由于这个已经被我们替换掉了，会找不到，从而使得光标跑到webview的外面去，因此我们还需要在这里通过监听compositionupdate，进行修正光标的位置</p>
-<h2>总结</h2>
-<p>总得来说，基于 webview 的富文本，虽然系统帮我们做了很多事情，但是真正实践起来还是会发现问题远比我们想象的多，所以永远不要怀疑 word 开发那么多年的工作！另外要基于 webview 做富文本编辑器，那么一定要对 JS 有一定的了解，要不然会发现很鬼头痛！不过对于大多数app而言，其实我们的要求是没那么高的，所以找一个适合自己的webview的开源方案还是能很大的减少自己的工作量。</p>
-
-          
+          <div class="post-more-link text-center">
+            <a class="btn" href="/2016/09/21/RichEditor/#more" rel="contents">
+              阅读全文 &raquo;
+            </a>
+          </div>
         
       
     </div>
@@ -613,131 +518,16 @@ b.多条线程里的 cache 数据需要同步。</p>
 
       
         
-          
-            <h1>引言</h1>
-<p>在 <a href="http://weread.qq.com">微信读书 App</a> 中，排版引擎负责解析 EPUB 或 TXT 格式的书籍源文件，将排版后的书籍内容如文字、图像、注解等元素渲染至屏幕上，是最常用、最复杂的组件之一。</p>
+          <h1 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h1><p>在 <a href="http://weread.qq.com">微信读书 App</a> 中，排版引擎负责解析 EPUB 或 TXT 格式的书籍源文件，将排版后的书籍内容如文字、图像、注解等元素渲染至屏幕上，是最常用、最复杂的组件之一。</p>
 <p>而开发同学对排版引擎的日常修改，可能影响了海量书籍的排版结果。对排版引擎代码变更的测试，往往耗时多、难度大、容易漏测。本文介绍了为解决测试的难题，如何逐步将人工测试步骤自动化，最终构建了一套微信读书排版引擎自动化测试流程，以确保微信读书排版引擎的质量。</p>
-<h1>背景</h1>
-<h2>排版引擎日常修改</h2>
-<p>为了获得极致的阅读体验，产品同学经常会提出细致的排版需求，交给开发同学修改。而排版引擎的修改，往往牵一发动全身，可能导致书城上万本书籍排版结果受影响。</p>
+<h1 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h1><h2 id="排版引擎日常修改"><a href="#排版引擎日常修改" class="headerlink" title="排版引擎日常修改"></a>排版引擎日常修改</h2><p>为了获得极致的阅读体验，产品同学经常会提出细致的排版需求，交给开发同学修改。而排版引擎的修改，往往牵一发动全身，可能导致书城上万本书籍排版结果受影响。</p>
 <p>举个例子，有个需求是增加正文段落的 margin：</p>
 <p><img src="/img/dailychange1.png" alt="日常修改1"></p>
-<p>&lt;!--more--&gt;</p>
-<p>再举个极端的例子，有个需求要把章节标题往右移动1个像素：</p>
-<p><img src="/img/dailychange2.png" alt="日常修改2"></p>
-<p>那么，如何确保微信读书的排版质量？最开始，我们用人工测试的方法来确保质量。</p>
-<h2>人工测试方法</h2>
-<p>当开发按需求修改排版引擎、自测后，会把代码提交到 svn，然后交给测试同学进行测试。</p>
-<p>测试同学使用持续集成工具编译打包，得到排版引擎修改后的 App 安装包；然后在两台设备安装排版引擎修改前、后两个版本的 App，同时打开需要测试的书籍，翻页，对比，通过肉眼观察排版差异是否符合预期。</p>
-<p>人工测试方法比较耗时，需要打开每本书，一页一页地翻页、对比，而且无法覆盖很多书籍，存在漏测的风险。</p>
-<p>另外，通过人眼检查两台设备上的排版结果有没有差异，是很困难的任务，一是容易疲惫导致判断失误，二是对细致的排版变更（如第二个例子）很难判断是否符合预期。</p>
-<h1>为什么需要自动化测试？</h1>
-<p>前面提到，人工测试费时耗力，且容易漏测。</p>
-<p>此外，排版需求的特点是细节多、变更快，且修改影响范围大，全网书籍上万本，无法一一验证。一旦出错，直接影响口碑。这些因素都增加了人工测试的工作量和压力。</p>
-<p>除了精细化的排版需求会对排版引擎代码做修改，在日常的维护中，也会重构排版引擎、修改排版引擎相关但不影响排版结果的代码。每次重构、修改后，也会交给测试同学验证此次修改对排版结果没有影响。由于人工测试比较耗时、无法一一验证，每次重构排版引擎代码压力很大，轻易不敢改动。</p>
-<p>还有一种情况，是在开发其他需求、修复缺陷时，意外地导致排版结果受影响。这种错误一旦发布到现网，后果很严重。</p>
-<p>所以，把人工测试流程自动化十分有必要。自动化以后，可以大大减少人工测试的时间，同时方便开发同学自测。开发同学对排版引擎也可以大胆重构、持续改进代码质量。最终，达到确保排版引擎质量的目的。</p>
-<h1>如何自动化测试？</h1>
-<p>首先，我们要分析一下，在人工测试中，主要有哪些步骤？每个步骤是否能自动化？</p>
-<p>在人工测试中，对每次变更的测试，有步骤如下：</p>
-<ol>
-<li>需要把变更前、变更后的 App 包安装到两台设备</li>
-<li>打开 App，登录，把要测试的书购买、加入到书架</li>
-<li>打开要测试的书，设置排版偏好，翻页，用眼睛查看屏幕上的排版结果，对比屏幕中的排版结果是否有差异</li>
-<li>如果有差异，根据需求判断差异是否符合预期</li>
-</ol>
-<p>其中步骤 1、2 利用自动化测试工具是比较容易完成的。步骤 3 借助算法能够使其自动化，会在后面详细展开。步骤 4 自动化的难度比较大，可能需要借助非常高阶的人工智能完成，我们把这个步骤交给测试和开发同学。</p>
-<p>那么，如何完成步骤 3 的自动化，让机器做人类的事情呢？我们把它再细分成三个步骤：</p>
-<h2>1. 获取排版结果的数据表示</h2>
-<p>首先，需要找到一种机器能读懂的数据表示，这种数据表示要既能够表示排版的结果、反映代码的修改，也能够通过算法来对比，对比的结果要便于可视化的展示，方便开发、测试同学判断差异是否符合预期。</p>
-<p>我们的选择有：</p>
-<ol>
-<li>
-<p><a href="https://developer.apple.com/library/ios/documentation/Cocoa/Reference/Foundation/Classes/NSAttributedString_Class" target="_blank" rel="external">NSAttributedString</a>，是从 EPUB、TXT 处理后得到的中间数据，包括文字和排版样式。这种数据结构比较抽象，没有一种很好的差异计算方法、和差异结果可视化方法。</p>
-</li>
-<li>
-<p>阅读器屏幕截图，位图格式，借助各种成熟的数字图像处理算法，容易计算差异</p>
-</li>
-</ol>
-<p>考虑到 2 容易计算差异，可视化输出效果较好，我们选取阅读器屏幕截图作为数据表示。</p>
-<h2>2. 对比图像差异</h2>
-<p>选择了图像作为排版结果的数据表示，那么如何对比图像差异呢？</p>
-<p>首先，我们要选取图像特征，然后才能对比图片差异。图像的特征，从视觉认知概念上，有低、中、高级特征：</p>
-<ul>
-<li>低级特征：如像素域、频率域、<a href="https://pypi.python.org/pypi/ImageHash" target="_blank" rel="external">ImageHash</a></li>
-<li>中级特征：如 <a href="https://en.wikipedia.org/wiki/Sobel_operator" target="_blank" rel="external">sobel</a> 边缘特征</li>
-<li>高级特征：抽象视觉概念，比如从 <a href="https://en.wikipedia.org/wiki/Convolutional_neural_network" target="_blank" rel="external">CNN</a> 算法训练得到的标签，如车、枪、球</li>
-</ul>
-<p>这里我们希望每个像素的差异都能检测到，所以选取像灰度化处理过的图像矩阵作为特征。</p>
-<p>有了特征后，我们需要定义差异，就是两个灰度图像矩阵的<a href="https://en.wikipedia.org/wiki/Lp_space" target="_blank" rel="external">距离函数</a>，如：</p>
-<ul>
-<li>L0，表示两个灰度图像矩阵之间，不一致的像素点的个数</li>
-<li>L1，曼哈顿距离或棋盘距离，不一致像素点差值的绝对值之和</li>
-<li>L2，不一致像素点差值的平方和</li>
-</ul>
-<p>我们关心有多少像素点不一致，所以我们这里取 L0距离，即两个图像有多少个像素点不一样，作为差异衡量的指标。</p>
-<p>当距离大于10时，我们认为这一页的排版结果有差异，把它可视化输出，给开发或者测试同学作为参考。</p>
-<h2>3. 可视化输出</h2>
-<p>检测到差异后，我们把两个图像矩阵灰度化后相减，得到一个新的矩阵，把它归一化得到差异图像，如右图所示：</p>
-<p><img src="/img/diff.png" alt="日常修改2"></p>
-<h2>通过 <a href="https://developer.apple.com/library/mac/featuredarticles/iPhoneURLScheme_Reference/Introduction/Introduction.html" target="_blank" rel="external">scheme</a> 生成排版结果</h2>
-<p>人工测试步骤 2、3 的书籍购买、加入书架、打开书籍、翻页、截图等任务，可以利用 <a href="https://developer.apple.com/library/ios/documentation/DeveloperTools/Conceptual/InstrumentsUserGuide/UIAutomation.html" target="_blank" rel="external">Instrument UI Automation</a> 自动测试脚本来模拟人工点击来完成任务。</p>
-<p>但是考虑到 Automation 模拟翻页、截图速度慢，且 UI 变更频繁导致 Automation 脚本后续维护麻烦等问题，所以我们通过提供一个测试 scheme 接口来完成这个任务。</p>
-<p>在 App 设置彩蛋的『执行 Scheme 页面』中，输入 scheme 并执行后，App 会在后台对指定书籍购买、加入书架、排版、生成排版结果截图，并把结果保存在本地磁盘。用户也可以选择 AirDrop 到 Mac 上。</p>
-<p><img src="/img/runscheme.png" alt="运行scheme"></p>
-<p>scheme 格式如下：</p>
-<p><figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">weread:<span class="comment">//typeset?books=三体,乔布斯传,失控,1984,乌兰拖拉机简史&amp;indent=1&amp;fontSize=2&amp;font=2&amp;theme=3&amp;folder=f1223</span></span><br><span class="line">  输出排版结果到目录/Libary/[vid]/[folder]/[bookId]<span class="variable">.zip</span></span><br><span class="line">  @param books 需要排版的书单</span><br><span class="line">  @param indent <span class="number">0</span>首行不缩进 <span class="number">1</span>首行缩进，默认<span class="number">0</span></span><br><span class="line">  @param fontSize  <span class="number">1</span>,<span class="number">2</span>,<span class="number">3</span>,<span class="number">4</span>,<span class="number">5</span>,<span class="number">6</span>,<span class="number">7</span> 字体大小，默认<span class="number">4</span></span><br><span class="line">  @param font 字体  <span class="number">1</span>系统字体 <span class="number">2</span> <span class="number">3</span> <span class="number">4</span> 为对应选项字体，默认<span class="number">1</span></span><br><span class="line">  @param bgcolor 背景颜色 <span class="number">1</span>白 <span class="number">2</span>黄 <span class="number">3</span>绿色 <span class="number">4</span>夜间，默认<span class="number">1</span></span><br><span class="line">  @param folder 输出文件夹名，默认<span class="string">"cropImage"</span></span><br></pre></td></tr></table></figure></p>
-<p>通过这个 scheme，在真机或者模拟器都可以随时得到排版结果，而且速度比模拟翻页要快10x。</p>
-<h1>自动化测试流程</h1>
-<p>下面，将介绍我们完整的排版引擎自动化测试流程。</p>
-<h2>1 生成排版结果</h2>
-<p>首先，用户需要确定参数：待生成排版结果的 svn 版本范围 <code>r1~rn</code>、书单、阅读偏好设置（字体、缩进、主题模式）。把这些参数传给脚本<code>batch_scan.py</code>，然后自动化流程开始，脚本会执行以下步骤：</p>
-<ol>
-<li>在指定 svn 版本范围内，找出排版引擎有变更的版本，checkout</li>
-<li>对每个 checkout 的版本，用 xcodebuild 编译项目，安装到模拟器</li>
-<li>通过 Instrument 的 UI Automation 脚本，打开模拟器，运行微信读书App，进入到测试彩蛋页面：<code>执行 scheme</code>，生成排版结果</li>
-<li>把结果从模拟器移动到指定的目录下</li>
-</ol>
-<p><img src="/img/batch_scan.png" alt="生成排版结果"></p>
-<h2>2 生成排版结果差异</h2>
-<p>得到排版结果后，执行脚本 <code>batch_diff.py</code>，对相近的版本，每本书的每一页通过 <code>diffimg.py</code> 对比，如果有差异，则输出可视化的差异结果。</p>
-<p><img src="/img/batch_diff.png" alt="对比排版结果"></p>
-<h2>3 人工检查差异</h2>
-<p>自动化流程结束后，我们得到排版结果差异，需要人工去检查差异是否符合预期。</p>
-<p>我们以文件夹的形式组织展示差异的可视化结果：版本 <code>r1</code>（修改前）与 <code>r2</code>（修改后），对书籍 <code>book1</code> 排版差异可视化结果，保存在文件夹 <code>diff_result_r1_r2/book1</code> 中。</p>
-<p>可视化结果图像中，深色字体是 <code>r1</code> （修改前）的排版结果，浅色字体是 <code>r2</code> （修改后）的排版结果。</p>
-<p>另外，排版性能变化也纳入了监控。</p>
-<p><img src="/img/diff_final.png" alt="检查排版差异"></p>
-<h1>自动化测试的优势</h1>
-<p>自动化流程的建立，使排版引擎的测试时间缩短了 95%，测试期间无需人工干预，对比数据如图：</p>
-<p><img src="/img/compare.png" alt="排版差异"></p>
-<p>例如，人工测试一本 550页的 《哈利波特与被诅咒的孩子》需要约 20 分钟，而自动化测试脚本扫描、对比差异只需 22 秒（不含编译时间）；人工测试 10 本书籍，用时约 3 小时，而自动化测试用时约 4.9 分钟；人工测试 100 本书籍需 33 小时，而自动化测试用时约 50 分钟。</p>
-<p>除了大大减少人工测试的时间，开发同学借助自动化测试工具，能大胆重构代码，通过自动化测试来确保重构不影响排版结果，拥抱快速变更的需求。</p>
-<p>随着自动化测试覆盖的变更版本、测试的书籍数量越来越多，带来的收益越大。</p>
-<p>借助自动化测试流程，对于任何代码修改而导致样本书籍、每一页、每个像素点的排版结果变更，都能够纳入我们的监控，最终达到确保微信读书排版引擎质量的目的。</p>
-<h1>未来工作</h1>
-<p>目前，自动化测试工具已经投入使用。未来会持续优化、增加特性，以满足测试、开发同学的需求。</p>
-<p>未来工作包括但不限于：</p>
-<ul>
-<li>
-<p>邮件通知：执行脚本得到结果后，如果两个版本之间的排版结果有差异，通过邮件通知相关同学；另外，排版的性能对比结果也可以生成一份报告，通过邮件通报。</p>
-</li>
-<li>
-<p>运行速度优化：目前对 20 本书生成排版结果，耗时约 10 分钟，对比耗时约 2 分钟。可以进一步优化运行速度，争取覆盖更多样本书籍</p>
-</li>
-<li>
-<p>支持微信读书安卓版</p>
-</li>
-<li>
-<p>尝试应用在其他模块：对运行预期结果相对固定、测试代价大的功能模块，可以通过支持测试 scheme，输出运行结果截图，以插件的形式接入这一套自动化测试流程。</p>
-</li>
-</ul>
-<h1>总结</h1>
-<p>本文介绍了微信读书排版引擎的日常修改时，人工测试所面临的问题，以及为什么需要自动化测试的原因。</p>
-<p>然后本文分析了人工测试的流程，以及这些流程改造成自动化的可能性。</p>
-<p>最后，介绍了我们整套自动化测试流程，以及应用自动化测试以后所来的好处，最终达到确保微信读书排版引擎质量的目的。</p>
-
-          
+          <div class="post-more-link text-center">
+            <a class="btn" href="/2016/08/23/Typesetter/#more" rel="contents">
+              阅读全文 &raquo;
+            </a>
+          </div>
         
       
     </div>
@@ -844,9 +634,7 @@ b.多条线程里的 cache 数据需要同步。</p>
 
       
         
-          
-            <h1>背景</h1>
-<p>最近微信 iOS 团队发表了一篇文章<a href="http://mp.weixin.qq.com/s?__biz=MzAwNDY1ODY2OQ==&amp;mid=2649286361&amp;idx=1&amp;sn=78bbcda7f41a14291ad71289e4821f71&amp;scene=4#wechat_redirect" target="_blank" rel="external">《微信iOS SQLite源码优化实践》</a>，该文章介绍了微信 iOS 客户端对 SQLite 进行的源码层级的优化，以及其所取得的成果。优化点包括：</p>
+          <h1 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h1><p>最近微信 iOS 团队发表了一篇文章<a href="http://mp.weixin.qq.com/s?__biz=MzAwNDY1ODY2OQ==&amp;mid=2649286361&amp;idx=1&amp;sn=78bbcda7f41a14291ad71289e4821f71&amp;scene=4#wechat_redirect">《微信iOS SQLite源码优化实践》</a>，该文章介绍了微信 iOS 客户端对 SQLite 进行的源码层级的优化，以及其所取得的成果。优化点包括：</p>
 <ol>
 <li>多线程并发优化（Busy Retry 的优化）</li>
 <li>I/O 性能优化（保留 WAL 文件大小，mmap 优化）</li>
@@ -860,55 +648,11 @@ b.多条线程里的 cache 数据需要同步。</p>
 <li>DB读操作造成的卡顿下降超过85%</li>
 </ul>
 </blockquote>
-<p>&lt;!--more--&gt;</p>
-<blockquote>
-<p><img src="/./img/wechat_stutter.png" alt=""></p>
-</blockquote>
-<p>看到这结果，首先是满怀惊喜，仅仅是禁用 SQLite 的内存统计这一点，就能使 DB 的卡顿下降超过80%，如果再加上其他优化，那么 SQLite 的性能将实现一次突破！但冷静下来之后，也很快产生怀疑，<strong>SQLite 这么成熟的开源数据库，怎么会为了一个内存统计牺牲这么大的性能，要知道，性能是任何一个数据库都极力追求的目标</strong>。</p>
-<p>所有的猜测都是没用的，实际测一下便知道孰是孰非。为了测试方便，使用自己的开源框架 GYDataCenter，每一行数据包括 NSInteger，double，BOOL，NSDate(double)，NSString 5列，测试机器为 iPhone 6s 64G，测试过程如下：</p>
-<ol>
-<li>打开 SQLite 内存统计，分别测试写入 10, 100, 1000，10000，100000 条数据所需时间；</li>
-<li>关闭 SQLite 内存统计，分别测试写入 10, 100, 1000，10000，100000 条数据所需时间；</li>
-<li>对比结果如下，横轴是数据量，纵轴是时间，单位秒；</li>
-</ol>
-<p><img src="/./img/memstatus_performance.png" alt=""></p>
-<p>从结果我们可以看出，<strong>打开或关闭 SQLite 的内存统计，性能基本没差别</strong>，仅有的一点点差别都是在误差范围内的。我们又对读操作进行了同样的测试，结果依然没有差别。</p>
-<p>问题出在于哪？究竟是哪个数据有问题？又或者是两个数据都没问题，只是我们打开的方式不对？于是，又重读了一遍微信的文章，发现该文章给出了这样的解释：</p>
-<blockquote>
-<p>多线程并发时，各线程很容易互相阻塞。
-阻塞虽然也很短暂，但频繁地切换线程，却是个很影响性能的操作，尤其是单核设备。
-因此，如果不需要内存统计的特性，可以通过sqlite3_config(SQLITE_CONFIG_MEMSTATUS, 0)进行关闭。</p>
-</blockquote>
-<p><strong>加锁和释放锁本身是有性能损耗，但这种损耗是很小的，基本上可以忽略，通常锁所带来的性能损耗正是在于等待其他线程释放锁的时间上</strong>。这正是两者的区别所在：</p>
-<ol>
-<li><strong>GYDataCenter 使用的是单线程单句柄的模式</strong>。对于同一个 db 的所有操作，都放到同一个队列同一个数据库句柄上，排队执行。并通过定时事务自动地把多个操作包在一起，批量地写入磁盘。</li>
-<li><strong>微信 iOS 客户端采用的是多线程多句柄的模式</strong>。对于每一个 db，会开多个数据库句柄。对于同一个数据库句柄，同一时间只能在一个队列运行。多个句柄间可以做到读与读，读与写的并发。</li>
-</ol>
-<p>GYDataCenter 在关闭 SQLite 的内存统计后，性能没有得到提升，正是因为 GYDataCenter 使用的是单线程模式，不会有多线程间等待锁的问题。GYDataCenter 从设计上根本地避免了多线程间等待锁的问题。而反观微信的文章，大部分的优化都是在解决多线程间等待锁所引起的性能损耗问题，解决 Busy Retry 使<code>等待线程锁的造成的卡顿下降超过90%</code>，解决内存统计的锁使<code>卡顿下降超过 80%</code>。这似乎也说明了<strong>多线程模式带来了很严重的竞争锁的问题</strong>。并且，Busy Retry 的线程锁，内存统计的锁只是其中两种锁，可能还有其他各种各样的锁急需优化。</p>
-<p>然而，单从这点就说单线程单句柄模式比多线程多句柄模式好是不正确的，多线程多句柄模式有它自己的优点，其中最明显的一点正是这种模式支持读与读，读与写的并发（WAL 模式下）。那么，我们就来具体分析一下，在移动客户端这个场景下，哪种模式可能更适用。</p>
-<h1>多线程多句柄 vs 单线程单句柄</h1>
-<h2>并发的需求</h2>
-<p>要回答这个问题，首先我们要问，<strong>在移动客户端下，数据库的读与读，读与写的并发的需求有多强</strong>？</p>
-<p>还是拿数据说话。在 iPhone 6s 上对微信读书 app 的主要场景进行了数据库并发性的统计。由于不同 app 不尽相同，不同机器性能也不一样，因此下面的统计数据只能做参考意义。</p>
-<p><img src="/./img/concurrence.png" alt=""></p>
-<p>在上面的结果中，对于<strong>n读0写</strong>跟<strong>n读1写</strong>的情况，多线程模式能起到优化作用。这两种情况分别占了 2% 跟 7%。我们进一步分析发现，出现这两种情况的场景，大多数是在网络请求回来时处理数据。</p>
-<p>**分析：移动客户端 app 的运行，都是用户操作驱动的。用户在界面上进行一系列操作，从主线程发起请求，app 响应请求，处理数据，显示结果，一般来说这一系列动作是一条线串起来执行的，没有并发的需求。移动客户端出现的最多的并发情况，在于发起网络请求，和网络请求回来后的数据处理。然而，在网络请求回来的情况下，数据库执行最多的操作是存储返回的数据。对于这种情况，我们都知道，通过事务把多个写操作包在一起能极大地提升性能。**下面，我们分析一下两种方案在这种情况下的表现：</p>
-<ol>
-<li>多线程多句柄：如果把写操作放在一个事务中，在事务结束前，其他线程其他句柄的操作都会被卡住，返回 Busy Retry，造成空等待。</li>
-<li>单线程单句柄：自动地把多个写操作包在一个事务中，由于所有操作都放到一个队列，其他的读写操作可以穿插其中，不会被卡住。</li>
-</ol>
-<p>当然，如果你对返回的数据的存储有原子性要求，即要求在存储期间不能有其他任何的读写操作，那么其他读写操作是一定会被卡住的，两种方案都是无法解决的。</p>
-<h2>Cache 的管理</h2>
-<p>我们都知道，cache 能很好地提升性能。如果采用单线程的方案，cache 的实现就比较简单了。由于所有操作都是在一个队列上排队操作，cache 的维护与查询也在一个队列上排队进行即可，cache 与 db 数据的一致性可以得到保证。</p>
-<p>而如果在多线程多句柄方案上做 cache，可能会有以下两个难点：</p>
-<ol>
-<li>保证 cache 与 db 数据的一到性；</li>
-<li>由于 cache 也是在多线程访问的，因此也需要加锁，也有可能引进竞争锁的性能问题；</li>
-</ol>
-<h1>结语</h1>
-<p>通过上面的分析，我个人更偏向于使用单线程单句柄的模式。然而，世事无绝对，还是要具体情况具体分析。</p>
-
-          
+          <div class="post-more-link text-center">
+            <a class="btn" href="/2016/08/19/SQLite/#more" rel="contents">
+              阅读全文 &raquo;
+            </a>
+          </div>
         
       
     </div>
@@ -1015,89 +759,19 @@ b.多条线程里的 cache 数据需要同步。</p>
 
       
         
-          
-            <p>Android 不仅系统版本众多，机型众多，而且各个市场都各有各的政策和审核速度，每次发布一个版本对于开发同学来讲都是一种漫长的煎熬。相比于 iOS 两三天就能达到 80% 的覆盖速度而言，Android 应用版本升级至少需要两周才能达到 80% 的升级率，严重阻碍了版本迭代速度。也导致<strong>市场上 App 版本分散</strong>，处理 bug 和投诉等也越来越麻烦。</p>
+          <p>Android 不仅系统版本众多，机型众多，而且各个市场都各有各的政策和审核速度，每次发布一个版本对于开发同学来讲都是一种漫长的煎熬。相比于 iOS 两三天就能达到 80% 的覆盖速度而言，Android 应用版本升级至少需要两周才能达到 80% 的升级率，严重阻碍了版本迭代速度。也导致<strong>市场上 App 版本分散</strong>，处理 bug 和投诉等也越来越麻烦。</p>
 <ul>
 <li>修复的 bug 需要等待下个版本发布窗口才能发布？</li>
 <li>已经 ready 的需求排队上线，需要等待其他 Feature Team 合入代码？</li>
 <li>老版本升级速度慢？频繁上线版本提醒用户升级，影响用户体验？</li>
 </ul>
 <p>这几个问题是每个 App 开发同学都必然要面对的。那么有没有方法能在用户无感知的情况下<strong>加速 bug 处理和版本迭代速度</strong>？</p>
-<p>在这方面 PC 端 Chrome 浏览器的 **<a href="https://www.chromium.org/developers/design-documents/software-updates-courgette" target="_blank" rel="external">patch 升级方案</a>**给我们了一个很好的借鉴：当 Chrome 有版本升级的时候会自动下载 patch 文件。下次启动后，Chrome 就已经是新版本。</p>
-<p>&lt;!--more--&gt;</p>
-<h2>他山之石，可以攻玉</h2>
-<p>近一两年 Android 热补丁框架非常热门。从最初 360 动态下发 lua 脚本，到后来出现的<a href="http://blog.csdn.net/RichieZhu/article/details/50601368" target="_blank" rel="external">各种方案</a>，如雨后春笋般出现。早期的补丁框架偏向于以<strong>代码修复</strong>为主，主要分为两大类：native hook 方案和 Multidex 方案。</p>
-<p>native hook 方案如阿里巴巴的 <a href="https://github.com/alibaba/AndFix" target="_blank" rel="external">AndFix</a> 和 <a href="https://github.com/alibaba/dexposed" target="_blank" rel="external">Dexposed</a>。Multidex 方案如 <a href="http://bugly.qq.com/bbs/forum.php?mod=viewthread&amp;tid=16" target="_blank" rel="external">Qzone</a>。切入点都是替换掉将要执行的代码。基于 <a href="http://bugly.qq.com/bbs/forum.php?mod=viewthread&amp;tid=16" target="_blank" rel="external">Qzone</a> 方案的思路，出现了 <a href="https://github.com/jasonross/Nuwa" target="_blank" rel="external">nuwa</a> 这个比较完善的库，工具链比较完善。</p>
-<p>类似 Chrome 的 <a href="https://www.chromium.org/developers/design-documents/software-updates-courgette" target="_blank" rel="external">patch 升级方案</a>足以满足<strong>加速 bug 处理和版本迭代速度</strong>的需求，给了我们很大的借鉴意义。在安卓系统上，可以通过 hotfix 的思路来达到这一目的：下发补丁文件，更新 App 版本</p>
-<h2>站在巨人的肩膀上</h2>
-<p>在今年 3 月份开始做技术选型的时候把上面的几种方案试了一轮。其中 <a href="https://github.com/alibaba/AndFix" target="_blank" rel="external">AndFix</a> 甚至跟上了现网的一个发布版本，但是由于影响正向开发过程（只能修改方法、不能修改 field、不能新增类等问题）、库本身难于维护（需要依赖外部开源力量进行维护）以及发现的莫名其妙的 bug（导致我们 App 下发 patch 后白屏），所以即使跟上了发布版本也没有使用。<a href="https://github.com/jasonross/Nuwa" target="_blank" rel="external">nuwa</a> 仅支持更新 Java 代码，不能更新资源和 so 文件，满足不了我们的需求。</p>
-<p>没有好用的轮子，我们决定自己造一个，于是有了现在的 patch 方案。</p>
-<h2>App 只是一个加载器</h2>
-<p>既然做安卓 patch 方案，最好的结果就是能支持更新 App 所有的代码和资源。但是</p>
-<ul>
-<li><code>Application</code> 类是 App 启动之初就被安卓系统加载起来，所以<strong>至少 <code>Application</code> 类和它启动依赖的其他业务类</strong>是不能被更新的？</li>
-<li>修复 bug 或者版本迭代过程中难免会遇到需要修改资源文件的情况。资源文件能更新吗？</li>
-<li>native 实现的 so 文件如何更新？</li>
-</ul>
-<p>针对上面三个问题，** 我们的设计是把 App 仅仅当做一个加载器**。系统启动 App 之后，加载器决定将要运行的代码和资源的位置。当有新功能或者 bugfix 需要推送给用户，替换加载器内容即可。</p>
-<p><img src="/img/androidPatch1.png" alt=""></p>
-<h2>支持更新全部代码</h2>
-<p>上面提到 <code>Application</code> 由于启动就被加载而不能被更新的问题，我们<strong>代理了真实 Application 类的创建过程</strong>。通过代理 <code>Application</code>，控制 <code>Application</code> <strong>从新 dex 文件中加载</strong>。假设真实的 <code>Application</code> 类是 <code>MyApplication</code>。我们在编译期间自动修改 <code>AndroidManifest.xml</code> 文件，把 <code>MyApplication</code> 替换为 <code>MoaiApplication</code>（是 App 的入口 <code>Application</code>）。App 启动后由 <code>MoaiApplication</code> 加载完相应的文件（dex/资源文件/so 文件）后，再将控制权交回给 <code>MyApplication</code>。</p>
-<h4>代理生命周期</h4>
-<p>将控制权交回给 <code>MyApplication</code>，我们最初是代理 <code>MyApplication</code> 的生命周期。具体做法是，<code>MoaiApplication</code> 决定加载哪里的业务代码、资源文件以及 so 文件之后依然负责接收 App 的全部生命周期，然后把生命周期代理给 <code>MyApplication</code>，简单例子如下：
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> MyApplication delegate;</span><br><span class="line"></span><br><span class="line"><span class="annotation">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">attachBaseContext</span><span class="params">(Context base)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">super</span>.attachBaseContext(base);</span><br><span class="line">  delegate = MyApplication.class.newInstance();</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="annotation">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onCreate</span><span class="params">()</span> </span>&#123;</span><br><span class="line">  <span class="keyword">super</span>.onCreate();</span><br><span class="line">  delegate.onCreate();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
-<p>还有比较多生命周期函数上面代码就没一一列举。</p>
-<p>从上面代码容易想到代理方案的缺点：<strong>必须要完整代理所有生命周期接口</strong>。否则 <code>MyApplication</code> 会由于生命周期<strong>不完整</strong>而出现奇怪的 bug。比如我们最初版本在测试过程中就出现了没有代理 <code>registerActivityLifecycleCallbacks</code> 函数而导致拿不到 <code>Activity</code> 生命周期 <code>onActivityCreated</code>/<code>onActivityDestroyed</code> 等回调。</p>
-<h4>反射 <code>Application</code></h4>
-<p>踩到生命周期回调不完整的坑之后，我们开始考虑能不能把 App 运行期间 <code>Application</code> 的引用<strong>全部</strong>替换成 <code>MyApplication</code> ？这样就无需 <code>MoaiApplication</code> 把生命周期代理给 <code>MyApplication</code>，而是由 <code>MyApplication</code> 直接接收系统回调。安卓系统 <code>ContextWrapper</code> 的实现是包装了一层真正的 <code>mBase</code> 上下文，App 真正使用到的就是这个 <code>mBase</code>。通过反射 <code>mBase</code> 以及其中字段对 <code>Application</code> 的引用，『彻底』解决了需要手写代理 <code>Application</code> 全部生命周期的方法。</p>
-<h4>dex分包</h4>
-<p><a href="http://bugly.qq.com/bbs/forum.php?mod=viewthread&amp;tid=16" target="_blank" rel="external">Qzone</a> 方案下发的 patch 文件是变更过的 Java 类组成的 patch.dex，在 dalvik 和 ART 虚拟机下分别需要解决 <code>Class ref in pre-verified class resolved to unexpected implementation</code> 和内存地址错乱问题。这些问题根源在于改变了类原本所属的 dex 文件。既然改变类所在的 dex 会导致各种各样的问题，那直接替换掉整个 dex 不就好了？在调研 <a href="http://zeroturnaround.com/software/jrebel-for-android/" target="_blank" rel="external">JRebal for Android</a> 和 <a href="https://github.com/nuptboyzhb/AndroidInstantRun" target="_blank" rel="external">Instant Run</a> 的时候也发现了他们有类似的做法。</p>
-<p>我们把 App 的 dex 分成两部分：</p>
-<ul>
-<li>patch 库的 dex 文件 -&gt; classes.dex</li>
-<li>其他业务代码的 dex 文件 -&gt; classes[N].dex</li>
-</ul>
-<p>其中 classes.dex 中仅包含了 patch 库的全部代码，并不包含任何其他业务代码。</p>
-<p>假设 apk 中包含三个文件：classes.dex、classes2.dex、classes3.dex。classes.dex 充当的角色就是<strong>加载器</strong>，负责启动 App 并且加载后面的两个 dex。这样做的目的是，App 启动需要用到的所有类都集中在 classes.dex 中，所有业务代码的类都集中在 classes[N].dex 中。如果某次下发 patch 代码把 classes2.dex 变更为 classes2-1.dex，那么由加载器加载 classes2-1.dex 和  classes3.dex 即可实现更新包含 <code>MyApplication</code> 类在内的所有代码。</p>
-<h2>怎么加载更新后的代码？</h2>
-<p>如果 dex 文件有更新，加载器会选择加载更新后的文件。我们最初采用了 Google 官方的 Multidex 方案，扩展 <code>DexPathList</code> 的 <code>dexElements</code> 字段。</p>
-<h4>Multidex 方案存在问题</h4>
-<p>Multidex 方案上线后发现某些机型（比如三星s6 5.0.2 ROM）并不能加载扩展进去的 dex 中的代码。debug 阶段却能顺利加载（debugger 拖慢代码执行速度）。目前的猜测是某些厂商在 5.x 以上版本改动 ROM 导致 App 启动逻辑有<strong>多线程</strong>并发执行。</p>
-<p>最终我们弃用了 Multidex 方案，转而 Hack 系统 <code>ClassLoader</code>。</p>
-<h4><code>ClassLoader</code> Hack 方案</h4>
-<p><strong>所有线程使用的是同一个 ClassLoader 对象</strong>。所以一旦 Hack 了这个对象，所有线程都开始使用 Hack 过的对象，从而能够解决多线程导致加载不到扩展的 dex 文件中代码的问题。</p>
-<p>安卓系统加载代码的 <code>ClassLoader</code> 是 <code>PathClassLoader</code> 和 <code>BootClassLoader</code>。我们最初设计的方案是在 <code>PathClassLoader</code> 和 <code>BootClassLoader</code> 之间插入一个 <code>BaseDexClassLoader</code>，让所有业务代码都在这个插入的 <code>BaseDexClassLoader</code> 中加载。但是这样的设计存在<strong>缺陷</strong>：业务代码的 <code>ClassLoader</code> 会变成 <code>BaseDexClassLoader</code>，如果业务代码依赖了 patch 库的代码（在 classes.dex 中），会出现 <code>ClassNotFoundException</code>。</p>
-<p>在这方面 <a href="https://github.com/nuptboyzhb/AndroidInstantRun" target="_blank" rel="external">Instant Run</a> 的设计很精巧。它让 <code>PathClassLoader</code> 插入的父 loader （<code>IncrementalClassLoader</code>）包装了  <code>DelegateClassLoader</code>，并且把 <code>DelegateClassLoader</code> 的父 loader 设置为 <code>PathClassLoader</code>，使得类加载的路径变成：</p>
-<p><img src="/img/androidPatch2.png" alt=""></p>
-<p>在 <code>DelegateClassLoader</code> 加载业务代码的时候（业务代码在 classesN.dex 中），流程会沿着标记的顺序最终第 5 步成功加载到业务代码。业务代码如果依赖 patch 库的代码，会在 <code>PathClassLoader</code> 加载。这样所有代码都可以被加载到。</p>
-<h2>怎么更新资源？</h2>
-<p>单纯更新 Java 代码的 patch 框架，实用性会受到很大的局限。开发同学需要<strong>仔细</strong>验证提交内容，确保提交中不包含资源文件的变更以及 native so 的改动，会导致本就复杂的开发流程变得更加繁琐。所以我们在支持更新 Java 代码的基础之上，也支持更新资源和 native so 文件。</p>
-<p>App 加载资源是依赖 <code>Context#getResources</code> 函数返回的 <code>Resources</code> 对象。<code>Resources</code> 内部包装了 <code>AssetManager</code>，最终由  <code>AssetManager</code> 从 apk 文件中加载资源。所以我们反射了替换系统默认的 <code>Resources</code>，让 <code>AssetManager</code> 从我们更新后的 apk 中加载资源。现阶段的实现支持比如 string/anim/drawable/color/layout 等资源文件的变更。由于 Android 系统在安装 apk 时候已经把 <code>AndroidManifest.xml</code> 文件解析并写入到系统中，目前还不支持修改四大组件，比如增加 <code>Activity</code>。后续会继续研究如何做到无缝修改四大组件。</p>
-<h2>怎么更新 so 文件？</h2>
-<p>在 Android 项目中使用 native 函数前需要先调用 <code>System.loadLibrary(libName)</code>。</p>
-<p>当 lib 文件需要更新或者有 bug 时候怎么办？首先想到的是在代码中把加载 so 文件的代码改成<code>System.load(libFilePath)</code>，让系统加载自己指定的 <code>libFilePath</code> 文件。然而这样的改动需要</p>
-<ul>
-<li>在源代码中修改或者使用工具在编译期把 <code>loadLibrary</code> 接口改为 <code>load</code></li>
-<li>patch 库把 so 文件从 patch 文件中复制到特定目录</li>
-</ul>
-<p>这样在运行期才有可能加载更新后的 so 文件。</p>
-<p>通过分析系统加载 so 文件的方式后，我们使用了更简单的处理方法。查找 lib 文件是通过调用 <code>PathClassLoader</code> 的 <code>findLibrary</code>，最终调用到 <code>DexPathList</code> 的 <code>findLibrary</code>。<code>DexPathList</code> 会在自己维护的列表目录中查找对应的 lib 文件是否存在。所以我们在发现 patch 文件中有 so 文件变更的时候，会在 <code>PathClassLoader</code> 的 <code>nativeLibraryDirectories</code>（Android6.0以下）或者<code>nativeLibraryPathElements</code> （Android 6.0及以上）的最前面<strong>插入自定义的lib文件目录</strong>。这样 <code>ClassLoader</code> 在 <code>findLibrary</code> 的时候会先在自定义的 lib 目录中查找，优先加载变更过的 so 文件。</p>
-<h2>patch 包的生成与应用</h2>
-<p>回到我们最初的目标：<strong>patch 不应该影响正向开发流程</strong>。我们生成 patch 文件是针对 apk 进行的，开发同学无需关心此次发布是 patch 版本还是正常版本，只需要正常开发并且打包要发布的 apk 即可，不会对正向开发流程产生任何影响。</p>
-<p>我们提供 python 脚本生成两个 apk 的：对比两个 apk 中的所有文件，找出有变更的文件进行 diff，把 diff 结果写入 patch 文件。线上用户下载 patch 文件到本地之后，启动一条新的进程使用 <code>context.getApplicationInfo().sourceDir</code> 路径的 apk 与 patch 文件合并，得到新的 apk（包含资源文件，不包含 dex 文件）以及 dex 文件、native so 文件，并在这条进程中提前做 dex 优化（dex2oat/dexopt）。针对 dex 优化过程太慢的问题（优化过程慢会导致进程可能会系统kill，降低 patch 成功率）我们并发了 dex 优化过程，使 patch 过程耗时相对减小。新 apk、dex文件、so 文件就可以在<strong>下次启动</strong> App 的时候由加载器加载。</p>
-<h2>优势和不足</h2>
-<p>正所谓没有完美的架构，只有适合自己的架构。当前的开源方案并不能满足我们加速 bug处理和版本迭代速度的需求，于是有了站在巨人肩膀上的思考和我们现在的 patch 方案。我们目前的优势：</p>
-<ul>
-<li>全面支持 patch Java 代码、资源文件 和 native so 文件。版本只需要正常滚动，开发同学无需关心是发布 patch 版本还是正常版本</li>
-<li>使用相对简单（<strong>减少接入成本</strong>也是我们的最初思考点之一），只需要在 <code>build.gradle</code> 中加入三行代码即可，无需更多配置。</li>
-</ul>
-<p>从我们团队发布的多个 patch 版本来看，下发的 diff 结果文件稍大。大文件下载过程可能出现的错误也会间接影响到 patch 铺开的速度，所以我们也在尝试更好的 diff 方案。Chrome 最初升级方案也是 bsdiff，而后慢慢演变出 <a href="https://www.chromium.org/developers/design-documents/software-updates-courgette" target="_blank" rel="external">Courgette</a> 算法。</p>
-<h2>演进与思考</h2>
-<p>我们对于补丁框架的定义不仅仅是『修复bug』就足够，除此之外，如何快速接入，如何做到不影响现有流程，这对于很多应用来说至关重要。在此之上，搞清楚框架的定位，适当舍弃一些不重要方面的时候，快速迭代，在迭代中持续优化，事情往往比想象的更加简单。</p>
-<p><a href="http://www.mindtheproduct.com/2016/02/what-the-hell-are-ci-cd-and-devops-a-cheatsheet-for-the-rest-of-us/" target="_blank" rel="external">持续交付</a>一直都是快速迭代思想的一种践行方式，对于 App 开发而言，如果我们通过构造补丁框架这样一个渠道，可以通过自动化系统把补丁快速地把新功能推送给用户，那这个事情的意义就不仅仅是『修复 bug』这么简单。减少线上 crash 率和加速版本迭代、让新功能尽早与用户见面，从而可以在更短的时间内不断收集用户反馈信息对产品进行打磨。</p>
-<p>目前我们已经在微信读书线上三个版本开始试行了用补丁代替版本发布或者加速老版本升级的做法，期待将来能通过这个渠道，为安卓开发同学们做到无感知的持续交付过程 。</p>
-
-          
+<p>在这方面 PC 端 Chrome 浏览器的 <strong><a href="https://www.chromium.org/developers/design-documents/software-updates-courgette">patch 升级方案</a></strong>给我们了一个很好的借鉴：当 Chrome 有版本升级的时候会自动下载 patch 文件。下次启动后，Chrome 就已经是新版本。</p>
+          <div class="post-more-link text-center">
+            <a class="btn" href="/2016/07/26/AndroidPatch/#more" rel="contents">
+              阅读全文 &raquo;
+            </a>
+          </div>
         
       
     </div>
@@ -1204,9 +878,8 @@ b.多条线程里的 cache 数据需要同步。</p>
 
       
         
-          
-            <p><a href="https://github.com/Zepo/MLeaksFinder" target="_blank" rel="external">MLeaksFinder</a> 是 iOS 平台的自动内存泄漏检测工具，引进 MLeaksFinder 后，就可以在日常的开发，调试业务逻辑的过程中自动地发现并警告内存泄漏。开发者无需打开 instrument 等工具，也无需为了找内存泄漏而去跑额外的流程。并且，由于开发者是在修改代码之后一跑业务逻辑就能发现内存泄漏的，这使得开发者能很快地意识到是哪里的代码写得问题。这种及时的内存泄漏的发现在很大的程度上降低了修复内存泄漏的成本。</p>
-<p>MLeaksFinder 0.1 开源已经有一段时间，关于 MLeaksFinder 的基本原理，可以参考这篇<a href="http://wereadteam.github.io/2016/02/22/MLeaksFinder/" target="_blank" rel="external">文章</a>。在 MLeaksFinder 开源之后，收到的最多的反馈是：MLeaksFinder 帮忙发现了内存泄漏，但是要去修复这些内存泄漏，找到造成问题的代码很难，特别是对于历史遗留的内存泄漏。</p>
+          <p><a href="https://github.com/Zepo/MLeaksFinder">MLeaksFinder</a> 是 iOS 平台的自动内存泄漏检测工具，引进 MLeaksFinder 后，就可以在日常的开发，调试业务逻辑的过程中自动地发现并警告内存泄漏。开发者无需打开 instrument 等工具，也无需为了找内存泄漏而去跑额外的流程。并且，由于开发者是在修改代码之后一跑业务逻辑就能发现内存泄漏的，这使得开发者能很快地意识到是哪里的代码写得问题。这种及时的内存泄漏的发现在很大的程度上降低了修复内存泄漏的成本。</p>
+<p>MLeaksFinder 0.1 开源已经有一段时间，关于 MLeaksFinder 的基本原理，可以参考这篇<a href="http://wereadteam.github.io/2016/02/22/MLeaksFinder/">文章</a>。在 MLeaksFinder 开源之后，收到的最多的反馈是：MLeaksFinder 帮忙发现了内存泄漏，但是要去修复这些内存泄漏，找到造成问题的代码很难，特别是对于历史遗留的内存泄漏。</p>
 <p>现在，MLeaksFinder 0.2 来了。如果说 0.1 版本旨在帮助开发者发现内存泄漏，那么 0.2 版本的新特性，正是旨在帮助开发者更好地解决内存泄漏。MLeaksFinder 0.2 包括以下几个新特性：</p>
 <ul>
 <li>assert 改为 alert</li>
@@ -1214,47 +887,11 @@ b.多条线程里的 cache 数据需要同步。</p>
 <li>查找循环引用链</li>
 </ul>
 <p>下面，我们来逐一看一下这几个特性。</p>
-<p>&lt;!--more--&gt;</p>
-<h1>assert 改为 alert</h1>
-<p>在 MLeaksFiner 0.1 版本，当 MLeaksFinder 发现内存泄漏时，会直接中 assert 并打出内存泄漏的信息。Assert 能迫使开发者及时地去修复内存泄漏，并且，如果只是打日志，内存泄漏的日志很可能会被淹没在众多的日志中。这种 assert 的方法在我们实际的项目取得了不错的效果。</p>
-<p>然而，assert 确实也有不好的一面。当开发者在调试业务逻辑的过程中，如果由于内存泄漏中 assert 而使得整个程序挂掉了，那么开发者的思维会因此被打断，并不得不在修复完内存泄漏之后，从头开始调试业务逻辑。有时候开发者更希望的是连贯地调完整个业务逻辑之后，再回过头来修复内存泄漏。</p>
-<p>因此，MLeaksFinder 0.2 把 assert 改成了 alert。当发现内存泄漏之后，开发者可以把 alert 框关掉，并继续调试业务逻辑。而且，把 assert 改成 alert 之后，也使得进一步分析内存成为可能，为下面两个新特性垫定基础。</p>
-<h1>追踪对象的生命周期</h1>
-<p>当发现可能的内存泄漏对象并给出 alert 之后，MLeaksFinder 会进一步地追踪该对象的生命周期，并在该对象释放时给出 <code>Object Deallocated</code> 的 alert。</p>
-<p>为什么认为一个对象内存泄漏之后，还要进一步去追踪该对象后续会不会释放呢？MLeaksFinder 的基本原理是这样的，当一个 ViewController 被 pop 或 dismiss 之后，我们认为该 ViewController，包括它上面的子 ViewController，以及它的 View，View 的 subView 等等，都很快会被释放，如果某个 View 或者 ViewController 没释放，我们就认为该对象泄漏了。然而，这样的判断内存泄漏的方法存在两个可能的“误判”：</p>
-<p><strong>1) 单例或者被 cache 起来复用的 View 或 ViewController</strong></p>
-<p>对于这样的 View 或 ViewController，在被 pop 或 dismiss 之后是不会被释放的。然而，由于 View 相关的对象一般都占用了较多了内存，这样的设计通常来说不是好的设计。如果开发者由于性能问题等原因而不得不这样设计的时候，开发者可以在报泄漏的类里重载 <code>- (BOOL)willDealloc</code> 方法，直接 <code>return NO;</code> 以消除内存泄漏的警告，这个消除内存泄漏警告的方法与 MLeaksFinder 0.1 版本一致。</p>
-<p><strong>2) 释放不及时的 View 或 ViewController</strong></p>
-<p>例如，发起网络请求的时候，在网络请求回调的 block 里强引用 ViewController，以便在网络请求回来的时候刷新界面。在网络请求比较慢的情况下，这种做法存在两个问题：</p>
-<ul>
-<li>ViewController 被 pop 之后，由于被 block 强引用导致释放不及时</li>
-<li>ViewController 被 pop 之后，如果网络请求回来了，不应该继续做刷新界面的事，浪费 CPU</li>
-</ul>
-<p>所以，对于这种情况，我们应该在 block 里弱引用 ViewController，而不是强引用。</p>
-<p>下面我们来看如何利用对象的生命周期来分析内存的真正使用情况，分三种情况：</p>
-<p><strong>1) 单例或者被 cache 起来复用</strong></p>
-<p>如下面所示，在第一次 pop 的时候报 Memory Leak，在之后的重复 push 并 pop 同一个 ViewController 过程中，即不报 Object Deallocated，也不报 Memory Leak。这种情况下我们可以确定该对象被设计成单例或者 cache 起来了。</p>
-<p><figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">    pop             push           pop           push          pop</span><br><span class="line">----------&gt; Leak ----------&gt; | ----------&gt; | ----------&gt; | ----------&gt;</span><br></pre></td></tr></table></figure></p>
-<p><strong>2) 释放不及时</strong></p>
-<p>如下面所示，在第一次 pop 的时候报 Memory Leak，在之后的重复 push 并 pop 同一个 ViewController 过程中，对于同一个类不断地报 Object Deallocated 和 Memory Leak。这种情况属于释放不及时的情况。</p>
-<p><figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">    pop             push                 pop             push                 pop</span><br><span class="line">----------&gt; Leak ----------&gt; Dealloc ----------&gt; Leak ----------&gt; Dealloc ----------&gt; Leak</span><br></pre></td></tr></table></figure></p>
-<p><strong>3) 真正的内存泄漏</strong></p>
-<p>如下面所示，在第一次 pop 的时候报 Memory Leak，在之后的重复 push 并 pop 同一个 ViewController 过程中，不报 Object Deallocated，但每次 pop 之后又报 Memory Leak。这种情况下每回进入并退出一个页面后，就报有新的内存泄漏，同时被报泄漏的对象又从来没有释放过，可以确定是真正的内存泄漏。</p>
-<p><figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">    pop             push           pop             push           pop</span><br><span class="line">----------&gt; Leak ----------&gt; | ----------&gt; Leak ----------&gt; | ----------&gt; Leak</span><br></pre></td></tr></table></figure></p>
-<h1>查找循环引用链</h1>
-<p>Facebook 在前阵子开源了一个循环引用检测工具 <a href="https://github.com/facebook/FBRetainCycleDetector" target="_blank" rel="external">FBRetainCycleDetector</a>。当传入内存中的任意一个 OC 对象，FBRetainCycleDetector 会递归遍历该对象的所有强引用的对象，以检测以该对象为根结点的强引用树有没有循环引用。</p>
-<p>我们知道，很多循环引用是 block 的使用不当造成的。而 FBRetainCycleDetector 最大的技术亮点，正在于如何找出一个 block 的所有强引用对象。对于这个感兴趣的，可以看 facebook 的这篇<a href="https://code.facebook.com/posts/583946315094347/automatic-memory-leak-detection-on-ios/" target="_blank" rel="external">文章</a>。</p>
-<p>然而，FBRetainCycleDetector 的使用存在两个问题：</p>
-<ul>
-<li>需要找到候选的检测对象</li>
-<li>检测循环引用比较耗时</li>
-</ul>
-<p>正是由于这两个问题，FBRetainCycleDetector 通常是结合其它工具一起使用，通过其它工具先找出候选的检测对象，然后进行有选择的检测。当 MLeaksFinder 与 FBRetainCycleDetector 结合使用时，正好能达到很好的效果。我们先通过 MLeaksFinder 找到内存泄漏的对象，然后再过 FBRetainCycleDetector 检测该对象有没有循环引用即可。</p>
-<p>循环引用的输出信息如下：
-<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">(</span><br><span class="line">    <span class="string">"-&gt; MyTableViewCell "</span>,</span><br><span class="line">    <span class="string">"-&gt; _callback -&gt; __NSMallocBlock__ "</span></span><br><span class="line">)</span><br></pre></td></tr></table></figure></p>
-<p>上面的信息表示，<code>MyTableViewCell</code> 有一个强引用的成员变量 <code>_callback</code>，该变量的类型是 <code>__NSMallocBlock__</code>，在 <code>_callback</code> 里，又强引用了 <code>MyTableViewCell</code> 造成循环引用。</p>
-
-          
+          <div class="post-more-link text-center">
+            <a class="btn" href="/2016/07/20/MLeaksFinder2/#more" rel="contents">
+              阅读全文 &raquo;
+            </a>
+          </div>
         
       
     </div>
@@ -1361,10 +998,8 @@ b.多条线程里的 cache 数据需要同步。</p>
 
       
         
-          
-            <p><a href="https://github.com/Zepo/GYDataCenter" target="_blank" rel="external">GYDataCenter</a> 是一个 SQLite 数据库框架，提供了一套简单易用的面向对象的数据操作接口，同时保留了 SQL 查询的灵活性。GYDataCenter 简单易上手，相对于 CoreData，GYDataCenter 的学习成本更低。同时，根据自己的需求，开发者可以更方便地划分数据库，设计数据库表，数据库索引等。</p>
-<h1>概览</h1>
-<p>GYDataCenter 具有以下特性：</p>
+          <p><a href="https://github.com/Zepo/GYDataCenter">GYDataCenter</a> 是一个 SQLite 数据库框架，提供了一套简单易用的面向对象的数据操作接口，同时保留了 SQL 查询的灵活性。GYDataCenter 简单易上手，相对于 CoreData，GYDataCenter 的学习成本更低。同时，根据自己的需求，开发者可以更方便地划分数据库，设计数据库表，数据库索引等。</p>
+<h1 id="概览"><a href="#概览" class="headerlink" title="概览"></a>概览</h1><p>GYDataCenter 具有以下特性：</p>
 <ul>
 <li>面向对象的数据操作接口</li>
 <li>使用 SQLite 的 where 语句做为查询条件</li>
@@ -1372,67 +1007,13 @@ b.多条线程里的 cache 数据需要同步。</p>
 <li>高性能 cache 层</li>
 <li>faulting 机制（类似 Core Data）</li>
 <li>自动批量写入磁盘</li>
-<li>使用 <a href="https://www.sqlite.org/lang_analyze.html" target="_blank" rel="external">ANALYZE</a> 优化查询</li>
+<li>使用 <a href="https://www.sqlite.org/lang_analyze.html">ANALYZE</a> 优化查询</li>
 </ul>
-<p>&lt;!--more--&gt;</p>
-<h1>使用方法</h1>
-<p>1）把 model 类继承于 GYModelObject。
-<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">@interface</span> <span class="title">Employee</span> : <span class="title">GYModelObject</span></span></span><br><span class="line"><span class="keyword">@property</span> (<span class="keyword">nonatomic</span>, <span class="keyword">assign</span>) <span class="built_in">NSInteger</span> employeeId;</span><br><span class="line"><span class="keyword">@property</span> (<span class="keyword">nonatomic</span>, <span class="keyword">strong</span>) <span class="built_in">NSString</span> *name;</span><br><span class="line"><span class="keyword">@property</span> (<span class="keyword">nonatomic</span>, <span class="keyword">strong</span>) <span class="built_in">NSDate</span> *dateOfBirth;</span><br><span class="line"><span class="keyword">@property</span> (<span class="keyword">nonatomic</span>, <span class="keyword">strong</span>) Department *department;</span><br><span class="line"><span class="keyword">@end</span></span><br></pre></td></tr></table></figure></p>
-<p>2）实现下面的 protocol 方法，指定数据库名，表名，指定哪个 property 做为主键（主键可以为 nil），以及哪些 property 需要持久化。
-<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line">+ (<span class="built_in">NSString</span> *)dbName &#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="string">@"GYDataCenterTests"</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">+ (<span class="built_in">NSString</span> *)tableName &#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="string">@"Employee"</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">+ (<span class="built_in">NSString</span> *)primaryKey &#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="string">@"employeeId"</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">+ (<span class="built_in">NSArray</span> *)persistentProperties &#123;</span><br><span class="line">    <span class="keyword">static</span> <span class="built_in">NSArray</span> *properties = <span class="literal">nil</span>;</span><br><span class="line">    <span class="keyword">if</span> (!properties) &#123;</span><br><span class="line">        properties = @[</span><br><span class="line">                       <span class="string">@"employeeId"</span>,</span><br><span class="line">                       <span class="string">@"name"</span>,</span><br><span class="line">                       <span class="string">@"dateOfBirth"</span>,</span><br><span class="line">                       <span class="string">@"department"</span></span><br><span class="line">                       ];</span><br><span class="line">    &#125;);</span><br><span class="line">    <span class="keyword">return</span> properties;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
-<p>3）实现上面方法后，即可以存储，查询，更新数据。
-<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">Employee *employee = ...</span><br><span class="line">[employee save];</span><br><span class="line"></span><br><span class="line">employee = [Employee objectForId:@<span class="number">1</span>];</span><br><span class="line"><span class="built_in">NSArray</span> *employees = [Employee objectsWhere:<span class="string">@"WHERE employeeId &lt; ? ORDER BY employeeId"</span></span><br><span class="line">                                  arguments:@[ @<span class="number">10</span> ]];</span><br></pre></td></tr></table></figure></p>
-<ol start="4">
-<li>这里的查询条件使用的还是 SQL 的 where 语句，这样做有两个好处：</li>
-</ol>
-<ol>
-<li>学习成本低。如果你已经熟悉 SQL 的语法，GYDataCenter 可以很快上手，你无需再学习一套新的查询语法。</li>
-<li>保持了 SQL 查询的灵活性。</li>
-</ol>
-<p>实际上，跟原生 SQL 一样，除了 where 语句，你也可以直接使用 order by，limit 等其它语句：
-<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">NSArray</span> *employees = [Employee objectsWhere:<span class="string">@"ORDER BY employeeId"</span></span><br><span class="line">                                  arguments:<span class="literal">nil</span>];</span><br><span class="line"><span class="built_in">NSArray</span> *employees = [Employee objectsWhere:<span class="string">@"LIMIT 1"</span></span><br><span class="line">                                  arguments:<span class="literal">nil</span>];</span><br></pre></td></tr></table></figure></p>
-<p>甚至是内嵌查询：
-<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">NSArray</span> *employees = [Employee objectsWhere:<span class="string">@"WHERE department in (SELECT departmentId from department WHERE name = ?)"</span></span><br><span class="line">                                  arguments:@[ <span class="string">@"Human Resource"</span> ]];</span><br></pre></td></tr></table></figure></p>
-<h1>特性</h1>
-<h2>自动创建及更新数据库表</h2>
-<p>如上面所示，开发者只需把 model 继承于 GYModelObject，并实现必要的 protocol 方法，即可以存储，查询，更新 model 对象了。开发者无需自己创建数据库，数据库表等，GYDataCenter 会自动创建。</p>
-<p>并且，当一个数据库表已经存在时，如果开发者添加了新的持久化的 property，GYDataCenter 也会自动更新数据库表，添加相应的 column 定义。</p>
-<p>但是，GYDataCenter <strong>不能</strong>自动删除或修改已经存在的 column，如果开发者因业务变更需要这样做，开发者只能自己创建一个新表，并把数据迁移过去。</p>
-<p>GYDataCenter 同样能自动创建及修改数据库索引，开发者只需实现下面方法。与 property 不同，已存在的索引是可以自动删除的。
-<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">+ (<span class="built_in">NSArray</span> *)indices &#123;</span><br><span class="line">    <span class="keyword">return</span> @[</span><br><span class="line">             @[ <span class="string">@"dateOfBirth"</span> ],</span><br><span class="line">             @[ <span class="string">@"department"</span>, <span class="string">@"name"</span> ]</span><br><span class="line">             ];</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
-<h2>关系型 property 及 faulting</h2>
-<p>如上面所示，持久化 property 的类型可以是另外一个 model 类型。比如 <strong>Employee</strong> 有一个属性 department，该属性的类型为 <strong>Department</strong>。这种属性称为 <strong>关系型 property</strong>。对于关系型 property，必须在实现里定义为 dynamic：
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">@dynamic department;</span><br></pre></td></tr></table></figure></p>
-<p>对于上面的关系型 property，GYDataCenter 会在 Employee 的数据库表里添加一个 column，用于存储 department 的主键值。当调用<code>[employee save]</code>时，GYDataCenter 会把 department 的主键值存在新插入的 Employee 数据库记录里。但是 GYDataCenter <strong>不会</strong>把整个 department 存在 Department 表里。当开发者需要这样做时，需要显示地调用 save：
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">[employee save];&#10;[employee.department save];</span><br></pre></td></tr></table></figure></p>
-<p>当开发者通过查询接口从 GYDataCenter 里拿出 Empolyee 对象时，属性 department 不会被完全赋值。属性 department 会指向一个 Department 对象，但该对象只有主键值被初始化了。当代码里第一次访问属性 department 时，department 才被完全赋值，这个过程对开发者是透明的。这个机制叫 faulting，与 Core Data 类似。</p>
-<p>Faulting 机制避免了拿一个对象时把它所有的关系对象，以及关系对象的关系对象都拿出来。这样带来了两个好处：</p>
-<ol>
-<li>减少内存使用。</li>
-<li>提高查询性能。</li>
-</ol>
-<h2>高性能 cache 层</h2>
-<p>与 FMDatabaseQueue 建议的一致，GYDataCenter 对于每一个数据库（dbName 相同）的所有操作，都放在同一个队列排队执行，这样做既保证了线程安全，同时又保证了数据的一致性。实际上，GYDataCenter 底层用的正是 FMDatabaseQueue。</p>
-<p>为了提高性能，GYDataCenter 还对 model 对象做了 cache，cache 以 model 对象的主键值为索引。开发者可以为每个 model 类型指定是否要 cache，以及在 memory warning 时是否要回收 cache。GYDataCenter 对于每一个数据库的所有 cache 的操作，同样也放在一个队列排队执行，具体流程如下：</p>
-<h4>1）按主键的查询操作</h4>
-<p>先到 cache 队列查询 cache 是否存在，存在则返回，不存在则同步到 DB 队列查询数据库，从 DB 队列返回后，回到 cache 队列先更新 cache，然后再返回。</p>
-<p><img src="/img/GYDataCenter1.png" alt=""></p>
-<h4>2）按 where 的查询操作</h4>
-<p>先进 cache 队列，通过 cache 队列同步调起 DB 队列查询数据库，并组装对象。在组装对象时，对于每一条记录先拿出主键值到 cache 查询一下对象是否存在，如果存在则直接使用，不存在则生成新的对象，并拿出其它 column 值以初始化新生成的对象。所有对象组装完后，返回 cache 队列，更新 cache 并返回。</p>
-<h4>3）写操作</h4>
-<p>先到 cache 队列更新 cache，然后异步调起 DB 队列执行数据库操作。</p>
-<p><img src="/img/GYDataCenter2.png" alt=""></p>
-<h2>自动批量写入</h2>
-<p>我们都知道，当数据库连续执行多个写操作时，可以通过事务（transaction）把多个写操作包在一起，一次性写入磁盘以提高性能。GYDataCenter 利用这点，自动地把多个 DB 操作包在一个事务中，以提高性能。</p>
-<p>前面说过，对于同一个数据库的所有操作，都放到一个队列排队执行。由于对于同一个数据库，只有一个数据库句柄，且只有一个线程，使得自动批量写入 DB 成为可能。当数据库连接建立时，GYDataCenter 即马上开始一个事务，并且每隔一个固定的时间（默认 1 秒），GYDataCenter 就会把事务提交后再马上开始一个新的事务。</p>
-<p>这种优化对于写操作频繁的情况特别有效，当然，对于读操作也是有帮助的。如果不手动加事务，SQLite 会为每个 SQL 的执行创建一个事务，把多个 SQL 的执行包在一个事务中，避免了创建多个事务的开销。</p>
-<p>虽然不断地定时提交事务， GYDataCenter 仍然支持多个请求的原子操作。GYDataCenter 提供了 <code>-inTransaction:dbName:</code> 接口，在该接口的开始，GYDataCenter 会把定时事务提交暂停，并把上一个事务提交掉。接着，把参数 block 里的多个操作包在一个事务里，并在该接口结束时恢复定时事务提交。</p>
-<h2>ANALYZE 优化查询</h2>
-<p><a href="https://www.sqlite.org/lang_analyze.html" target="_blank" rel="external">ANALYZE</a> 是 SQLite 提供的一个工具，执行 ANALYZE 命令后 SQLite 会收集数据和索引的统计信息，并将这些统计信息存于数据库文件的一个内部表里（sqlite_stat1）。这些统计数据可以帮助 SQLite 在执行 SQL 时选择更优的策略，从而提高数据库性能。</p>
-<p>ANALYZE 命令产生的统计数据不会自动更新，随着数据库写操作的不断累积，这些统计信息会变得不准确，需要重新执行 ANALYZE 命令。根据这点，GYDataCenter 统计写操作的次数，当写操作累计达到一定次数时（默认 500），GYDataCenter 会在 app 进入后台时执行一次 ANALYZE 命令，以此优化性能。</p>
-<p>ANALYZE 命令的执行是比较快的，在实际项目的实践中发现，ANALYZE 命令的执行时间是几十毫秒级别，因此，不必担心由于 ANALYZE 执行太慢导致 app 被系统 kill 掉。</p>
-
-          
+          <div class="post-more-link text-center">
+            <a class="btn" href="/2016/07/06/GYDataCenter/#more" rel="contents">
+              阅读全文 &raquo;
+            </a>
+          </div>
         
       
     </div>
@@ -1539,71 +1120,19 @@ b.多条线程里的 cache 数据需要同步。</p>
 
       
         
-          
-            <p><a href="https://github.com/bang590/JSPatch" target="_blank" rel="external">JSPatch</a> 支持了动态调用 C 函数，无需在编译前桥接每个要调用的 C 函数，只需要在 JS 里调用前声明下这个函数，就可以直接调用：</p>
-<p><figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">require</span>(<span class="string">'JPEngine'</span>).addExtensions([<span class="string">'JPCFunction'</span>])</span><br><span class="line">defineCFunction(<span class="string">"malloc"</span>, <span class="string">"void *, size_t"</span>)</span><br><span class="line">malloc(<span class="number">10</span>)</span><br></pre></td></tr></table></figure></p>
+          <p><a href="https://github.com/bang590/JSPatch">JSPatch</a> 支持了动态调用 C 函数，无需在编译前桥接每个要调用的 C 函数，只需要在 JS 里调用前声明下这个函数，就可以直接调用：</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">require</span>(<span class="string">'JPEngine'</span>).addExtensions([<span class="string">'JPCFunction'</span>])</span><br><span class="line">defineCFunction(<span class="string">"malloc"</span>, <span class="string">"void *, size_t"</span>)</span><br><span class="line">malloc(<span class="number">10</span>)</span><br></pre></td></tr></table></figure>
 <p>我们一步步来看看怎样可以做到动态调用 C 函数。</p>
-<h2>函数地址</h2>
-<p>首先若要动态调用 C 函数，第一步就是需要通过传入一个函数名字符串找到这个函数地址，这里一个必要的前提条件就是 C 编译后的可执行文件里必须有原函数名的信息，才有可能做到通过函数名字符串找到函数地址。我们写个简单的程序来看看它编译后可执行文件的内容有没有这个信息：</p>
-<p><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//main.m</span></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">test</span><span class="params">()</span> </span>&#123;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<h2 id="函数地址"><a href="#函数地址" class="headerlink" title="函数地址"></a>函数地址</h2><p>首先若要动态调用 C 函数，第一步就是需要通过传入一个函数名字符串找到这个函数地址，这里一个必要的前提条件就是 C 编译后的可执行文件里必须有原函数名的信息，才有可能做到通过函数名字符串找到函数地址。我们写个简单的程序来看看它编译后可执行文件的内容有没有这个信息：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//main.m</span></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">test</span><span class="params">()</span> </span>&#123;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 <p>编译这个文件，并用otool看下它的汇编：</p>
-<p><figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">gcc main.m -o main.o&#10;otool -tV main.o</span><br></pre></td></tr></table></figure></p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">gcc main.m -o main.o&#10;otool -tV main.o</span><br></pre></td></tr></table></figure>
 <p>输出：</p>
-<p>&lt;!--more--&gt;</p>
-<p><figure class="highlight r"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">main.o:</span><br><span class="line">(__TEXT,__text) section</span><br><span class="line">_test:</span><br><span class="line">0000000100000f90  pushq %rbp</span><br><span class="line">0000000100000f91  movq  %rsp, %rbp</span><br><span class="line">0000000100000f94  popq  %rbp</span><br><span class="line">0000000100000f95  retq</span><br><span class="line">0000000100000f96  nopw  %cs:(%rax,%rax)</span><br><span class="line">_main:</span><br><span class="line">0000000100000fa0  pushq %rbp</span><br><span class="line">0000000100000fa1  movq  %rsp, %rbp</span><br><span class="line">0000000100000fa4  xorl  %eax, %eax</span><br><span class="line">0000000100000fa6  movl  $<span class="number">0x0</span>, -<span class="number">0x4</span>(%rbp)</span><br><span class="line">0000000100000fad  popq  %rbp</span><br><span class="line">0000000100000fae  retq</span><br></pre></td></tr></table></figure></p>
-<p>可以看到函数名 test 和 main 都清楚地记录在可执行文件里，只不过前面多了个下划线_，所以完全可以在运行时通过函数名字符串查到这个函数地址。</p>
-<h2>dlsym()</h2>
-<p>实际上动态链接器已经提供一个 API：<code>dlsym()</code>，本来是用于动态加载库(DLL)，然后通过这个接口拿到函数地址，它也可以应用于当前可执行文件镜像，原理是一样的。</p>
-<p><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">test</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">"testFunc"</span>);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">void</span> (*funcPointer)() = dlsym(RTLD_DEFAULT, <span class="string">"test"</span>);</span><br><span class="line">    funcPointer();</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
-<p>好了现在我们可以通过函数名拿到对应的函数地址了，这样就可以自由动态调用所有 C 函数了吗？还不行，这样只能动态调用返回值和参数都为空的 C 函数，上面 <code>funcPointer</code> 指针只能在指向参数返回值都为空的函数时才能正确调用到。对于有返回值和有参数的 C 函数，这里定义时需要指明参数和返回值类型才能使用：</p>
-<p><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">testFunc</span><span class="params">(<span class="keyword">int</span> n, <span class="keyword">int</span> m)</span> </span>&#123;</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">"testFunc"</span>);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">1</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="comment">// ①</span></span><br><span class="line">    <span class="keyword">int</span> (*funcPointer)(<span class="keyword">int</span>, <span class="keyword">int</span>) = dlsym(RTLD_DEFAULT, <span class="string">"testFunc"</span>);</span><br><span class="line">    funcPointer(<span class="number">1</span>, <span class="number">2</span>);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// ②</span></span><br><span class="line">    <span class="keyword">void</span> (*funcPointer)() = dlsym(RTLD_DEFAULT, <span class="string">"testFunc"</span>);</span><br><span class="line">    funcPointer(<span class="number">1</span>, <span class="number">2</span>);  <span class="comment">//error</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
-<p>（这里①和②两个调用方式下文会多次提到，①表示调用正确定义了函数参数/返回值类型的函数指针，②表示调用没有正确定义参数/返回值类型的函数指针）</p>
-<p>这个例子中 dlsym 返回了 testFunc 的函数指针，必须像 ① 那样指明它的返回类型和参数类型后，才能调用成功，如果像 ② 那样定义这个指针，没有正确的参数类型和返回值类型，在调用时就会出现crash。</p>
-<p>也就是说我们没法通过定义一个万能的函数指针去支持所有函数的动态调用，这里必须让函数的参数/返回值类型都对应上才能调用，为什么必须要对应上呢？因为函数的调用方和被调用方是会遵循一种叫调用惯例(Calling Convention)的约定的。</p>
-<h2>Calling Convention</h2>
-<p>一个函数的调用过程中，函数的参数既可以使用栈传递，也可以使用寄存器传递，参数压栈的顺序可以从左到右也可以从右到左，函数调用后参数从栈弹出这个工作可以由函数调用方完成，也可以由被调用方完成。如果函数的调用方和被调用方(函数本身)不遵循统一的约定，有这么多分歧这个函数调用就没法完成。这个双方必须遵守的统一约定就叫做调用惯例(Calling Convention)，调用惯例规定了参数的传递的顺序和方式，以及栈的维护方式。</p>
-<p>函数调用者和被调用者需要遵循这同一套约定，上述②这样的情况，就是函数本身遵循了这个约定，而调用者没有遵守，导致调用出错。</p>
-<p>再简单分析下，如果按①那样正确的定义方式定义funcPointer，然后调用它，这里编译成汇编后，在调用处会有相应指令把参数 n,m 的值 1 和 2 入栈，然后跳过去 <code>testFunc()</code> 函数实体执行，这个函数执行时，按约定它知道n,m两个参数值已经在栈上，就可以取出来使用了。</p>
-<p><img src="/img/c1.png" alt=""></p>
-<p>而如果按②那样定义，编译后这里不会把参数 n,m 的值 1 和 2 入栈，因为这里编译器把它当成了没有参数和没有返回值的函数，也就不需要进行参数入栈的操作，然后在 <code>testFunc()</code> 函数实体里按约定去栈上取参数时就会发现栈上本来应该存参数 n 和 m 的地方并没有数据，或者是其他错误的数据，导致调用出错。</p>
-<p><img src="/img/c2.png" alt=""></p>
-<p>所以你需要在调用前明确告诉编译器这个函数的参数和返回值类型是什么，编译器才能生成对应的正确的汇编代码，让被调用的函数执行时能正常取到参数。</p>
-<p>也就是说如果需要动态调用任意 C 函数，就得先准备好任意 参数类型/参数个数/返回值类型 排列组合的 C 函数指针，让最终的汇编把所有情况都准备好，最后调用时通过 switch 去找到正确的那个去执行就可以了。但显然这是很糟糕的主意。</p>
-<p>在 C 语言这个层面上是解决不了这个问题的，要解决只能再往底层走，靠汇编。</p>
-<p>（P.S. 在不同 CPU 架构上调用惯例不同，例如arm32位所有参数都通过栈传递，arm64位会让部分参数通过寄存器传递，超出寄存器大小的参数才通过栈传递，因为64位机器多出了寄存器，通过寄存器传递比栈快。不过就算所有CPU架构调用惯例相同，也不影响我们碰到的这个问题，你可以忽略这点。）</p>
-<h2>objc_msgSend</h2>
-<p>实际上你会发现 OC 上有个函数脱离了上述限制，就是 <code>objc_msgSend</code>。OC 所有方法调用最终都会走到 <code>objc_msgSend</code> 去调用，这个神奇的方法支持任意返回值任意参数类型和个数，而它的定义仅是这样：</p>
-<p><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">objc_msgSend</span><span class="params">(<span class="keyword">void</span> <span class="comment">/* id self, SEL op, ... */</span> )</span></span></span><br></pre></td></tr></table></figure></p>
-<p>为什么它就可以支持所有函数调用呢，不是说调用者和函数本身要遵循调用惯例吗，这个函数跟我们上述的②有什么区别？</p>
-<p>答案是在C语言层面上没区别，但人家在汇编上做了手脚，<code>objc_msgSend</code> 是用汇编写的，在调用这个函数之前，会把栈/寄存器等数据都准备好，相当于调用前对参数入栈等处理由这个函数自己写的汇编代码接管了，不需要编译器在调用处去生成这些指令。</p>
-<p>这里会在调用真正的函数之前，根据 Calling Convention 准备好栈帧/寄存器数据和状态，最后再 jump/call 到函数实体执行就可以了，这时函数实体按约定去取参数是取得到的，可以正常执行。于是 objc 就做到了在编译前只需要定义一个简单的 <code>objc_msgSend</code>，就支持运行时动态调用任意类型的 C 函数（所有 OC 方法的 IMP）。</p>
-<p>所以我们要仿照 <code>objc_msgSend</code> 做一遍这个事情吗？难度好高:(。不用怕， libffi 这个神器已经帮你做了。</p>
-<h2>libffi</h2>
-<p>对 libffi 的介绍可以看 <a href="http://www.oschina.net/p/libffi" target="_blank" rel="external">[这里]</a>，简单来说它就是提供了动态调用任意 C 函数的功能。</p>
-<p>先来看看怎样通过 libffi 动态调用一个 C 函数：</p>
-<p><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">testFunc</span><span class="params">(<span class="keyword">int</span> m, <span class="keyword">int</span> n)</span> </span>&#123;</span><br><span class="line">  <span class="built_in">printf</span>(<span class="string">"params: %d %d \n"</span>, n, m);</span><br><span class="line">  <span class="keyword">return</span> n+m;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="comment">//拿函数指针</span></span><br><span class="line">    <span class="keyword">void</span>* functionPtr = dlsym(RTLD_DEFAULT, <span class="string">"testFunc"</span>);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">int</span> argCount = <span class="number">2</span>;</span><br><span class="line"></span><br><span class="line">    <span class="comment">//按ffi要求组装好参数类型数组</span></span><br><span class="line">    ffi_type **ffiArgTypes = alloca(<span class="keyword">sizeof</span>(ffi_type *) *argCount);</span><br><span class="line">    ffiArgTypes[<span class="number">0</span>] = &amp;ffi_type_sint;</span><br><span class="line">    ffiArgTypes[<span class="number">1</span>] = &amp;ffi_type_sint;</span><br><span class="line"></span><br><span class="line">    <span class="comment">//按ffi要求组装好参数数据数组</span></span><br><span class="line">    <span class="keyword">void</span> **ffiArgs = alloca(<span class="keyword">sizeof</span>(<span class="keyword">void</span> *) *argCount);</span><br><span class="line">    <span class="keyword">void</span> *ffiArgPtr = alloca(ffiArgTypes[<span class="number">0</span>]-&gt;size);</span><br><span class="line">    <span class="keyword">int</span> *argPtr = ffiArgPtr;</span><br><span class="line">    *argPtr = <span class="number">1</span>;</span><br><span class="line">    ffiArgs[<span class="number">0</span>] = ffiArgPtr;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">void</span> *ffiArgPtr2 = alloca(ffiArgTypes[<span class="number">1</span>]-&gt;size);</span><br><span class="line">    <span class="keyword">int</span> *argPtr2 = ffiArgPtr2;</span><br><span class="line">    *argPtr2 = <span class="number">2</span>;</span><br><span class="line">    ffiArgs[<span class="number">1</span>] = ffiArgPtr2;</span><br><span class="line"></span><br><span class="line">    <span class="comment">//生成 ffi_cfi 对象，保存函数参数个数/类型等信息，相当于一个函数原型</span></span><br><span class="line">    ffi_cif cif;</span><br><span class="line">    ffi_type *returnFfiType = &amp;ffi_type_sint;</span><br><span class="line">    ffi_status ffiPrepStatus = ffi_prep_cif_var(&amp;cif, FFI_DEFAULT_ABI, (<span class="keyword">unsigned</span> <span class="keyword">int</span>)<span class="number">0</span>, (<span class="keyword">unsigned</span> <span class="keyword">int</span>)argCount, returnFfiType, ffiArgTypes);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (ffiPrepStatus == FFI_OK) &#123;</span><br><span class="line">        <span class="comment">//生成用于保存返回值的内存</span></span><br><span class="line">        <span class="keyword">void</span> *returnPtr = <span class="literal">NULL</span>;</span><br><span class="line">        <span class="keyword">if</span> (returnFfiType-&gt;size) &#123;</span><br><span class="line">            returnPtr = alloca(returnFfiType-&gt;size);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">//根据cif函数原型，函数指针，返回值内存指针，函数参数数据调用这个函数</span></span><br><span class="line">        ffi_call(&amp;cif, functionPtr, returnPtr, ffiArgs);</span><br><span class="line"></span><br><span class="line">        <span class="comment">//拿到返回值</span></span><br><span class="line">        <span class="keyword">int</span> returnValue = *(<span class="keyword">int</span> *)returnPtr;</span><br><span class="line">        <span class="built_in">printf</span>(<span class="string">"ret: %d \n"</span>, returnValue);</span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
-<p>看起来挺复杂的，梳理一下就这几步：</p>
-<ol>
-<li>通过 dlsym 拿到函数指针。</li>
-<li>给每个参数申请内存空间，按 ffi 要求把参数数据组装成数组。（用<code>alloca()</code>申请空间，不需要<code>free()</code>去释放）</li>
-<li>用函数参数个数/参数类型/返回值类型组装成 cif 对象，表示这个函数原型。（有点像OC的methodSignature）</li>
-<li>申请内存空间用于保存函数返回值。</li>
-<li>把 cif 函数原型，函数指针，返回值内存指针，参数数据 传入 <code>ffi_call</code> 调用这个函数。</li>
-</ol>
-<p>这里每一步都是可以在运行时动态去做的，也就可以做到在运行时动态调用任意 C 函数了。</p>
-<p>这里最终 libffi 能调用任意 C 函数的原理按我理解跟上面说的 <code>objc_msgSend</code> 的原理差不多，<code>ffi_call</code> 底层是用汇编实现的，它在调用我们传入的函数之前，会根据上面提到的函数原型 cif 和参数数据，把参数都按规则塞到栈/寄存器里，准备好数据和状态，这样调用的函数实体里就可以按规则取到这些参数，正常执行了。调用完再获取返回值，清理这些栈帧/寄存器数据。libffi 针对每个架构不同的 Calling Convention 写了不同的汇编代码去做这个事。可以参见 libffi 里的 <code>sysv_arm64.S</code> <code>sysv_arm.S</code> 等汇编源码。<a href="http://blog.csdn.net/ayu_ag/article/details/50706429" target="_blank" rel="external">[这篇文章]</a> 有一些细节解析，可以看看。</p>
-<p>到这里已经完成了动态调用 C 函数，接下来的工作就只是在 JS 和 libffi 之间加一层转换，就可以让 JSPatch 支持动态调用 C 函数了，JPCFunction 就是做这层转换的。</p>
-<h2>JPCFunction</h2>
-<p>目前 <a href="https://github.com/bang590/JSPatch/blob/master/Extensions/JPCFunction/JPCFunction.m" target="_blank" rel="external">JPCFunction</a> 比较简单，直接看代码就可以了，简单说下流程：</p>
-<ol>
-<li>调用 C 函数之前需要通过 <code>defineCFunction</code> 定义这个函数的各参数类型和返回值类型，defineCFunction 里解析了类型字符串，转换成一个 <code>JPCFunctionSignature</code> 对象，每个函数对应一个 <code>JPCFunctionSignature</code>对象，这里模拟了 OC 方法的<code>NSMethodSignature</code>。</li>
-<li>调用函数时根据函数名拿到 <code>JPCFunctionSignature</code> 对象，集齐了 参数个数/各参数类型/返回值类型/各参数数据 这些信息，组装成 ffi 需要的格式进行调用。</li>
-</ol>
-<p>这里第二步的处理中对于 struct 类型会比较麻烦，目前还未支持参数/返回值类型为 struct 的 C 函数，后续会补上。</p>
-<h2>总结</h2>
-<p>回顾下动态调用 C 函数的探索过程，先是通过 <code>dlsym()</code> 拿到函数指针，然后需要告诉编译器这个函数的参数/返回值类型，编译器才会根据 Calling Convention 约定生成对应的汇编代码，在调用函数时对参数进行正确的入栈/存入寄存器等操作，让函数成功调用，这一步在运行时在 C 语言层面上无法做到，所以 <code>objc_msgSend</code> 和 libffi 都用汇编模拟了这一过程，达到动态调用 C 函数的目的。</p>
-
-          
+          <div class="post-more-link text-center">
+            <a class="btn" href="/2016/07/05/CFunction/#more" rel="contents">
+              阅读全文 &raquo;
+            </a>
+          </div>
         
       
     </div>
@@ -1710,80 +1239,15 @@ b.多条线程里的 cache 数据需要同步。</p>
 
       
         
-          
-            <h1>1. 背景</h1>
-<p>最近在做项目的打点统计的时候，发现业务逻辑和打点逻辑经常耦合在一起，这样一方面影响了正常的业务逻辑，同时也很容易搞乱打点逻辑，而且要查看打点情况的时候也很分散，因此想着如何将两者解耦，并将打点逻辑集中起来。其实在 web 编程时候，这种场景很早就有了很成熟的方案，也就是所谓的 aop 编程(面向切面编程)，其原理也就是在不更改正常的业务处理流程的前提下，通过生成一个动态代理类，从而实现对目标对象嵌入附加的操作。</p>
-<p>在 iOS 中，要想实现相似的效果也很简单，利用 OC 的动态性，通过 swizzling method 改变目标函数的 selector 所指向的实现，然后在新的实现中实现附加的操作，完成之后再回到原来的处理逻辑。想明白这些之后，我就打算动手实现，当然并没有重复造轮子，我在 github 发现了一个基于 swizzling method 的开源框架 <a href="https://github.com/steipete/Aspects" target="_blank" rel="external">Aspects</a> 。这个库的代码量比较小，总共就一个类文件，使用起来也比较方便，比如你想统计某个  controller 的 viewwillappear 的调用次数，你只需要引入 Aspect.h 头文件，然后在合适的地方初始化如下代码即可。</p>
-<p><figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">- (<span class="keyword">void</span>)addKvLogAspect &#123;</span><br><span class="line">    [<span class="keyword">self</span> wr_Aspect_hookSelector:<span class="keyword">@selector</span>(viewWillAppear:) withOptions:AspectPositionAfter usingBlock:^&#123;</span><br><span class="line">        KVLog_ReviewTimeline(ReviewTimeline_Open_Tab);</span><br><span class="line">    &#125;error:<span class="literal">NULL</span>];</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+          <h1 id="1-背景"><a href="#1-背景" class="headerlink" title="1. 背景"></a>1. 背景</h1><p>最近在做项目的打点统计的时候，发现业务逻辑和打点逻辑经常耦合在一起，这样一方面影响了正常的业务逻辑，同时也很容易搞乱打点逻辑，而且要查看打点情况的时候也很分散，因此想着如何将两者解耦，并将打点逻辑集中起来。其实在 web 编程时候，这种场景很早就有了很成熟的方案，也就是所谓的 aop 编程(面向切面编程)，其原理也就是在不更改正常的业务处理流程的前提下，通过生成一个动态代理类，从而实现对目标对象嵌入附加的操作。</p>
+<p>在 iOS 中，要想实现相似的效果也很简单，利用 OC 的动态性，通过 swizzling method 改变目标函数的 selector 所指向的实现，然后在新的实现中实现附加的操作，完成之后再回到原来的处理逻辑。想明白这些之后，我就打算动手实现，当然并没有重复造轮子，我在 github 发现了一个基于 swizzling method 的开源框架 <a href="https://github.com/steipete/Aspects">Aspects</a> 。这个库的代码量比较小，总共就一个类文件，使用起来也比较方便，比如你想统计某个  controller 的 viewwillappear 的调用次数，你只需要引入 Aspect.h 头文件，然后在合适的地方初始化如下代码即可。</p>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">- (<span class="keyword">void</span>)addKvLogAspect &#123;</span><br><span class="line">    [<span class="keyword">self</span> wr_Aspect_hookSelector:<span class="keyword">@selector</span>(viewWillAppear:) withOptions:AspectPositionAfter usingBlock:^&#123;</span><br><span class="line">        KVLog_ReviewTimeline(ReviewTimeline_Open_Tab);</span><br><span class="line">    &#125;error:<span class="literal">NULL</span>];</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 <p>这篇文章主要是介绍 Aspects 源码以及其思路，以及我在实际应用中遇到的一些问题。对 swizzling method 不了解的同学可以先去网上了解一下，下面的内容是基于大家对 swizzling method 有一定的了解的基础上的。</p>
-<p>&lt;!--more--&gt;</p>
-<h1>2. 基本原理</h1>
-<p>我们知道 OC 是动态语言，我们执行一个函数的时候，其实是在发一条消息：<code>[receiver message]</code>，这个过程就是根据 message 生成 selector，然后根据 selector 寻找指向函数具体实现的指针 IMP，然后找到真正的函数执行逻辑。这种处理流程给我们提供了动态性的可能，试想一下，如果在运行时，动态的改变了 selector 和 IMP 的对应关系，那么就能使得原来的<code>[receiver message]</code>进入到新的函数实现了。</p>
-<p>那么具体怎么实现这样的动态替换了?</p>
-<p>直观的一种方案是提供一个统一入口，如 commonImp ,将所有需要 hook 的函数都指向这个函数，然后在这里，提取相关信息进行转发，<a href="https://github.com/bang590/JSPatch/wiki/JSPatch-%E5%AE%9E%E7%8E%B0%E5%8E%9F%E7%90%86%E8%AF%A6%E8%A7%A3#1%E5%9F%BA%E7%A1%80%E5%8E%9F%E7%90%86" target="_blank" rel="external">JSPatch 实现原理详解</a>对此方案的可行性有进行分析，对于64位机器可能会有点问题。另外一个方法就是利用 oc 自己的消息转发机制进行转发，Aspects 的大体思路，基本上是顺着这个来的。为了更好的解释这个过程，我们先来看一下消息具体是怎么找到对应的 imp 的，见下图（此图并非原创）。</p>
-<p><img src="http://img.blog.csdn.net/20160629125258569" alt="流程图"></p>
-<p>从上面我们可以发现，在发消息的时候，如果 selector 有对应的 IMP ,则直接执行，如果没有，oc 给我们提供了几个可供补救的机会，依次有 <code>resolveInstanceMethod</code> 、<code>forwardingTargetForSelector</code>、<code>forwardInvocation</code>。Aspects 之所以选择在 <code>forwardInvocation</code> 这里处理是因为，这几个阶段特性都不太一样：<code>resolvedInstanceMethod</code> 适合给类/对象动态添加一个相应的实现，<code>forwardingTargetForSelector</code> 适合将消息转发给其他对象处理,相对而言，<code>forwardInvocation</code> 是里面最灵活，最能符合需求的。因此 Aspects 的方案就是，对于待 hook 的 selector，将其指向 <code>objc_msgForward</code> / <code>_objc_msgForward_stret</code> ,同时生成一个新的 <code>aliasSelector</code> 指向原来的 IMP，并且 hook 住 <code>forwardInvocation</code> 函数，使他指向自己的实现。按照上面的思路，当被 hook 的 selector 被执行的时候，首先根据 selector 找到了 <code>objc_msgForward</code> / <code>_objc_msgForward_stret</code> ,而这个会触发消息转发，从而进入 <code>forwardInvocation</code>。同时由于 <code>forwardInvocation</code> 的指向也被修改了，因此会转入新的 <code>forwardInvocation</code> 函数，在里面执行需要嵌入的附加代码，完成之后，再转回原来的 IMP。</p>
-<h1>3. 源码分析</h1>
-<h2>3.1 数据结构</h2>
-<p>介绍完大致思路之后，下面将从代码层来来具体分析。从头文件中可以看到使用aspects有两种使用方式：1）类方法 2）实例方法</p>
-<p><figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">+ (<span class="keyword">id</span>&lt;AspectToken&gt;)aspect_hookSelector:(SEL)selector</span><br><span class="line">                           withOptions:(AspectOptions)options</span><br><span class="line">                            usingBlock:(<span class="keyword">id</span>)block</span><br><span class="line">                                 error:(<span class="built_in">NSError</span> **)error;</span><br><span class="line"></span><br><span class="line"><span class="comment">/// Adds a block of code before/instead/after the current `selector` for a specific instance.</span></span><br><span class="line">- (<span class="keyword">id</span>&lt;AspectToken&gt;)aspect_hookSelector:(SEL)selector</span><br><span class="line">                           withOptions:(AspectOptions)options</span><br><span class="line">                            usingBlock:(<span class="keyword">id</span>)block</span><br><span class="line">                                 error:(<span class="built_in">NSError</span> **)error;</span><br></pre></td></tr></table></figure></p>
-<p>两者的主要原理基本差不多，这里不做一一介绍，只是以实例方法为例进行说明。在介绍之前，先介绍里面几个重要的数据结构：</p>
-<h3>AspectOptions</h3>
-<p><figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="built_in">NS_OPTIONS</span>(<span class="built_in">NSUInteger</span>, AspectOptions) &#123;</span><br><span class="line">    AspectPositionAfter   = <span class="number">0</span>,            <span class="comment">/// Called after the original implementation (default)</span></span><br><span class="line">    AspectPositionInstead = <span class="number">1</span>,            <span class="comment">/// Will replace the original implementation.</span></span><br><span class="line">    AspectPositionBefore  = <span class="number">2</span>,            <span class="comment">/// Called before the original implementation.</span></span><br><span class="line">    AspectOptionAutomaticRemoval = <span class="number">1</span> &lt;&lt; <span class="number">3</span> <span class="comment">/// Will remove the hook after the first execution.</span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure></p>
-<p>这里表示了 block 执行的时机，也就是额外操作的执行时机，在我的应用场景中就是打点逻辑的执行时机，它可以在原始函数执行之前，也可以是执行之后，甚至可以完全替换掉原来的逻辑。</p>
-<h3>AspectsContainer</h3>
-<p>一个对象或者类的所有的 Aspects 整体情况
-<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Tracks all aspects for an object/class.</span></span><br><span class="line"><span class="class"><span class="keyword">@interface</span> <span class="title">AspectsContainer</span> : <span class="title">NSObject</span></span></span><br><span class="line">- (<span class="keyword">void</span>)addAspect:(AspectIdentifier *)aspect withOptions:(AspectOptions)injectPosition;</span><br><span class="line">- (<span class="built_in">BOOL</span>)removeAspect:(<span class="keyword">id</span>)aspect;</span><br><span class="line">- (<span class="built_in">BOOL</span>)hasAspects;</span><br><span class="line"><span class="keyword">@property</span> (atomic, <span class="keyword">copy</span>) <span class="built_in">NSArray</span> *beforeAspects;</span><br><span class="line"><span class="keyword">@property</span> (atomic, <span class="keyword">copy</span>) <span class="built_in">NSArray</span> *insteadAspects;</span><br><span class="line"><span class="keyword">@property</span> (atomic, <span class="keyword">copy</span>) <span class="built_in">NSArray</span> *afterAspects;</span><br><span class="line"><span class="keyword">@end</span></span><br></pre></td></tr></table></figure></p>
-<h3>AspectIdentifier</h3>
-<p>一个 Aspect 的具体内容</p>
-<p><figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">@interface</span> <span class="title">AspectIdentifier</span> : <span class="title">NSObject</span></span></span><br><span class="line">+ (instancetype)identifierWithSelector:(SEL)selector object:(<span class="keyword">id</span>)object options:(AspectOptions)options block:(<span class="keyword">id</span>)block error:(<span class="built_in">NSError</span> **)error;</span><br><span class="line">- (<span class="built_in">BOOL</span>)invokeWithInfo:(<span class="keyword">id</span>&lt;AspectInfo&gt;)info;</span><br><span class="line"><span class="keyword">@property</span> (<span class="keyword">nonatomic</span>, <span class="keyword">assign</span>) SEL selector;</span><br><span class="line"><span class="keyword">@property</span> (<span class="keyword">nonatomic</span>, <span class="keyword">strong</span>) <span class="keyword">id</span> block;</span><br><span class="line"><span class="keyword">@property</span> (<span class="keyword">nonatomic</span>, <span class="keyword">strong</span>) <span class="built_in">NSMethodSignature</span> *blockSignature;</span><br><span class="line"><span class="keyword">@property</span> (<span class="keyword">nonatomic</span>, <span class="keyword">weak</span>) <span class="keyword">id</span> object;</span><br><span class="line"><span class="keyword">@property</span> (<span class="keyword">nonatomic</span>, <span class="keyword">assign</span>) AspectOptions options;</span><br><span class="line"><span class="keyword">@end</span></span><br></pre></td></tr></table></figure></p>
-<p>这里主要包含了单个的 aspect 的具体信息，包括执行时机，要执行 block 所需要用到的具体信息：包括方法签名、参数等等</p>
-<h3>AspectInfo</h3>
-<p>一个 Aspect 执行环境，主要是 NSInvocation 信息。</p>
-<p><figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">@interface</span> <span class="title">AspectInfo</span> : <span class="title">NSObject</span> &lt;<span class="title">AspctInfo</span>&gt;</span></span><br><span class="line">- (<span class="keyword">id</span>)initWithInstance:(__unsafe_unretained <span class="keyword">id</span>)instance invocation:(<span class="built_in">NSInvocation</span> *)invocation;</span><br><span class="line"><span class="keyword">@property</span> (<span class="keyword">nonatomic</span>, unsafe_unretained, <span class="keyword">readonly</span>) <span class="keyword">id</span> instance;</span><br><span class="line"><span class="keyword">@property</span> (<span class="keyword">nonatomic</span>, <span class="keyword">strong</span>, <span class="keyword">readonly</span>) <span class="built_in">NSArray</span> *arguments;</span><br><span class="line"><span class="keyword">@property</span> (<span class="keyword">nonatomic</span>, <span class="keyword">strong</span>, <span class="keyword">readonly</span>) <span class="built_in">NSInvocation</span> *originalInvocation;</span><br><span class="line"><span class="keyword">@end</span></span><br></pre></td></tr></table></figure></p>
-<h2>3.2 代码流程</h2>
-<p>有了上面的了解，我们就能更好的分析整个 apsects 的执行流程。添加一个 aspect 的关键流程如下图所示：</p>
-<p><img src="http://img.blog.csdn.net/20160629130456935" alt="这里写图片描述">
-从代码来看，要想使用 aspects ，首先要添加一个 aspect ，可以通过上面介绍的类/实例方法。关键代码实现如下:
-<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">static</span> <span class="keyword">id</span> aspect_add(<span class="keyword">id</span> <span class="keyword">self</span>, SEL selector, AspectOptions options, <span class="keyword">id</span> block, <span class="built_in">NSError</span> **error) &#123;</span><br><span class="line">    ...</span><br><span class="line">    __block AspectIdentifier *identifier = <span class="literal">nil</span>;</span><br><span class="line">    aspect_performLocked(^&#123;</span><br><span class="line">        <span class="keyword">if</span> (aspect_isSelectorAllowedAndTrack(<span class="keyword">self</span>, selector, options, error)) &#123;<span class="comment">//1判断能否hook</span></span><br><span class="line">            ...<span class="comment">//2 记录数据结构</span></span><br><span class="line">            aspect_prepareClassAndHookSelector(<span class="keyword">self</span>, selector, error);<span class="comment">//3 swizzling</span></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;);</span><br><span class="line">    <span class="keyword">return</span> identifier;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
-<p>这个过程基本和上面的流程图一致，这里重点介绍几个关键部分。</p>
-<h3>3.2.1 判断能否被 hook</h3>
-<p>对于对象实例而言，这里主要是根据黑名单，比如 retain forwardInvocation 等这些方法在外部是不能被 hook ,(对于类对象还要确保同一个类继承关系层级中，只能被 hook 一次，因此这里需要判断子类，父类有没有被 hook，之所以做这样的实现，主要是为了避免出现死循环的出现，这里有相关的讨论)。如果能够 hook，则继续下面的步骤。</p>
-<h3>3.2.2 swizzling method</h3>
-<p>这是真正的核心逻辑，swizzling method 主要有两部分，一个是对对象的 forwardInvocation 进行 swizzling,另一个是对传入的 selector 进行 swizzling.</p>
-<p><figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">static</span> <span class="keyword">void</span> aspect_prepareClassAndHookSelector(<span class="built_in">NSObject</span> *<span class="keyword">self</span>, SEL selector, <span class="built_in">NSError</span> **error) &#123;</span><br><span class="line">    Class klass = aspect_hookClass(<span class="keyword">self</span>, error); <span class="comment">//1  swizzling forwardInvocation</span></span><br><span class="line">    Method targetMethod = class_getInstanceMethod(klass, selector);</span><br><span class="line">    IMP targetMethodIMP = method_getImplementation(targetMethod);</span><br><span class="line">    <span class="keyword">if</span> (!aspect_isMsgForwardIMP(targetMethodIMP)) &#123;<span class="comment">//2  swizzling method</span></span><br><span class="line">       ...<span class="comment">//</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
-<h3>3.2.2.1 swizzling forwardInvocation:</h3>
-<p>aspect_hookClass 函数主要 swizzling 类/对象的 forwardInvocation 函数，aspects 的真正的处理逻辑都是在 forwradInvocation 函数里面进行的。对于对象实例而言，源代码中并没有直接 swizzling 对象的 forwardInvocation 方法，而是动态生成一个当前对象的子类，并将当前对象与子类关联,然后替换子类的 forwardInvocation 方法(这里具体方法就是调用了 object_setClass(self, subclass) ,将当前对象 isa 指针指向了 subclass ,同时修改了 subclass 以及其 subclass metaclass 的 class 方法,使他返回当前对象的 class。,这个地方特别绕，它的原理有点类似 kvo 的实现，它想要实现的效果就是，将当前对象变成一个 subclass 的实例，同时对于外部使用者而言，又能把它继续当成原对象在使用，而且所有的 swizzling 操作都发生在子类，这样做的好处是你不需要去更改对象本身的类，也就是，当你在 remove aspects 的时候，如果发现当前对象的 aspect 都被移除了，那么，你可以将 isa 指针重新指回对象本身的类，从而消除了该对象的 swizzling ,同时也不会影响到其他该类的不同对象)。对于每一个对象而言，这样的动态对象只会生成一次，这里 aspect_swizzlingForwardInvocation 将使得 forwardInvocation 方法指向 aspects 自己的实现逻辑 ,具体代码如下：
-<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">static</span> Class aspect_hookClass(<span class="built_in">NSObject</span> *<span class="keyword">self</span>, <span class="built_in">NSError</span> **error) &#123;</span><br><span class="line">     ...</span><br><span class="line">     <span class="comment">//生成动态子类，并swizzling forwardInvocation方法</span></span><br><span class="line">     subclass = objc_allocateClassPair(baseClass, subclassName, <span class="number">0</span>); </span><br><span class="line">     aspect_swizzleForwardInvocation(subclass);<span class="comment">//swizzling forwardinvation方法</span></span><br><span class="line"></span><br><span class="line">     objc_registerClassPair(subclass);</span><br><span class="line">      ...</span><br><span class="line">     object_setClass(<span class="keyword">self</span>, subclass);<span class="comment">//将当前self设置为子类，这里其实只是更改了self的isa指针而已</span></span><br><span class="line">     <span class="keyword">return</span> subclass;</span><br><span class="line">&#125;</span><br><span class="line">...</span><br><span class="line"><span class="keyword">static</span> <span class="keyword">void</span> aspect_swizzleForwardInvocation(Class klass) &#123;</span><br><span class="line">     ...</span><br><span class="line">    IMP originalImplementation = class_replaceMethod(klass, <span class="keyword">@selector</span>(forwardInvocation:),     (IMP)__ASPECTS_ARE_BEING_<span class="built_in">CALLED__</span>, <span class="string">"v@:@"</span>);</span><br><span class="line">    <span class="keyword">if</span> (originalImplementation) &#123;</span><br><span class="line">         class_addMethod(klass, <span class="built_in">NSSelectorFromString</span>(AspectsForwardInvocationSelectorName),        originalImplementation, <span class="string">"v@:@"</span>)</span><br><span class="line">      &#125;</span><br><span class="line">...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
-<p>由于子类本身并没有实现 forwardInvocation ，隐藏返回的 originalImplementation 将为空值，所以也不会生成 NSSelectorFromString(AspectsForwardInvocationSelectorName) 。</p>
-<h3>3.2.2.2 swizzling selector</h3>
-<p>当 forwradInvocation 被 hook 之后，接下来，将对传入的 selector 进行 hook ，这里的做法是，将 selector 指向了转发 IMP ，同时生成一个 aliasSelector ，指向了原来的 IMP ,同时为了放在重复 hook ,做了一个判断，如果发现 selector 已经指向了转发 IMP ,那就就不需要进行交换了，代码如下</p>
-<p><figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">static</span> <span class="keyword">void</span> aspect_prepareClassAndHookSelector(<span class="built_in">NSObject</span> *<span class="keyword">self</span>, SEL selector, <span class="built_in">NSError</span> **error) &#123;</span><br><span class="line">     ...</span><br><span class="line">     Method targetMethod = class_getInstanceMethod(klass, selector);</span><br><span class="line">     IMP targetMethodIMP = method_getImplementation(targetMethod);</span><br><span class="line">     <span class="keyword">if</span> (!aspect_isMsgForwardIMP(targetMethodIMP)) &#123;</span><br><span class="line">     ...</span><br><span class="line">     SEL aliasSelector = aspect_aliasForSelector(selector);<span class="comment">//generator aliasSelector</span></span><br><span class="line">     <span class="keyword">if</span> (![klass instancesRespondToSelector:aliasSelector]) &#123;</span><br><span class="line">          __unused <span class="built_in">BOOL</span> addedAlias = class_addMethod(klass, aliasSelector, method_getImplementation(targetMethod), typeEncoding); </span><br><span class="line">     &#125;</span><br><span class="line">     class_replaceMethod(klass, selector, aspect_getMsgForwardIMP(<span class="keyword">self</span>, selector), typeEncoding);<span class="comment">// point to   _objc_msgForward</span></span><br><span class="line">   ...</span><br><span class="line">     &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
-<h3>3.2.3 handle ForwardInvocation</h3>
-<p>基于上面的代码分析知道，转发最终的逻辑代码最终转入 <code>__ASPECTS_ARE_BEING_CALLED__</code> 函数的处理中。这里，需要处理的部分包括额外处理代码（如打点代码）以及最终重新转会原来的 selector 所指向的函数，其实现代码如下：</p>
-<p><figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">static</span> <span class="keyword">void</span> __ASPECTS_ARE_BEING_<span class="built_in">CALLED__</span>(__unsafe_unretained <span class="built_in">NSObject</span> *<span class="keyword">self</span>, SEL selector, <span class="built_in">NSInvocation</span> *invocation) &#123;</span><br><span class="line">...</span><br><span class="line">     <span class="comment">// Before hooks.  原来逻辑之前执行</span></span><br><span class="line">    aspect_invoke(classContainer<span class="variable">.beforeAspects</span>, info);</span><br><span class="line">    aspect_invoke(objectContainer<span class="variable">.beforeAspects</span>, info);</span><br><span class="line">    <span class="comment">// Instead hooks.</span></span><br><span class="line">    <span class="built_in">BOOL</span> respondsToAlias = <span class="literal">YES</span>;</span><br><span class="line">    <span class="keyword">if</span> (objectContainer<span class="variable">.insteadAspects</span><span class="variable">.count</span> || classContainer<span class="variable">.insteadAspects</span><span class="variable">.count</span>) &#123;<span class="comment">//是否需要替换掉原来的路基</span></span><br><span class="line">         aspect_invoke(classContainer<span class="variable">.insteadAspects</span>, info);</span><br><span class="line">         aspect_invoke(objectContainer<span class="variable">.insteadAspects</span>, info);</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        Class klass = object_getClass(invocation<span class="variable">.target</span>);</span><br><span class="line">        <span class="keyword">do</span> &#123;</span><br><span class="line">              <span class="keyword">if</span> ((respondsToAlias = [klass instancesRespondToSelector:aliasSelector])) &#123;</span><br><span class="line">                    [invocation invoke];<span class="comment">//根据aliasSelector找到原来的逻辑并执行</span></span><br><span class="line">                    <span class="keyword">break</span>;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;<span class="keyword">while</span> (!respondsToAlias &amp;&amp; (klass = class_getSuperclass(klass)));</span><br><span class="line">     &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// After hooks.  原来逻辑之后执行</span></span><br><span class="line">     aspect_invoke(classContainer<span class="variable">.afterAspects</span>, info);</span><br><span class="line">     aspect_invoke(objectContainer<span class="variable">.afterAspects</span>, info);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// If no hooks are installed, call original implementation (usually to throw an exception)</span></span><br><span class="line">     <span class="keyword">if</span> (!respondsToAlias) &#123;<span class="comment">//找不到aliasSelector的IMP实现，没有找到原来的逻辑，进行消息转发</span></span><br><span class="line">          invocation<span class="variable">.selector</span> = originalSelector;</span><br><span class="line">          SEL originalForwardInvocationSEL = <span class="built_in">NSSelectorFromString</span>(AspectsForwardInvocationSelectorName);</span><br><span class="line">          <span class="keyword">if</span> ([<span class="keyword">self</span> respondsToSelector:originalForwardInvocationSEL]) &#123;</span><br><span class="line">               ((<span class="keyword">void</span>( *)(<span class="keyword">id</span>, SEL, <span class="built_in">NSInvocation</span> *))objc_msgSend)(<span class="keyword">self</span>, originalForwardInvocationSEL, invocation);</span><br><span class="line">          &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">              [<span class="keyword">self</span> doesNotRecognizeSelector:invocation<span class="variable">.selector</span>];</span><br><span class="line">         &#125;</span><br><span class="line">     &#125;                     </span><br><span class="line">...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
-<p>依次处理 before/instead/after hook 以及真正函数实现。如果没有找到原始的函数实现，还需要进行转发操作。</p>
-<h1>4. 遇到的问题</h1>
-<p>以上就是 Apsects 的实现了，接下来会介绍在实际应用过程中遇到的一些问题以及我的解决方案。</p>
-<h2>4.1 JSPatch 兼容问题</h2>
-<h3>原因</h3>
-<p>我们的项目中引入了 JSPatch 作为我们的 hot fix方案。 JSPatch 也会 hook 住对象的 forwradInvocation 方法，并且 swizzling 相应的 method ，使其指向转发 IMP ,由于 aspects 也是基于这两者实现的，那么会不会导致问题呢(其实类似的问题也会发生在对象提前被 kvo 了，会不会有影响)？</p>
-<p>回过头去看3.2.1 我们先是 hook了 类的 <code>forwardInvocation</code> 使其指向了 <code>__ASPECTS_ARE_BEING_CALLED__</code>，然后在 swizzling method 那里，aspect 有做一个判断，如果传入的 selector 指向了转发 IMP ,那么我们什么也不做。因此可想而知，如果传入的 selector 先被 JSPatch hook ,那么，这里我们将不会再处理,也就不会生成 aliasSelector 。</p>
-<p>这会导致什么问题了？设想一下，当 selector 被触发的时候，由于 selector 指向了转发 IMP ，因此会进入消息转发过程，同时由于 <code>forwardInvocation</code> 被 aspects 所 hook ,最终会进入到 aspects 的处理逻辑 <code>__ASPECTS_ARE_BEING_CALLED__</code> 中来。让我们回过头去看看3.2.2中的分析，由于找不到 aliasSelector 的 IMP 实现，因此会在此进行消息转发。而在 3.2.2.1 的分析中我们知道，子类并没有实现 <code>NSSelectorFromString(AspectsForwardInvocationSelectorName)</code> ，所以这里的流程就会进入 <code>doesNotRecognizeSelector</code>，从而抛出异常。</p>
-<h3>解决方案</h3>
-<p>出现上诉问题的原因在于，当 aliasSelector 没有被找到的时候，我们没能将消息正常的转发，也就是没有实现一个 <code>NSSelectorFromString(AspectsForwardInvocationSelectorName)</code> ， 使得消息有机会重新转发回去的方法。因此解决方案也就呼之欲出了，我的做法是在对子类的 <code>forwardInvocation</code> 方法进行交换而不仅仅是替换，实现逻辑如下，强制生成一个 <code>NSSelectorFromString(AspectsForwardInvocationSelectorName)</code> 指向原对象的 <code>forwardInvocation</code> 的实现。</p>
-<p><figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">static</span> Class aspect_hookClass(<span class="built_in">NSObject</span> *<span class="keyword">self</span>, <span class="built_in">NSError</span> **error) &#123;</span><br><span class="line">    ...</span><br><span class="line">   subclass = objc_allocateClassPair(baseClass, subclassName, <span class="number">0</span>);</span><br><span class="line">   ...</span><br><span class="line">   IMP originalImplementation = class_replaceMethod(subclass, <span class="keyword">@selector</span>(forwardInvocation:), (IMP)__ASPECTS_ARE_BEING_<span class="built_in">CALLED__</span>, <span class="string">"v@:@"</span>);</span><br><span class="line">   <span class="keyword">if</span> (originalImplementation) &#123;</span><br><span class="line">        class_addMethod(subclass, <span class="built_in">NSSelectorFromString</span>(AspectsForwardInvocationSelectorName),   originalImplementation, <span class="string">"v@:@"</span>);</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        Method baseTargetMethod = class_getInstanceMethod(baseClass, <span class="keyword">@selector</span>(forwardInvocation:));</span><br><span class="line">        IMP baseTargetMethodIMP = method_getImplementation(baseTargetMethod);</span><br><span class="line">       <span class="keyword">if</span> (baseTargetMethodIMP) &#123;</span><br><span class="line">               class_addMethod(subclass, <span class="built_in">NSSelectorFromString</span>(AspectsForwardInvocationSelectorName), baseTargetMethodIMP, <span class="string">"v@:@"</span>);</span><br><span class="line">         &#125;</span><br><span class="line">  &#125;</span><br><span class="line">...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
-<p>注意如果 <code>originalImplementation</code> 为空，那么生成的 <code>NSSelectorFromString(AspectsForwardInvocationSelectorName)</code> 将指向 baseClass 也就是真正的这个对象的  forwradInvocation ,这个其实也就是 JSPatch hook 的方法。同时为了保证 block 的执行顺序（也就是前面介绍的 before hooks / instead hooks / after hooks ），这里需要将这段代码提前到 after hooks 执行之前进行。这样就解决了 forwardInvocation 在外面已经被 hook 之后的冲突问题。</p>
-<h2>4.2 remove操作</h2>
-<h3>4.2.1 单个aspect remove</h3>
-<p>单个 aspect 的 remove 貌似有个问题，先来看看源码。
-<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> (aspect_isMsgForwardIMP(targetMethodIMP)) &#123;</span><br><span class="line">      SEL aliasSelector = aspect_aliasForSelector(selector);</span><br><span class="line">      Method originalMethod = class_getInstanceMethod(klass, aliasSelector);</span><br><span class="line">      IMP originalIMP = method_getImplementation(originalMethod);</span><br><span class="line">      <span class="keyword">if</span> (originalIMP) &#123;            </span><br><span class="line">            class_replaceMethod(klass, selector, originalIMP, typeEncoding);</span><br><span class="line">      &#125; </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
-<p>当你对某个 aspect 执行 remove 操作的时候，它会直接 replace 这个 selector 的 IMP，这个操作是对整个类的所有实例都生效的，这会导致什么问题呢？</p>
-<p>以类 A 为例，你先进入了 A 的一个实例 A1 ，hook 住了方法 selector1 ，然后，并没有销毁这个实例的时候，通过其他路径又进入类 A 的另一个实例 A2 ,当然也 hook 了  selector1 ，然后这个时候，如果你 A2 中执行了这个 aspect 的 remove 操作，按照上面的逻辑，类 A 的 selector1 将会恢复正常，可像而知，当你退回 A1 的时候， A1 的 aspect  将会失效。这里其实我的解决思路很简单，因为在执行 remove 操作的时候，其实和这个对象相关的数据结构都已经被清除了，即使不去恢复 selector1 的执行，在进入 <code>__ASPECTS_ARE_BEING_CALLED__</code> 由于这个没有响应的 aspects ,其实会直接跳到原来的处理逻辑，并不会有其他附加影响。</p>
-<h3>4.2.2 整个对象aspect remove</h3>
-<p>还有一个问题就是，aspects 的 remove 操作只能支持单个的 remove 操作,不支持一次性删除一个对象的所有 aspects 。这里，也做了一个扩展，对原来的 aspects 进行扩展，实现了一次性 remove 一个对象所有 aspects 的方法。</p>
-
-          
+          <div class="post-more-link text-center">
+            <a class="btn" href="/2016/06/30/Aspects/#more" rel="contents">
+              阅读全文 &raquo;
+            </a>
+          </div>
         
       
     </div>
@@ -1890,137 +1354,18 @@ b.多条线程里的 cache 数据需要同步。</p>
 
       
         
-          
-            <h2>引言</h2>
-<blockquote>
-<p>“如果某个实体表现出以下任何一种特性，它就具备自主性：自我修复、自我保护、自我维护、对目标的自我控制、自我改进。” —— 凯文·凯利</p>
+          <h2 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h2><blockquote>
+<p>“如果某个实体表现出以下任何一种特性，它就具备自主性：自我修复、自我保护、自我维护、对目标的自我控制、自我改进。” —— 凯文·凯利 </p>
 </blockquote>
 <p>iOS App 有时可能遇到启动必 crash 的绝境：每次打开 App 都闪退，无法正常使用App。</p>
-<p>为了尝试解决这个问题，微信读书开发了 iOS 连续闪退保护工具：<a href="https://github.com/liuslevis/GYBootingProtection" target="_blank" rel="external">GYBootingProtection</a>，检测连续闪退，在连续闪退出现时，尝试自修复 App：</p>
+<p>为了尝试解决这个问题，微信读书开发了 iOS 连续闪退保护工具：<a href="https://github.com/liuslevis/GYBootingProtection">GYBootingProtection</a>，检测连续闪退，在连续闪退出现时，尝试自修复 App：</p>
 <p><img src="/img/GYBootingProtectionIntro.png" alt="img"></p>
-<p>本文探讨了连续闪退问题的产生原因、检测、修复机制，以及如何在你的项目中引入、测试和使用 <a href="https://github.com/liuslevis/GYBootingProtection" target="_blank" rel="external">GYBootingProtection</a>。</p>
-<p>&lt;!--more--&gt;</p>
-<h2>连续闪退检测</h2>
-<p>首先要检测用户 App 出现了连续闪退的情况，有两种检测方法，捕获异常和计时器。</p>
-<h4>1. 捕获异常</h4>
-<p>检测连续闪退，可以通过捕获异常来实现，异常有以下种类：</p>
-<ul>
-<li>Mach 异常：EXC_CRASH</li>
-<li>UNIX 信号：SIGABRT</li>
-<li>NSException 异常：应用层，通过 NSUncaughtExceptionHandler 捕获</li>
-</ul>
-<p>在念茜的<a href="http://mp.weixin.qq.com/s?__biz=MjM5NTIyNTUyMQ==&amp;mid=208483273&amp;idx=1&amp;sn=37ee88e06e7426f59f3074c536370317&amp;scene=21" target="_blank" rel="external">漫谈 iOS Crash 收集框架</a>一文中详细介绍了 Mach 异常和 Unix 信号捕获 crash 的机制。简单来说，异常一般产生自 iOS 的微内核 Mach，然后在 BSD 层转换成 UNIX SIGABRT 信号，以标准 POSIX 信号的形式提供给用户。NSException 是使用者在处理 App 逻辑时，用编程的方法抛出。</p>
-<h5>如何捕获异常</h5>
-<p>通过以下方法捕获异常：</p>
-<ul>
-<li>利用 Mach API 捕获 Mach 异常</li>
-<li>通过 POSIX API 注册 signal(SIGSEGV,signalHandler) 来捕获 UNIX 异常信号</li>
-<li>注册 NSUncaughtExceptionHandler 来捕获应用级异常</li>
-</ul>
-<p>Crash 上报工具如 PLCrashReporter 通过注册 Mach 异常 + UNIX信号 的 handler 达到检测的目的，对用户提供了处理异常的接口。</p>
-<h5>如何检测</h5>
-<p>可以利用 PLCrashReporter 这类工具来检测连续闪退：</p>
-<ol>
-<li>首先维护一个计数变量，表示连续闪退次数</li>
-<li>在 PLCrashReporter 的 crash handler 中加入逻辑：如果启动 5s 内 crash 使计数器加一</li>
-<li>每次启动时，如果连续闪退计数 &gt; n，则检测到了连续闪退</li>
-<li>启动后，执行一个定时任务，在 5s 后重置计数（如果 App 连续闪退则不会重置）</li>
-</ol>
-<h5>流程图</h5>
-<p><img src="/img/GYBootingProtectionCrashDetect.png" alt="img"></p>
-<h5>优缺点</h5>
-<p>通过 Mach 异常、Unix 信号、NSException 异常来检测闪退，能获得更多的 crash 上下文，但由于 crash 收集框架多使用这些方法，可能会有这样的风险：与第三方 crash 收集框架冲突导致漏检测。另外，可能会与 App 已有的异常处理代码产生耦合。</p>
-<h4>2. 计时器方法</h4>
-<p>除了通过捕获异常的方式检测连续闪退，还可以通过计数器方法来检测：</p>
-<ol>
-<li>维护一个计数变量，用于表示连续闪退的次数</li>
-<li>在启动 application:didFinishLaunchingWithOptions: 后使计数加一</li>
-<li>接着使用 dispatch_after 方法在 5s 后清零计数，如果 App 活不过 5 秒计数就不会被清零</li>
-<li>如果发现计数变量 &gt; n，表明 App 连续 n 次连续闪退，启动保护流程，重置计数。</li>
-<li>当保护流程完成后，进入 App 正常启动流程</li>
-</ol>
-<h5>流程图</h5>
-<p><img src="/img/GYBootingProtectionTimer.png" alt="img"></p>
-<h5>优缺点</h5>
-<p>而计数器方法逻辑简单，与原有的代码耦合小。虽然有误报可能（在启动后立即被 kill 掉，误认为 crash），但是可以通过设置阈值来减小误报的误报率。</p>
-<p>综上权衡，我们使用计时器方法检测连续闪退。</p>
-<h2>连续闪退修复</h2>
-<p>检测到连续闪退后，接下来要尝试对闪退进行修复，这里先分析可能的闪退原因，再结合微信读书的例子说明修复流程。</p>
-<h3>闪退原因</h3>
-<p>连续闪退，可能是 App 启动关键路径中执行了必 crash 的代码，原因可能有：</p>
-<ol>
-<li>数据库损坏：在日常使用如异常退出、断电，或者错误的操作（参考：<a href="http://blog.systoolsgroup.com/sqlite-corruption-causes.html" target="_blank" rel="external">sqlite corruption causes</a>）。</li>
-<li>文件损坏：处理文件时如果没有 <code>@try...catch</code>，损坏文件会抛出 <code>NSException</code> 导致 crash</li>
-<li>网络返回数据处理异常：比如预期返回数组，但实际返回了字典，对字典对象执行 <code>-objectAtIndex</code> 方法会产生 <code>crash： unknow selector send to object；</code>，或返回破损的 Tar 包，在解压失败导致 crash。</li>
-<li>代码 bug：当必 crash 的代码出现在启动关键路径中，就会导致连续闪退。</li>
-</ol>
-<p>针对 1，可以通过工具修复数据库，或者删除 DB。针对2，可以删除文件来进行修复。对于 3 和 4，我们需要具体地分析 crash 案例，通过 JSPatch 来进行修复。</p>
-<h3>微信读书的修复流程</h3>
-<p>为了应对上述导致连续闪退的原因，微信读书的修复流程为：</p>
-<ol>
-<li>进入 didFinishLaunch 时检查是否有连续闪退，无则执行 5</li>
-<li>弹 Toast 提示用户是否修复，轻触『修复』执行2，否则执行 5</li>
-<li>尝试下载并执行 JSPatch 补丁</li>
-</ol>
-<p>这里是为了解决上述第4点 - 代码 bug 导致的闪退，使用 JSPatch <a href="https://github.com/bang590/JSPatch" target="_blank" rel="external">[github]</a>可以进行热修复。在 didFinishLaunching 时，会卡住界面发请求检查是否有可用的 JSPatch 脚本，如果有则加载执行，解决代码 bug 导致的闪退。</p>
-<ol start="3">
-<li>尝试删除 <code>Documents</code> / <code>Library</code> / <code>Caches</code> 目录下的所有文件</li>
-</ol>
-<p>这里直接删除了所有用户数据，适用于微信读书这种所有数据都在云端，删除后可以完全从云端恢复。如果你的 App 不属于这种场景，那么应该在 repairBlock 中自定义修复逻辑，比如：</p>
-<p>a. 不删除文件，只修复数据库
-b. 修复前把用户数据备份到云端
-c. 收集 crash 样本，查明原因，定制 JSPatch 修复补丁并下发</p>
-<ol start="4">
-<li>退出微信读书登录状态</li>
-<li>进入原 didFinishLaunch</li>
-</ol>
-<p>连续闪退检测 + 保护流程如图所示：</p>
-<p><img src="/img/GYBootingProtection.png" alt="img"></p>
-<h2>实现</h2>
-<p>检测和连续 crash 并修复需要修改原 <code>-application:didFinishLaunchingWithOptions:</code> 逻辑，有几种方法：</p>
-<ol>
-<li>直接修改 <code>-application:didFinishLaunchingWithOptions:</code> 方法。</li>
-<li>新建一个 <code>SubAppDelegate</code> 类来继承 <code>AppDelegate</code>，覆盖 <code>-application:didFinishLaunchingWithOptions:</code> 方法，然后把 <code>main()</code> 函数中的 <code>AppDelegate</code> 替换为 <code>SubAppDelegate</code></li>
-<li>新建一个 <code>AppDelegate</code> 扩展，然后用 method swizzle 的方法替换 <code>-application:didFinishLaunchingWithOptions:</code> 方法。</li>
-</ol>
-<p>上述三种方案，对现有项目改动代价是 1 &gt; 2 &gt; 3。因此，我们使用对源码修改代价最小的方案 3 来替换 <code>-application:didFinishLaunchingWithOptions:</code>。</p>
-<p>检测的逻辑 GYBootingProtection 已经处理好，修复的处理预留了接口，可以由用户自定义，把自定义的修复流程传入 repairBlock 即可。</p>
-<h2>使用</h2>
-<h3>引入项目</h3>
-<ol>
-<li>
-<p>下载 <a href="https://github.com/liuslevis/GYBootingProtection" target="_blank" rel="external">(github)</a> 源码 ，将 <code>src</code> 目录下所有文件拖拽到你的 Xcode 项目</p>
-</li>
-<li>
-<p>在 <code>AppDelegate+GYBootingProtection.m</code> 的 <code>onBeforeBootingProtection</code> 方法中添加检测前需要执行的代码，比如设置crash上报：</p>
-</li>
-</ol>
-<p><figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">- (<span class="keyword">void</span>)onBeforeBootingProtection &#123;</span><br><span class="line">  [GYBootingProtection setLogger:^(<span class="built_in">NSString</span> *msg) &#123;</span><br><span class="line">      <span class="comment">// setup logger</span></span><br><span class="line">      <span class="built_in">NSLog</span>(<span class="string">@"%@"</span>, msg);</span><br><span class="line">  &#125;];</span><br><span class="line">  </span><br><span class="line">  [GYBootingProtection setReportBlock:^(<span class="built_in">NSInteger</span> crashCounts) &#123;</span><br><span class="line">      <span class="comment">// setup crash report</span></span><br><span class="line">  &#125;];</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
-<ol start="3">
-<li>
-<p>在 <code>onBootingProtection</code> 方法中添加修复逻辑，比如删除文件：</p>
-<p><figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">- (<span class="keyword">void</span>)onBootingProtection &#123;</span><br><span class="line">	<span class="comment">// 检查 JSPatch 更新</span></span><br><span class="line">	...</span><br><span class="line">	<span class="comment">// 删除 Documents Library Caches 目录下所有文件</span></span><br><span class="line">	[GYBootingProtection deleteAllFilesUnderDocumentsLibraryCaches];</span><br><span class="line">   	...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
-<p>如需执行异步的修复逻辑，在 <code>onBootingProtectionWithCompletion:</code> 方法添加修复逻辑，并在完成修复后调用 completion ：</p>
-<p><figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">- (<span class="keyword">void</span>)onBootingProtectionWithCompletion:(BoolCompletionBlock)completion &#123;</span><br><span class="line">  		[<span class="keyword">self</span> onBootingProtection];</span><br><span class="line">   	<span class="comment">// 异步修复</span></span><br><span class="line">  		[<span class="keyword">self</span> asyncRepairWithCompletion:^(<span class="keyword">void</span>) &#123;</span><br><span class="line">    	<span class="comment">// 正常启动流程</span></span><br><span class="line">  			<span class="keyword">if</span> (completion) completion();</span><br><span class="line">  		&#125;];</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
-</li>
-</ol>
-<h3>测试</h3>
-<ol>
-<li>首先制造连续闪退场景：</li>
-</ol>
-<p>启动后 5 秒内，双击 Home 通过上划手势 kill 掉 App，重复多次。（也可以在代码里人为制造crash）</p>
-<ol start="2">
-<li>当连续闪退超过 5 次时，会提示用户修复：</li>
-</ol>
-<p><img src="/img/GYBootingProtectionTips.png" alt="img"></p>
-<ol start="3">
-<li>用户轻触修复，App 重置初始状态，连续闪退问题解决：</li>
-</ol>
-<p><img src="/img/GYBootingProtectionAfter.png" alt="img"></p>
-<h2>源码</h2>
-<p><a href="https://github.com/liuslevis/GYBootingProtection" target="_blank" rel="external">https://github.com/liuslevis/GYBootingProtection</a></p>
-
-          
+<p>本文探讨了连续闪退问题的产生原因、检测、修复机制，以及如何在你的项目中引入、测试和使用 <a href="https://github.com/liuslevis/GYBootingProtection">GYBootingProtection</a>。</p>
+          <div class="post-more-link text-center">
+            <a class="btn" href="/2016/05/23/GYBootingProtection/#more" rel="contents">
+              阅读全文 &raquo;
+            </a>
+          </div>
         
       
     </div>
