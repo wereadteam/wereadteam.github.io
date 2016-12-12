@@ -58,7 +58,8 @@
 
 
 <meta name="description" content="引言
-“如果某个实体表现出以下任何一种特性，它就具备自主性：自我修复、自我保护、自我维护、对目标的自我控制、自我改进。” —— 凯文·凯利 
+
+“如果某个实体表现出以下任何一种特性，它就具备自主性：自我修复、自我保护、自我维护、对目标的自我控制、自我改进。” —— 凯文·凯利
 
 iOS App 有时可能遇到启动必 crash 的绝境：每次打开 App 都闪退，无法正常使用App。
 为了尝试解决这个问题，微信读书开发了 iOS 连续闪退保护工具：GYBootingProtection，检测连续闪退，在连续闪退出现时，尝试自修复 Ap">
@@ -67,7 +68,8 @@ iOS App 有时可能遇到启动必 crash 的绝境：每次打开 App 都闪退
 <meta property="og:url" content="http://weread.qq.com/2016/05/23/GYBootingProtection/index.html">
 <meta property="og:site_name" content="WeRead团队博客">
 <meta property="og:description" content="引言
-“如果某个实体表现出以下任何一种特性，它就具备自主性：自我修复、自我保护、自我维护、对目标的自我控制、自我改进。” —— 凯文·凯利 
+
+“如果某个实体表现出以下任何一种特性，它就具备自主性：自我修复、自我保护、自我维护、对目标的自我控制、自我改进。” —— 凯文·凯利
 
 iOS App 有时可能遇到启动必 crash 的绝境：每次打开 App 都闪退，无法正常使用App。
 为了尝试解决这个问题，微信读书开发了 iOS 连续闪退保护工具：GYBootingProtection，检测连续闪退，在连续闪退出现时，尝试自修复 Ap">
@@ -81,7 +83,8 @@ iOS App 有时可能遇到启动必 crash 的绝境：每次打开 App 都闪退
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="iOS 启动连续闪退保护方案">
 <meta name="twitter:description" content="引言
-“如果某个实体表现出以下任何一种特性，它就具备自主性：自我修复、自我保护、自我维护、对目标的自我控制、自我改进。” —— 凯文·凯利 
+
+“如果某个实体表现出以下任何一种特性，它就具备自主性：自我修复、自我保护、自我维护、对目标的自我控制、自我改进。” —— 凯文·凯利
 
 iOS App 有时可能遇到启动必 crash 的绝境：每次打开 App 都闪退，无法正常使用App。
 为了尝试解决这个问题，微信读书开发了 iOS 连续闪退保护工具：GYBootingProtection，检测连续闪退，在连续闪退出现时，尝试自修复 Ap">
@@ -276,39 +279,47 @@ iOS App 有时可能遇到启动必 crash 的绝境：每次打开 App 都闪退
       
 
       
-        <h2 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h2><blockquote>
-<p>“如果某个实体表现出以下任何一种特性，它就具备自主性：自我修复、自我保护、自我维护、对目标的自我控制、自我改进。” —— 凯文·凯利 </p>
+        <h2>引言</h2>
+<blockquote>
+<p>“如果某个实体表现出以下任何一种特性，它就具备自主性：自我修复、自我保护、自我维护、对目标的自我控制、自我改进。” —— 凯文·凯利</p>
 </blockquote>
 <p>iOS App 有时可能遇到启动必 crash 的绝境：每次打开 App 都闪退，无法正常使用App。</p>
 <p>为了尝试解决这个问题，微信读书开发了 iOS 连续闪退保护工具：<a href="https://github.com/liuslevis/GYBootingProtection" target="_blank" rel="external">GYBootingProtection</a>，检测连续闪退，在连续闪退出现时，尝试自修复 App：</p>
 <p><img src="/img/GYBootingProtectionIntro.png" alt="img"></p>
 <p>本文探讨了连续闪退问题的产生原因、检测、修复机制，以及如何在你的项目中引入、测试和使用 <a href="https://github.com/liuslevis/GYBootingProtection" target="_blank" rel="external">GYBootingProtection</a>。</p>
-<a id="more"></a>
-<h2 id="连续闪退检测"><a href="#连续闪退检测" class="headerlink" title="连续闪退检测"></a>连续闪退检测</h2><p>首先要检测用户 App 出现了连续闪退的情况，有两种检测方法，捕获异常和计时器。</p>
-<h4 id="1-捕获异常"><a href="#1-捕获异常" class="headerlink" title="1. 捕获异常"></a>1. 捕获异常</h4><p>检测连续闪退，可以通过捕获异常来实现，异常有以下种类：</p>
+<p>&lt;!--more--&gt;</p>
+<h2>连续闪退检测</h2>
+<p>首先要检测用户 App 出现了连续闪退的情况，有两种检测方法，捕获异常和计时器。</p>
+<h4>1. 捕获异常</h4>
+<p>检测连续闪退，可以通过捕获异常来实现，异常有以下种类：</p>
 <ul>
 <li>Mach 异常：EXC_CRASH</li>
 <li>UNIX 信号：SIGABRT</li>
 <li>NSException 异常：应用层，通过 NSUncaughtExceptionHandler 捕获</li>
 </ul>
 <p>在念茜的<a href="http://mp.weixin.qq.com/s?__biz=MjM5NTIyNTUyMQ==&amp;mid=208483273&amp;idx=1&amp;sn=37ee88e06e7426f59f3074c536370317&amp;scene=21" target="_blank" rel="external">漫谈 iOS Crash 收集框架</a>一文中详细介绍了 Mach 异常和 Unix 信号捕获 crash 的机制。简单来说，异常一般产生自 iOS 的微内核 Mach，然后在 BSD 层转换成 UNIX SIGABRT 信号，以标准 POSIX 信号的形式提供给用户。NSException 是使用者在处理 App 逻辑时，用编程的方法抛出。</p>
-<h5 id="如何捕获异常"><a href="#如何捕获异常" class="headerlink" title="如何捕获异常"></a>如何捕获异常</h5><p>通过以下方法捕获异常：</p>
+<h5>如何捕获异常</h5>
+<p>通过以下方法捕获异常：</p>
 <ul>
 <li>利用 Mach API 捕获 Mach 异常</li>
 <li>通过 POSIX API 注册 signal(SIGSEGV,signalHandler) 来捕获 UNIX 异常信号</li>
 <li>注册 NSUncaughtExceptionHandler 来捕获应用级异常</li>
 </ul>
 <p>Crash 上报工具如 PLCrashReporter 通过注册 Mach 异常 + UNIX信号 的 handler 达到检测的目的，对用户提供了处理异常的接口。</p>
-<h5 id="如何检测"><a href="#如何检测" class="headerlink" title="如何检测"></a>如何检测</h5><p>可以利用 PLCrashReporter 这类工具来检测连续闪退：</p>
+<h5>如何检测</h5>
+<p>可以利用 PLCrashReporter 这类工具来检测连续闪退：</p>
 <ol>
 <li>首先维护一个计数变量，表示连续闪退次数</li>
 <li>在 PLCrashReporter 的 crash handler 中加入逻辑：如果启动 5s 内 crash 使计数器加一</li>
 <li>每次启动时，如果连续闪退计数 &gt; n，则检测到了连续闪退</li>
 <li>启动后，执行一个定时任务，在 5s 后重置计数（如果 App 连续闪退则不会重置）</li>
 </ol>
-<h5 id="流程图"><a href="#流程图" class="headerlink" title="流程图"></a>流程图</h5><p><img src="/img/GYBootingProtectionCrashDetect.png" alt="img"></p>
-<h5 id="优缺点"><a href="#优缺点" class="headerlink" title="优缺点"></a>优缺点</h5><p>通过 Mach 异常、Unix 信号、NSException 异常来检测闪退，能获得更多的 crash 上下文，但由于 crash 收集框架多使用这些方法，可能会有这样的风险：与第三方 crash 收集框架冲突导致漏检测。另外，可能会与 App 已有的异常处理代码产生耦合。</p>
-<h4 id="2-计时器方法"><a href="#2-计时器方法" class="headerlink" title="2. 计时器方法"></a>2. 计时器方法</h4><p>除了通过捕获异常的方式检测连续闪退，还可以通过计数器方法来检测：</p>
+<h5>流程图</h5>
+<p><img src="/img/GYBootingProtectionCrashDetect.png" alt="img"></p>
+<h5>优缺点</h5>
+<p>通过 Mach 异常、Unix 信号、NSException 异常来检测闪退，能获得更多的 crash 上下文，但由于 crash 收集框架多使用这些方法，可能会有这样的风险：与第三方 crash 收集框架冲突导致漏检测。另外，可能会与 App 已有的异常处理代码产生耦合。</p>
+<h4>2. 计时器方法</h4>
+<p>除了通过捕获异常的方式检测连续闪退，还可以通过计数器方法来检测：</p>
 <ol>
 <li>维护一个计数变量，用于表示连续闪退的次数</li>
 <li>在启动 application:didFinishLaunchingWithOptions: 后使计数加一</li>
@@ -316,11 +327,15 @@ iOS App 有时可能遇到启动必 crash 的绝境：每次打开 App 都闪退
 <li>如果发现计数变量 &gt; n，表明 App 连续 n 次连续闪退，启动保护流程，重置计数。</li>
 <li>当保护流程完成后，进入 App 正常启动流程</li>
 </ol>
-<h5 id="流程图-1"><a href="#流程图-1" class="headerlink" title="流程图"></a>流程图</h5><p><img src="/img/GYBootingProtectionTimer.png" alt="img"></p>
-<h5 id="优缺点-1"><a href="#优缺点-1" class="headerlink" title="优缺点"></a>优缺点</h5><p>而计数器方法逻辑简单，与原有的代码耦合小。虽然有误报可能（在启动后立即被 kill 掉，误认为 crash），但是可以通过设置阈值来减小误报的误报率。</p>
+<h5>流程图</h5>
+<p><img src="/img/GYBootingProtectionTimer.png" alt="img"></p>
+<h5>优缺点</h5>
+<p>而计数器方法逻辑简单，与原有的代码耦合小。虽然有误报可能（在启动后立即被 kill 掉，误认为 crash），但是可以通过设置阈值来减小误报的误报率。</p>
 <p>综上权衡，我们使用计时器方法检测连续闪退。</p>
-<h2 id="连续闪退修复"><a href="#连续闪退修复" class="headerlink" title="连续闪退修复"></a>连续闪退修复</h2><p>检测到连续闪退后，接下来要尝试对闪退进行修复，这里先分析可能的闪退原因，再结合微信读书的例子说明修复流程。</p>
-<h3 id="闪退原因"><a href="#闪退原因" class="headerlink" title="闪退原因"></a>闪退原因</h3><p>连续闪退，可能是 App 启动关键路径中执行了必 crash 的代码，原因可能有：</p>
+<h2>连续闪退修复</h2>
+<p>检测到连续闪退后，接下来要尝试对闪退进行修复，这里先分析可能的闪退原因，再结合微信读书的例子说明修复流程。</p>
+<h3>闪退原因</h3>
+<p>连续闪退，可能是 App 启动关键路径中执行了必 crash 的代码，原因可能有：</p>
 <ol>
 <li>数据库损坏：在日常使用如异常退出、断电，或者错误的操作（参考：<a href="http://blog.systoolsgroup.com/sqlite-corruption-causes.html" target="_blank" rel="external">sqlite corruption causes</a>）。</li>
 <li>文件损坏：处理文件时如果没有 <code>@try...catch</code>，损坏文件会抛出 <code>NSException</code> 导致 crash</li>
@@ -328,24 +343,29 @@ iOS App 有时可能遇到启动必 crash 的绝境：每次打开 App 都闪退
 <li>代码 bug：当必 crash 的代码出现在启动关键路径中，就会导致连续闪退。</li>
 </ol>
 <p>针对 1，可以通过工具修复数据库，或者删除 DB。针对2，可以删除文件来进行修复。对于 3 和 4，我们需要具体地分析 crash 案例，通过 JSPatch 来进行修复。</p>
-<h3 id="微信读书的修复流程"><a href="#微信读书的修复流程" class="headerlink" title="微信读书的修复流程"></a>微信读书的修复流程</h3><p>为了应对上述导致连续闪退的原因，微信读书的修复流程为：</p>
+<h3>微信读书的修复流程</h3>
+<p>为了应对上述导致连续闪退的原因，微信读书的修复流程为：</p>
 <ol>
 <li>进入 didFinishLaunch 时检查是否有连续闪退，无则执行 5</li>
 <li>弹 Toast 提示用户是否修复，轻触『修复』执行2，否则执行 5</li>
-<li><p>尝试下载并执行 JSPatch 补丁</p>
+<li>尝试下载并执行 JSPatch 补丁</li>
+</ol>
 <p>这里是为了解决上述第4点 - 代码 bug 导致的闪退，使用 JSPatch <a href="https://github.com/bang590/JSPatch" target="_blank" rel="external">[github]</a>可以进行热修复。在 didFinishLaunching 时，会卡住界面发请求检查是否有可用的 JSPatch 脚本，如果有则加载执行，解决代码 bug 导致的闪退。</p>
-</li>
-<li><p>尝试删除 <code>Documents</code> / <code>Library</code> / <code>Caches</code> 目录下的所有文件</p>
+<ol start="3">
+<li>尝试删除 <code>Documents</code> / <code>Library</code> / <code>Caches</code> 目录下的所有文件</li>
+</ol>
 <p>这里直接删除了所有用户数据，适用于微信读书这种所有数据都在云端，删除后可以完全从云端恢复。如果你的 App 不属于这种场景，那么应该在 repairBlock 中自定义修复逻辑，比如：</p>
-<p>a. 不删除文件，只修复数据库<br>b. 修复前把用户数据备份到云端<br>c. 收集 crash 样本，查明原因，定制 JSPatch 修复补丁并下发</p>
-</li>
-<li><p>退出微信读书登录状态</p>
-</li>
+<p>a. 不删除文件，只修复数据库
+b. 修复前把用户数据备份到云端
+c. 收集 crash 样本，查明原因，定制 JSPatch 修复补丁并下发</p>
+<ol start="4">
+<li>退出微信读书登录状态</li>
 <li>进入原 didFinishLaunch</li>
 </ol>
 <p>连续闪退检测 + 保护流程如图所示：</p>
 <p><img src="/img/GYBootingProtection.png" alt="img"></p>
-<h2 id="实现"><a href="#实现" class="headerlink" title="实现"></a>实现</h2><p>检测和连续 crash 并修复需要修改原 <code>-application:didFinishLaunchingWithOptions:</code> 逻辑，有几种方法：</p>
+<h2>实现</h2>
+<p>检测和连续 crash 并修复需要修改原 <code>-application:didFinishLaunchingWithOptions:</code> 逻辑，有几种方法：</p>
 <ol>
 <li>直接修改 <code>-application:didFinishLaunchingWithOptions:</code> 方法。</li>
 <li>新建一个 <code>SubAppDelegate</code> 类来继承 <code>AppDelegate</code>，覆盖 <code>-application:didFinishLaunchingWithOptions:</code> 方法，然后把 <code>main()</code> 函数中的 <code>AppDelegate</code> 替换为 <code>SubAppDelegate</code></li>
@@ -353,30 +373,40 @@ iOS App 有时可能遇到启动必 crash 的绝境：每次打开 App 都闪退
 </ol>
 <p>上述三种方案，对现有项目改动代价是 1 &gt; 2 &gt; 3。因此，我们使用对源码修改代价最小的方案 3 来替换 <code>-application:didFinishLaunchingWithOptions:</code>。</p>
 <p>检测的逻辑 GYBootingProtection 已经处理好，修复的处理预留了接口，可以由用户自定义，把自定义的修复流程传入 repairBlock 即可。</p>
-<h2 id="使用"><a href="#使用" class="headerlink" title="使用"></a>使用</h2><h3 id="引入项目"><a href="#引入项目" class="headerlink" title="引入项目"></a>引入项目</h3><ol>
-<li><p>下载 <a href="https://github.com/liuslevis/GYBootingProtection" target="_blank" rel="external">(github)</a> 源码 ，将 <code>src</code> 目录下所有文件拖拽到你的 Xcode 项目</p>
+<h2>使用</h2>
+<h3>引入项目</h3>
+<ol>
+<li>
+<p>下载 <a href="https://github.com/liuslevis/GYBootingProtection" target="_blank" rel="external">(github)</a> 源码 ，将 <code>src</code> 目录下所有文件拖拽到你的 Xcode 项目</p>
 </li>
-<li><p>在 <code>AppDelegate+GYBootingProtection.m</code> 的 <code>onBeforeBootingProtection</code> 方法中添加检测前需要执行的代码，比如设置crash上报：</p>
-<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">- (<span class="keyword">void</span>)onBeforeBootingProtection &#123;</span><br><span class="line">  [GYBootingProtection setLogger:^(<span class="built_in">NSString</span> *msg) &#123;</span><br><span class="line">      <span class="comment">// setup logger</span></span><br><span class="line">      <span class="built_in">NSLog</span>(<span class="string">@"%@"</span>, msg);</span><br><span class="line">  &#125;];</span><br><span class="line">  </span><br><span class="line">  [GYBootingProtection setReportBlock:^(<span class="built_in">NSInteger</span> crashCounts) &#123;</span><br><span class="line">      <span class="comment">// setup crash report</span></span><br><span class="line">  &#125;];</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>在 <code>onBootingProtection</code> 方法中添加修复逻辑，比如删除文件：</p>
- <figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">- (<span class="keyword">void</span>)onBootingProtection &#123;</span><br><span class="line">	<span class="comment">// 检查 JSPatch 更新</span></span><br><span class="line">	...</span><br><span class="line">	<span class="comment">// 删除 Documents Library Caches 目录下所有文件</span></span><br><span class="line">	[GYBootingProtection deleteAllFilesUnderDocumentsLibraryCaches];</span><br><span class="line">   	...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p> 如需执行异步的修复逻辑，在 <code>onBootingProtectionWithCompletion:</code> 方法添加修复逻辑，并在完成修复后调用 completion ：</p>
- <figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">- (<span class="keyword">void</span>)onBootingProtectionWithCompletion:(BoolCompletionBlock)completion &#123;</span><br><span class="line">  		[<span class="keyword">self</span> onBootingProtection];</span><br><span class="line">   	<span class="comment">// 异步修复</span></span><br><span class="line">  		[<span class="keyword">self</span> asyncRepairWithCompletion:^(<span class="keyword">void</span>) &#123;</span><br><span class="line">    	<span class="comment">// 正常启动流程</span></span><br><span class="line">  			<span class="keyword">if</span> (completion) completion();</span><br><span class="line">  		&#125;];</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<li>
+<p>在 <code>AppDelegate+GYBootingProtection.m</code> 的 <code>onBeforeBootingProtection</code> 方法中添加检测前需要执行的代码，比如设置crash上报：</p>
 </li>
 </ol>
-<h3 id="测试"><a href="#测试" class="headerlink" title="测试"></a>测试</h3><ol>
-<li><p>首先制造连续闪退场景：</p>
+<p><figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">- (<span class="keyword">void</span>)onBeforeBootingProtection &#123;</span><br><span class="line">  [GYBootingProtection setLogger:^(<span class="built_in">NSString</span> *msg) &#123;</span><br><span class="line">      <span class="comment">// setup logger</span></span><br><span class="line">      <span class="built_in">NSLog</span>(<span class="string">@"%@"</span>, msg);</span><br><span class="line">  &#125;];</span><br><span class="line">  </span><br><span class="line">  [GYBootingProtection setReportBlock:^(<span class="built_in">NSInteger</span> crashCounts) &#123;</span><br><span class="line">      <span class="comment">// setup crash report</span></span><br><span class="line">  &#125;];</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<ol start="3">
+<li>
+<p>在 <code>onBootingProtection</code> 方法中添加修复逻辑，比如删除文件：</p>
+<p><figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">- (<span class="keyword">void</span>)onBootingProtection &#123;</span><br><span class="line">	<span class="comment">// 检查 JSPatch 更新</span></span><br><span class="line">	...</span><br><span class="line">	<span class="comment">// 删除 Documents Library Caches 目录下所有文件</span></span><br><span class="line">	[GYBootingProtection deleteAllFilesUnderDocumentsLibraryCaches];</span><br><span class="line">   	...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>如需执行异步的修复逻辑，在 <code>onBootingProtectionWithCompletion:</code> 方法添加修复逻辑，并在完成修复后调用 completion ：</p>
+<p><figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">- (<span class="keyword">void</span>)onBootingProtectionWithCompletion:(BoolCompletionBlock)completion &#123;</span><br><span class="line">  		[<span class="keyword">self</span> onBootingProtection];</span><br><span class="line">   	<span class="comment">// 异步修复</span></span><br><span class="line">  		[<span class="keyword">self</span> asyncRepairWithCompletion:^(<span class="keyword">void</span>) &#123;</span><br><span class="line">    	<span class="comment">// 正常启动流程</span></span><br><span class="line">  			<span class="keyword">if</span> (completion) completion();</span><br><span class="line">  		&#125;];</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+</li>
+</ol>
+<h3>测试</h3>
+<ol>
+<li>首先制造连续闪退场景：</li>
+</ol>
 <p>启动后 5 秒内，双击 Home 通过上划手势 kill 掉 App，重复多次。（也可以在代码里人为制造crash）</p>
-</li>
-<li><p>当连续闪退超过 5 次时，会提示用户修复：</p>
-<p><img src="/img/GYBootingProtectionTips.png" alt="img"></p>
-</li>
-<li><p>用户轻触修复，App 重置初始状态，连续闪退问题解决：</p>
-<p><img src="/img/GYBootingProtectionAfter.png" alt="img"></p>
-</li>
+<ol start="2">
+<li>当连续闪退超过 5 次时，会提示用户修复：</li>
 </ol>
-<h2 id="源码"><a href="#源码" class="headerlink" title="源码"></a>源码</h2><p><a href="https://github.com/liuslevis/GYBootingProtection" target="_blank" rel="external">https://github.com/liuslevis/GYBootingProtection</a></p>
+<p><img src="/img/GYBootingProtectionTips.png" alt="img"></p>
+<ol start="3">
+<li>用户轻触修复，App 重置初始状态，连续闪退问题解决：</li>
+</ol>
+<p><img src="/img/GYBootingProtectionAfter.png" alt="img"></p>
+<h2>源码</h2>
+<p><a href="https://github.com/liuslevis/GYBootingProtection" target="_blank" rel="external">https://github.com/liuslevis/GYBootingProtection</a></p>
 
       
     </div>
@@ -557,7 +587,7 @@ iOS App 有时可能遇到启动必 crash 的绝境：每次打开 App 都闪退
               
             
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#引言"><span class="nav-number">1.</span> <span class="nav-text">引言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#连续闪退检测"><span class="nav-number">2.</span> <span class="nav-text">连续闪退检测</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#1-捕获异常"><span class="nav-number">2.0.1.</span> <span class="nav-text">1. 捕获异常</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#如何捕获异常"><span class="nav-number">2.0.1.1.</span> <span class="nav-text">如何捕获异常</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#如何检测"><span class="nav-number">2.0.1.2.</span> <span class="nav-text">如何检测</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#流程图"><span class="nav-number">2.0.1.3.</span> <span class="nav-text">流程图</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#优缺点"><span class="nav-number">2.0.1.4.</span> <span class="nav-text">优缺点</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#2-计时器方法"><span class="nav-number">2.0.2.</span> <span class="nav-text">2. 计时器方法</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#流程图-1"><span class="nav-number">2.0.2.1.</span> <span class="nav-text">流程图</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#优缺点-1"><span class="nav-number">2.0.2.2.</span> <span class="nav-text">优缺点</span></a></li></ol></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#连续闪退修复"><span class="nav-number">3.</span> <span class="nav-text">连续闪退修复</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#闪退原因"><span class="nav-number">3.1.</span> <span class="nav-text">闪退原因</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#微信读书的修复流程"><span class="nav-number">3.2.</span> <span class="nav-text">微信读书的修复流程</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#实现"><span class="nav-number">4.</span> <span class="nav-text">实现</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#使用"><span class="nav-number">5.</span> <span class="nav-text">使用</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#引入项目"><span class="nav-number">5.1.</span> <span class="nav-text">引入项目</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#测试"><span class="nav-number">5.2.</span> <span class="nav-text">测试</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#源码"><span class="nav-number">6.</span> <span class="nav-text">源码</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#undefined"><span class="nav-number">1.</span> <span class="nav-text">引言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#undefined"><span class="nav-number">2.</span> <span class="nav-text">连续闪退检测</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#undefined"><span class="nav-number">2.0.1.</span> <span class="nav-text">1. 捕获异常</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#undefined"><span class="nav-number">2.0.1.1.</span> <span class="nav-text">如何捕获异常</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#undefined"><span class="nav-number">2.0.1.2.</span> <span class="nav-text">如何检测</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#undefined"><span class="nav-number">2.0.1.3.</span> <span class="nav-text">流程图</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#undefined"><span class="nav-number">2.0.1.4.</span> <span class="nav-text">优缺点</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#undefined"><span class="nav-number">2.0.2.</span> <span class="nav-text">2. 计时器方法</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#undefined"><span class="nav-number">2.0.2.1.</span> <span class="nav-text">流程图</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#undefined"><span class="nav-number">2.0.2.2.</span> <span class="nav-text">优缺点</span></a></li></ol></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#undefined"><span class="nav-number">3.</span> <span class="nav-text">连续闪退修复</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#undefined"><span class="nav-number">3.1.</span> <span class="nav-text">闪退原因</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#undefined"><span class="nav-number">3.2.</span> <span class="nav-text">微信读书的修复流程</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#undefined"><span class="nav-number">4.</span> <span class="nav-text">实现</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#undefined"><span class="nav-number">5.</span> <span class="nav-text">使用</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#undefined"><span class="nav-number">5.1.</span> <span class="nav-text">引入项目</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#undefined"><span class="nav-number">5.2.</span> <span class="nav-text">测试</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#undefined"><span class="nav-number">6.</span> <span class="nav-text">源码</span></a></li></ol></div>
             
           </div>
           <div class="post-toc-indicator-bottom post-toc-indicator">
