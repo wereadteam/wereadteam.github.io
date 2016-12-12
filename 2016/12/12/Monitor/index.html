@@ -63,22 +63,22 @@
 <meta property="og:url" content="http://weread.qq.com/2016/12/12/Monitor/index.html">
 <meta property="og:site_name" content="WeRead团队博客">
 <meta property="og:description" content="在实现需求的同时，能写出既优雅性能又高效的代码是每个开发者都在追求的目标，但是在实际开发中，随着每个版本需求的迭代，功能变得越来越复杂，加上开发者的意识不够或者一时疏忽，日渐复杂的工程很容易产生或多或少的问题。在使用微信读书的过程中，我们也碰到过app随机丢失动画、用户反馈app卡死、用户投诉看不了书籍等等的问题，这些问题都严重影响使用，也会降低产品口碑，因此我们开发了一些监控工具来解决这些问题，">
-<meta property="og:image" content="http://weread.qq.com/img/monitor/app2.png">
-<meta property="og:image" content="http://weread.qq.com/img/monitor/cgierror.png">
-<meta property="og:image" content="http://weread.qq.com/img/monitor/recommend.png">
-<meta property="og:image" content="http://weread.qq.com/img/monitor/datacenter.png">
-<meta property="og:image" content="http://weread.qq.com/img/monitor/sql.png">
-<meta property="og:image" content="http://weread.qq.com/img/monitor/sql_cmp.png">
-<meta property="og:image" content="http://weread.qq.com/img/monitor/anr.png">
-<meta property="og:image" content="http://weread.qq.com/img/monitor/collection.png">
-<meta property="og:image" content="http://weread.qq.com/img/monitor/datasource.png">
-<meta property="og:image" content="http://weread.qq.com/img/monitor/fps1.png">
-<meta property="og:image" content="http://weread.qq.com/img/monitor/fps2.png">
-<meta property="og:image" content="http://weread.qq.com/img/monitor/main_run_loop.png">
-<meta property="og:image" content="http://weread.qq.com/img/monitor/main_run_loop_cost.png">
-<meta property="og:image" content="http://weread.qq.com/img/monitor/reading_monitor.png">
-<meta property="og:image" content="http://weread.qq.com/img/monitor/assert.png">
-<meta property="og:updated_time" content="2016-12-12T12:33:17.000Z">
+<meta property="og:image" content="http://weread.qq.com/img/monitor-app2.png">
+<meta property="og:image" content="http://weread.qq.com/img/monitor-cgierror.png">
+<meta property="og:image" content="http://weread.qq.com/img/monitor-recommend.png">
+<meta property="og:image" content="http://weread.qq.com/img/monitor-datacenter.png">
+<meta property="og:image" content="http://weread.qq.com/img/monitor-sql.png">
+<meta property="og:image" content="http://weread.qq.com/img/monitor-sql_cmp.png">
+<meta property="og:image" content="http://weread.qq.com/img/monitor-anr.png">
+<meta property="og:image" content="http://weread.qq.com/img/monitor-collection.png">
+<meta property="og:image" content="http://weread.qq.com/img/monitor-datasource.png">
+<meta property="og:image" content="http://weread.qq.com/img/monitor-fps1.png">
+<meta property="og:image" content="http://weread.qq.com/img/monitor-fps2.png">
+<meta property="og:image" content="http://weread.qq.com/img/monitor-main_run_loop.png">
+<meta property="og:image" content="http://weread.qq.com/img/monitor-main_run_loop_cost.png">
+<meta property="og:image" content="http://weread.qq.com/img/monitor-reading_monitor.png">
+<meta property="og:image" content="http://weread.qq.com/img/monitor-assert.png">
+<meta property="og:updated_time" content="2016-12-12T12:35:39.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="微信读书 iOS 质量保证及性能监控">
 <meta name="twitter:description" content="在实现需求的同时，能写出既优雅性能又高效的代码是每个开发者都在追求的目标，但是在实际开发中，随着每个版本需求的迭代，功能变得越来越复杂，加上开发者的意识不够或者一时疏忽，日渐复杂的工程很容易产生或多或少的问题。在使用微信读书的过程中，我们也碰到过app随机丢失动画、用户反馈app卡死、用户投诉看不了书籍等等的问题，这些问题都严重影响使用，也会降低产品口碑，因此我们开发了一些监控工具来解决这些问题，">
@@ -275,7 +275,7 @@
       
         <p>在实现需求的同时，能写出既优雅性能又高效的代码是每个开发者都在追求的目标，但是在实际开发中，随着每个版本需求的迭代，功能变得越来越复杂，加上开发者的意识不够或者一时疏忽，日渐复杂的工程很容易产生或多或少的问题。在使用微信读书的过程中，我们也碰到过app随机丢失动画、用户反馈app卡死、用户投诉看不了书籍等等的问题，这些问题都严重影响使用，也会降低产品口碑，因此我们开发了一些监控工具来解决这些问题，在这里总结和分享一下。</p>
 <p>先来看看app的结构，如下图:</p>
-<p><img src="/img/monitor/app2.png" alt=""></p>
+<p><img src="/img/monitor-app2.png" width="30%" height="30%"></p>
 <p>微信读书主要分为5层，由下至上分为:</p>
 <ul>
 <li>网络层：负责和服务器通讯，使用http协议获取数据。</li>
@@ -289,10 +289,10 @@
 <h2 id="对网络层成功率的监控"><a href="#对网络层成功率的监控" class="headerlink" title="对网络层成功率的监控"></a>对网络层成功率的监控</h2><p>网络层使用NSURLSession对象向服务器发送请求后，要先经过公司统一网关TGW，然后经过代理最后再到CGI处理，最后返回JSON数据，流程较长，而JSON数据也包括业务的错误码。以前开发QQ邮箱时会遇到联不上网、会话过期、返回的数据格式有误、中了反垃圾逻辑等等的问题，而每天遇到这些问题的人次应是固定在某一个范围的，否则就表示app或者服务器不稳定，所以微信读书很早就开始统计网络请求的成功、失败率，了解所有错误码的分布情况。</p>
 <p>刚开始时，微信读书对每一个CGI请求返回的错误码都收集上报然后再统计出人数和次数，后来发现这样统计失败率达到30%之高，影响判断，因为有两个错误码比较特殊，分别是-1009没有网络和-1001超时，App在没有连网时也可以继续使用缓存数据来读书，所以无网络比较正常。超时是连接服务器超时，可能是app发起请求后就被切换到后台了被挂起了，或者在后台被push唤醒然后发起请求，但很快被系统挂起。后来我们把-1009和在请求期间有切换到后台并且花费了120秒的-1001都作另外统计，真正的失败率变得更小，这样就方便看出真正错误的分布情况。</p>
 <p>以下表格就是某一天网络请求的统计结果：</p>
-<p><img src="/img/monitor/cgierror.png" width="80%" height="80%"></p>
+<p><img src="/img/monitor-cgierror.png" width="80%" height="80%"></p>
 <p>从上面这个统计结果可以发现两个问题：</p>
 <p>第一是/store/recommend的次数失败率突然飙高，点击可查看具体的错误码，如下图，主要是-2501这个错误码居多，通过查看代码和询问后台同事就知道是最近新需求上线导致的问题了。</p>
-<p><img src="/img/monitor/recommend.png" width="80%" height="80%"></p>
+<p><img src="/img/monitor-recommend.png" width="80%" height="80%"></p>
 <p>第二个是多了莫名其妙的url，app的某些请求被重定向了，原因可能是DNS被劫持了，我们正在接入HTTPDNS来解决这个问题。</p>
 <p>整个发现问题、查找原因过程是很方便的。目前这一块还没有加上自动监控，还需要人为地观察，一般需要持续观察这个统计表的情况有：</p>
 <ol>
@@ -305,13 +305,13 @@
 <p>临近1月1日苹果要求将http请求切换到https的日子，很多app或者服务器都需要进行改造，网络层成功率的统计显示十分重要，当遇到问题时，我们都会先看网络请求是否出现大面积的失败来定位问题，如果是网络层请求失败可以根据错误码来查找原因，否则就要在其它模块找原因了。</p>
 <h2 id="数据层的性能监控"><a href="#数据层的性能监控" class="headerlink" title="数据层的性能监控"></a>数据层的性能监控</h2><p>从RDM的卡顿监控结果看，我们发现了不少卡顿都是发生在数据层，但是看到了卡顿堆栈我们也很无奈，因为当我们自己根据堆栈去重现的时候又不会卡，这种跟特定数据有关的卡顿很难重现，源码太多流程太长，单纯从审查源码来找出这些原因也是不现实的。数据层就像一个黑盒，接收输入参数然后输出数据，如果我们将数据层每一次sql执行所需要的时间都列出来，那我们就知道是什么操作最耗时了，于是我们开始了数据层的监控工作。</p>
 <p>我们使用的数据层框架是<a href="https://wereadteam.github.io/2016/07/06/GYDataCenter/" target="_blank" rel="external">GYDataCenter</a>，大概的工作流程是这样的：</p>
-<p><img src="/img/monitor/datacenter.png" width="70%" height="70%"></p>
+<p><img src="/img/monitor-datacenter.png" width="70%" height="70%"></p>
 <p>数据层主要由内存cache和sqlite组成，每一个db对应一个Cache队列和DB队列。业务层每个业务的处理可能在不同线程，当需要数据时通过DataCenter的接口将任务同步放到Cache Queue，然后等前面的任务完成。当Cache任务执行时，如果在cache就有数据就可以立即返回，否则需要查询sqlite，将任务放入db queue然后等待执行。当查询到数据库的数据时，将其转换成对象然后逐步callback回去，最终回到业务层。所以一次sql的完整操作是要经过等待cache队列 -&gt; 放入cache队列执行 -&gt; 等待db队列 -&gt; 放入db队列执行这四步，而我们需要做的就是记录这四步的时间以及对应的sql。</p>
 <p>在实际中，我们发现这些操作的数量非常多，所以最后我们没有将每一次的操作都记录，只是记录超过平均执行时间的sql操作。</p>
 <p>统计出来的结果如下图所示，可以按4个时间来排序：</p>
-<p><img src="/img/monitor/sql.png"></p>
+<p><img src="/img/monitor-sql.png"></p>
 <p>可以对比每个版本的耗时情况： </p>
-<p><img src="/img/monitor/sql_cmp.png" width="80%" height="80%"></p>
+<p><img src="/img/monitor-sql_cmp.png" width="80%" height="80%"></p>
 <p>有了这份统计数据，有以下好处：</p>
 <ol>
 <li>打开数据层这个黑盒，对整个app的所用到的sql一目了然。</li>
@@ -328,30 +328,30 @@
 <p>这条语句不合理的地方在于最后面的“678”没有使用“?”，如果使用“?”这种参数绑定的方法，sqlite就不需要重新编译这条sql，从而节省时间。</p>
 <p>有了数据层的监控，不合理的sql语句都被暴露出来，在1.4.5版本，类似第一种没有写WHERE条件的UPDATE语句还是比较多的，它们相当耗时，虽然是在子线程UPDATE，但是从上图可知当子线程在执行任务时，如果主线程访问数据库也是需要等待Cache、DB队列，从而发生卡顿，也引起了很多用户的投诉。</p>
 <p>改善了相关sql后卡顿率有所下降，下图是RDM统计出来的ANR(Application Not Responding)率，ANR率是在主线程卡顿3秒的人数占联网人数的比例，按天计算，越小越好。1.4.5版本卡顿率平均在0.93%，1.4.6.299平均在0.63%，有30%的提升。</p>
-<p><img src="/img/monitor/anr.png"></p>
+<p><img src="/img/monitor-anr.png"></p>
 <p>单纯优化sql语句还不能解决所有问题，但根据这些耗时统计，比较慢的操作都是集中在3个表里，它们要么存在位运算字段因此不能使用索引优化，要么因为字段太多，我们后续可能会进行拆表再观察。</p>
 <h2 id="UI数据源监控"><a href="#UI数据源监控" class="headerlink" title="UI数据源监控"></a>UI数据源监控</h2><p>UI数据源对象是负责为UI的渲染提供所有数据，它会读取本地cache、DB的数据，或者发送网络请求来同步数据。</p>
 <p>以前曾经遇到这个问题：</p>
-<p><img src="/img/monitor/collection.png"></p>
+<p><img src="/img/monitor-collection.png"></p>
 <p>当一条线程在遍历数组，另一条线程又在修改它时会Crash，因为数组不是线程安全的。程序中存在很多可变数组，虽然目前还找不到方法来查找所有这种多线程读写的问题，但是对于我们的UI数据源还是有办法排查一部分问题的。这是得益于微信读书UIDataSource都有固定的模式：</p>
-<p><img src="/img/monitor/datasource.png"></p>
+<p><img src="/img/monitor-datasource.png"></p>
 <p>WRBookMarketDataSource是书城的数据源，真正为UITableView提供数据的是它的成员<em>_allBooks</em>，如果需要多线程访问这个变量就要加锁，但最方便的做法是统一都在主线程访问这个变量。但写代码一不注意就会在子线程更改了<em>_allBooks</em>，而我们可以做一些事情来防止这件事发生。我们只需hook了UIDataSource的alloc、NSMutableArray的add等方法，当调用NSMutableArray的add方法时，去遍历所有UIDataSource对象，通过class_copyIvarList、valueForKey函数把所有的成员变量都找出来看看是否为当前的NSMutableArray，通过NSAssert确保当前在主线程，否则在debug模式下会crash提醒开发者修改。通过这种方法能确保操作UIDatsSource的NSMutableArray成员对象一定在主线程操作。</p>
 <h2 id="UI主线程监控"><a href="#UI主线程监控" class="headerlink" title="UI主线程监控"></a>UI主线程监控</h2><h5 id="1-防止子线程访问UI"><a href="#1-防止子线程访问UI" class="headerlink" title="1. 防止子线程访问UI"></a>1. 防止子线程访问UI</h5><p>UIKit的大部分对象都不是线程安全的，所有继承自UIResponder的类都需要在主线程操作，如果在子线程更改了这些UI对象就会导致未知道的行为，比如随机出现丢失动画、页面错乱甚至crash。可以尝试一下以下代码，在子线程调用100次后，很可能会导致整个app丢失动画。</p>
 <figure class="highlight objectivec"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">UIImageView</span> *imageView = [[<span class="built_in">UIImageView</span> alloc] initWithImage:image];</span><br></pre></td></tr></table></figure>
 <p>为了防止在子线程操作UI，我们在开发阶段hook掉UIView、CALayer的setNeedsLayout、setNeedsDisplay、setNeedsDisplayInRect:三个方法，当调用这三个方法时判断是否在主线程，如果不在主线程调用就让程序crash，在crash堆栈能看出是哪里的问题。</p>
 <h5 id="2-FPS监控"><a href="#2-FPS监控" class="headerlink" title="2. FPS监控"></a>2. FPS监控</h5><p>在开发过程中，有些时候我们自己也会遇到卡顿，但很难重现，错过了现场比较可惜。所以我们弄了一个FPS监控条，通过CADisplayLink来获取屏幕刷新频率，在使用过程中就能即时知道什么页面流畅什么页面会卡顿，如下图在右上角一直有一个view显示fps的变化，当fps低于30的时候，就会捕获所有线程堆栈，然后右上角的view会给出红色警示，可点击查看具体的堆栈信息。如果在真机，反解堆栈还需要另外的工作，Demo可参考<a href="https://github.com/featuretower/GYMonitor" target="_blank" rel="external">这里</a>。</p>
 <p>这种做法的好处是当自己在使用过程中，如果碰到了卡顿，能第一时间知道是什么场景下发生的，而且知道堆栈大概是什么，当下次碰到现网用户有类似的堆栈卡顿的时候，就能很快反应过来是哪里卡了，这样能够减少很多查找问题的时间。比如下图就是在使用过程中，app突然之间卡住了一下，fps也降低了，好奇的点开右上角的view，可以看出是在主线程解压字体压缩包导致的。</p>
-<p><img src="/img/monitor/fps1.png" width="40%" height="40%"></p>
-<p><img src="/img/monitor/fps2.png" width="40%" height="40%"></p>
+<p><img src="/img/monitor-fps1.png" width="40%" height="40%"></p>
+<p><img src="/img/monitor-fps2.png" width="40%" height="40%"></p>
 <h5 id="3-线上用户监控"><a href="#3-线上用户监控" class="headerlink" title="3. 线上用户监控"></a>3. 线上用户监控</h5><p>线上用户的卡顿监控是使用RDM sdk来监控的，原理是通过RunLoop的几个Observer来确定主线程是否卡住了，具体原理请参考老谭笔记。当主线程的RunLoop执行时间超过3秒就会捕获所有线程的堆栈，然后上报给服务器。通过几个版本的使用，这种方法确实能够发现很多卡顿问题并且堆栈也很清晰，也便于我们定位问题。</p>
 <p>除此之外，我们还结合RunLoop和用户点击流来监控页面的流畅程度。</p>
-<p><img src="/img/monitor/main_run_loop.png" width="80%" height="80%"></p>
+<p><img src="/img/monitor-main_run_loop.png" width="80%" height="80%"></p>
 <p>比如下面这个统计就是首页四个tab切换的耗时统计：</p>
-<p><img src="/img/monitor/main_run_loop_cost.png"></p>
+<p><img src="/img/monitor-main_run_loop_cost.png"></p>
 <p>当碰到这种页面切换卡顿时，我们会怀疑是不是随着用户的使用时间越多，本地存储的数据越来越多导致数据处理逻辑变慢的，因为我们进入每一个列表时都会在主线程读取本地数据来渲染，如果数据多就会卡。所以我们的做法是制造很多测试数据来进行压力测试，可以是向db插入测试数据，也可以拦截网络层返回测试数据，通过这种方式来确定是不是页面切换卡顿是否和数据量有关，如果是的话，会采取分页拉取，预加载等方式去优化，否则还需要获取详细的堆栈，这将会在后续补上。</p>
 <h2 id="业务实时监控"><a href="#业务实时监控" class="headerlink" title="业务实时监控"></a>业务实时监控</h2><p>在几个月前，微信读书用户反馈系统突然之间收到了很多投诉，对某些书籍app总是显示章节加载失败，始终不能阅读，但是从后台监控来看是没有异常的。后来经过一轮排查才知道是书籍内容出问题，而这个问题已经出现一天多了，已经影响很多用户。为什么后台没有发现异常呢，这是因为是书籍内容出了问题，从server端是很难知道这种错误的，只有app端在处理这份数据时才容易知道问题。这个问题给我们一个警醒，我们的app端监控存在不足，不能第一时间发现问题，我们需要对一些关键业务补上监控。</p>
 <h5 id="1-书籍下载和渲染实时监控"><a href="#1-书籍下载和渲染实时监控" class="headerlink" title="1. 书籍下载和渲染实时监控"></a>1. 书籍下载和渲染实时监控</h5><p>阅读书籍是微信读书的主要功能之一，我们需要确保阅读流程任何一个环节都没有发生问题。阅读一本书需要经过的流程有下载章节 -&gt; 解压数据 -&gt; 存储 -&gt; 读取章节 -&gt; 解密 -&gt; 解析 -&gt; 渲染，我们现在对每一步都加了实时监控，一旦有问题发生，运营系统能在几分钟内发出警报，第一时间通知相关人员。</p>
-<p><img src="/img/monitor/reading_monitor.png"></p>
+<p><img src="/img/monitor-reading_monitor.png"></p>
 <h5 id="2-epub乱码监控"><a href="#2-epub乱码监控" class="headerlink" title="2. epub乱码监控"></a>2. epub乱码监控</h5><p>书籍内容出现乱码也是严重影响阅读的问题，我们也收到好几例这样的投诉。乱码的原因有可能是书籍本身就不是用UTF8编码，有可能是文件在传输或者解压过程中丢失了部分字符，幸好UTF8编码是有规律的，所以我们在排版的时候会检测这些字符是否用UTF8编码，如果不是的话就会上报。</p>
 <h5 id="3-想法下划线位置"><a href="#3-想法下划线位置" class="headerlink" title="3. 想法下划线位置"></a>3. 想法下划线位置</h5><p>阅读过程中可以对文中内容划线写想法然后分享，但是当书籍需要从txt升级到epub时，需要转换下划线对应的位置，开发初期我们经常遇到点击别人的想法但下划线对应不上的问题，后来也是遇到一个问题解决一个，现在我们已经针对这个问题对线上用户加上监控，统一处理问题。</p>
 <p>以上三个只是业务监控的几个例子，统计能帮我们发现问题，也为我们决策提供很好的依据。我们业务层监控的思路就是如果遇到问题，不管是自己发现的，还是用户反馈的，把它解决之后要衡量这个业务的重要程度，出现问题的几率和后果，如果认为比较重要都会想办法对相关流程加上监控，希望通过这种方法能及时发现问题。</p>
@@ -368,7 +368,7 @@
 <figure class="highlight objectivec"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="number">0</span>   WeRead                              <span class="number">0x0000000100b19834</span> WeRead + <span class="number">10770484</span></span><br><span class="line"><span class="number">1</span>   WeRead                              <span class="number">0x0000000100b19448</span> WeRead + <span class="number">10769480</span></span><br><span class="line"><span class="number">2</span>   WeRead                              <span class="number">0x0000000100b268dc</span> WeRead + <span class="number">10823900</span></span><br><span class="line"><span class="number">3</span>   WeRead                              <span class="number">0x000000010060e7d4</span> WeRead + <span class="number">5482452</span></span><br><span class="line"><span class="number">4</span>   WeRead                              <span class="number">0x0000000100c130d4</span> _ZN9spplcrash5async16gnu_ehptr_readerIyE4readEP23spplcrash_async_mobjectml<span class="built_in">NS0_8DW_EH_PEEPyPm</span> + <span class="number">535828</span></span><br><span class="line"><span class="number">5</span>   WeRead                              <span class="number">0x0000000100304914</span> WeRead + <span class="number">2296084</span></span><br><span class="line"><span class="number">6</span>   WeRead                              <span class="number">0x0000000100443de4</span> WeRead + <span class="number">3603940</span></span><br><span class="line"><span class="number">7</span>   WeRead                              <span class="number">0x0000000100442ba0</span> WeRead + <span class="number">3599264</span></span><br><span class="line"><span class="number">8</span>   WeRead                              <span class="number">0x000000010030475c</span> WeRead + <span class="number">2295644</span></span><br><span class="line"><span class="number">9</span>   <span class="built_in">UIKit</span>                               <span class="number">0x000000018d7e1494</span> &lt;redacted&gt; + <span class="number">84</span></span><br><span class="line"><span class="number">10</span>  <span class="built_in">UIKit</span>                               <span class="number">0x000000018d2fd9a0</span> &lt;redacted&gt; + <span class="number">96</span></span><br><span class="line"><span class="number">11</span>  <span class="built_in">UIKit</span>                               <span class="number">0x000000018d2fd920</span> &lt;redacted&gt; + <span class="number">80</span></span><br></pre></td></tr></table></figure>
 <p>第二列是镜像名，最后一列是这行代码在运行时的偏移地址，对于同一个app和设备都是固定的，我们取每一行的这两列来组成字符串再计算md5来标识某个堆栈，然后再判断之前是否已经存在，如果存在就只上报函数名不上报堆栈。</p>
 <p>下图是我们某次内测的部分统计数据:</p>
-<p><img src="/img/monitor/assert.png"></p>
+<p><img src="/img/monitor-assert.png"></p>
 <p>从统计数据来看，往往都有几个断言的人次特别多，其它比较少，我们目前只处理人次较多的问题。比如下面两个断言的人数不高，但次数很高，很可能是数据上出了问题，结合上传的消息、堆栈以及查看具体源码，很快就能知道是什么人、哪一本书哪一章节遇到问题，像下面第一个是缓存数据出了问题，会导致阅读不了，第二个是遇到了没有处理的css样式，虽然它们都不会导致crash，但很可能会影响到阅读体验和产生其它问题。通过统计出这些Assert，我们能够发现、定位并解决潜在的bug，提高代码质量。</p>
 <h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>随着时间的推移，老代码和框架始终会碰到bug和性能瓶颈，微信读书针对现有的问题，开发出一些工具来辅助开发人员定位和解决问题，也取得一定的效果。目前这些工具还不能覆盖所有问题，我们在编码的同时会继续追求更好的工具来辅助我们，减少我们埋坑的几率和解决问题的时间。</p>
 
