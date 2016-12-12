@@ -58,15 +58,13 @@
 
 
 <meta name="description" content="微信读书作为一款阅读类的新产品，目前还处于快速迭代，不断尝试的过程中，性能问题也在业务的不断累积中逐渐体现出来。最近的 1.3.0 版本发布后，关于性能问题的用户反馈逐渐增多，为此，团队开始做一些针对性的性能问题优化。本文将从发现问题、解决问题和预防问题三个方面进行总结。
-如何发现性能问题
-不同于一般的 bug，性能问题因为并没有统一的标准，而且与用户的机器环境相关性较大，所以往往是在产品上线后才">
+如何发现性能问题不同于一般的 bug，性能问题因为并没有统一的标准，而且与用户的机器环境相关性较大，所以往往是在产品上线后才被">
 <meta property="og:type" content="article">
 <meta property="og:title" content="微信读书 iOS 性能优化总结">
 <meta property="og:url" content="http://weread.qq.com/2016/05/03/WeRead-Performance/index.html">
 <meta property="og:site_name" content="WeRead团队博客">
 <meta property="og:description" content="微信读书作为一款阅读类的新产品，目前还处于快速迭代，不断尝试的过程中，性能问题也在业务的不断累积中逐渐体现出来。最近的 1.3.0 版本发布后，关于性能问题的用户反馈逐渐增多，为此，团队开始做一些针对性的性能问题优化。本文将从发现问题、解决问题和预防问题三个方面进行总结。
-如何发现性能问题
-不同于一般的 bug，性能问题因为并没有统一的标准，而且与用户的机器环境相关性较大，所以往往是在产品上线后才">
+如何发现性能问题不同于一般的 bug，性能问题因为并没有统一的标准，而且与用户的机器环境相关性较大，所以往往是在产品上线后才被">
 <meta property="og:image" content="http://weread.qq.com/img/wechat-stuck.jpeg">
 <meta property="og:image" content="http://weread.qq.com/img/performance.jpeg">
 <meta property="og:image" content="http://weread.qq.com/img/performance-result.jpeg">
@@ -74,8 +72,7 @@
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="微信读书 iOS 性能优化总结">
 <meta name="twitter:description" content="微信读书作为一款阅读类的新产品，目前还处于快速迭代，不断尝试的过程中，性能问题也在业务的不断累积中逐渐体现出来。最近的 1.3.0 版本发布后，关于性能问题的用户反馈逐渐增多，为此，团队开始做一些针对性的性能问题优化。本文将从发现问题、解决问题和预防问题三个方面进行总结。
-如何发现性能问题
-不同于一般的 bug，性能问题因为并没有统一的标准，而且与用户的机器环境相关性较大，所以往往是在产品上线后才">
+如何发现性能问题不同于一般的 bug，性能问题因为并没有统一的标准，而且与用户的机器环境相关性较大，所以往往是在产品上线后才被">
 
 
 
@@ -268,119 +265,90 @@
 
       
         <p><a href="http://weread.qq.com/">微信读书</a>作为一款阅读类的新产品，目前还处于快速迭代，不断尝试的过程中，性能问题也在业务的不断累积中逐渐体现出来。最近的 1.3.0 版本发布后，关于性能问题的用户反馈逐渐增多，为此，团队开始做一些针对性的性能问题优化。本文将从发现问题、解决问题和预防问题三个方面进行总结。</p>
-<h2>如何发现性能问题</h2>
-<p>不同于一般的 bug，性能问题因为并没有统一的标准，而且与用户的机器环境相关性较大，所以往往是在产品上线后才被发现，也导致解决问题的周期很长。微信读书 1.3.0 版本之前，性能问题基本都来自于用户反馈（包括测试人员），受限于测试时间和用户反馈的积极性，性能问题往往到了比较严重的程度，开发人员才真正发现问题。</p>
+<h2 id="如何发现性能问题"><a href="#如何发现性能问题" class="headerlink" title="如何发现性能问题"></a>如何发现性能问题</h2><p>不同于一般的 bug，性能问题因为并没有统一的标准，而且与用户的机器环境相关性较大，所以往往是在产品上线后才被发现，也导致解决问题的周期很长。微信读书 1.3.0 版本之前，性能问题基本都来自于用户反馈（包括测试人员），受限于测试时间和用户反馈的积极性，性能问题往往到了比较严重的程度，开发人员才真正发现问题。</p>
 <p>但是，移动应用要保证良好的用户体验，产品在性能方面的表现极其重要。为了尽可能早、尽可能全面地收集产品的性能问题，就避免不了对产品做性能监控。我们主要从两个维度进行了监控：</p>
-<p>&lt;!--more--&gt;</p>
+<a id="more"></a>
 <ol>
-<li>
-<p>业务性能监控，是指在App本地，业务的开始和结束处打点上报，然后后台统计达到监控目的；</p>
+<li><p>业务性能监控，是指在App本地，业务的开始和结束处打点上报，然后后台统计达到监控目的；</p>
 </li>
-<li>
-<p>卡顿监控。卡顿监控的实现一般有两种方案：</p>
-</li>
-</ol>
+<li><p>卡顿监控。卡顿监控的实现一般有两种方案：</p>
 <blockquote>
 <p>（1）主线程卡顿监控。通过子线程监测主线程的 runLoop，判断两个状态区域之间的耗时是否达到一定阈值。具体原理和实现，<a href="http://www.tanhao.me/code/151113.html/" target="_blank" rel="external">这篇文章</a>介绍得比较详细。</p>
-</blockquote>
-<blockquote>
 <p>（2）FPS监控。要保持流畅的UI交互，App 刷新率应该当努力保持在 60fps。监控实现原理比较简单，通过记录两次刷新时间间隔，就可以计算出当前的 FPS。</p>
 </blockquote>
+</li>
+</ol>
 <p>但是，在实际应用过程我们发现，无论是主线程监控，还是 FPS 监控，抖动都比较大。因此，微信团队提出了一套综合的判断方法，结合了主线程监控、FPS监控，以及CPU使用率等指标，作为判断卡顿的标准。</p>
 <p><img src="/img/wechat-stuck.jpeg" alt="微信卡顿监控"></p>
 <p>微信读书接入了RDM(bugly)的卡顿监控(也是基于微信团队的卡顿标准)，通过下发配置，对现网用户进行抽样检测，并上报卡顿的堆栈信息。这对于我们掌握现网用户的卡顿状况起到了非常大的帮助。</p>
-<h2>性能问题的解决方法</h2>
-<p>产生性能问题的原因多种多样，因此解决的办法也不尽相同，比较常用的大概有以下几种：</p>
-<h4>1.优化业务流程</h4>
-<p>性能优化看似高深，真正落到实处才会发现，最大的坑往往都隐藏在于业务不断累积和频繁变更之处。优化业务流程就是在满足需求的同时，提出更加高效优雅的解决方案，从根本上解决问题。从实践来看，这种方法解决问题是最彻底的，但通常也是难度最大的。微信读书在优化阅读中各种操作（如，书签、划想、想法等）性能时，就是从业务流程的角度来进行优化。如下图：</p>
+<h2 id="性能问题的解决方法"><a href="#性能问题的解决方法" class="headerlink" title="性能问题的解决方法"></a>性能问题的解决方法</h2><p>产生性能问题的原因多种多样，因此解决的办法也不尽相同，比较常用的大概有以下几种：</p>
+<h4 id="1-优化业务流程"><a href="#1-优化业务流程" class="headerlink" title="1.优化业务流程"></a>1.优化业务流程</h4><p>性能优化看似高深，真正落到实处才会发现，最大的坑往往都隐藏在于业务不断累积和频繁变更之处。优化业务流程就是在满足需求的同时，提出更加高效优雅的解决方案，从根本上解决问题。从实践来看，这种方法解决问题是最彻底的，但通常也是难度最大的。微信读书在优化阅读中各种操作（如，书签、划想、想法等）性能时，就是从业务流程的角度来进行优化。如下图：</p>
 <p><img src="/img/performance.jpeg" alt="阅读划线优化"></p>
-<h4>2.合理的线程分配</h4>
-<p>由于 GCD 实在太方便了，如果不加控制，大部分需要抛到子线程操作都会被直接加到 global 队列，这样会导致两个问题，1.开的子线程越来越多，线程的开销逐渐明显，因为开启线程需要占用一定的内存空间（默认的情况下，主线程占1M,子线程占用512KB）。2.多线程情况下，网络回调的时序问题，导致数据处理错乱，而且不容易发现。为此，我们项目定了一些基本原则。</p>
+<h4 id="2-合理的线程分配"><a href="#2-合理的线程分配" class="headerlink" title="2.合理的线程分配"></a>2.合理的线程分配</h4><p>由于 GCD 实在太方便了，如果不加控制，大部分需要抛到子线程操作都会被直接加到 global 队列，这样会导致两个问题，1.开的子线程越来越多，线程的开销逐渐明显，因为开启线程需要占用一定的内存空间（默认的情况下，主线程占1M,子线程占用512KB）。2.多线程情况下，网络回调的时序问题，导致数据处理错乱，而且不容易发现。为此，我们项目定了一些基本原则。</p>
 <ul>
 <li>UI 操作和 DataSource 的操作一定在主线程。</li>
 <li>DB 操作、日志记录、网络回调都在各自的固定线程。</li>
 <li>不同业务，可以通过创建队列保证数据一致性。例如，想法列表的数据加载、书籍章节下载、书架加载等。</li>
 </ul>
 <p>合理的线程分配，最终目的就是保证主线程尽量少的处理非UI操作，同时控制整个App的子线程数量在合理的范围内。</p>
-<h4>3.预处理和延时加载</h4>
-<p>预处理，是将初次显示需要耗费大量线程时间的操作，提前放到后台线程进行计算，再将结果数据拿来显示。</p>
+<h4 id="3-预处理和延时加载"><a href="#3-预处理和延时加载" class="headerlink" title="3.预处理和延时加载"></a>3.预处理和延时加载</h4><p>预处理，是将初次显示需要耗费大量线程时间的操作，提前放到后台线程进行计算，再将结果数据拿来显示。</p>
 <p>延时加载，是指首先加载当前必须的可视内容，在稍后一段时间内或特定事件时，再触发其他内容的加载。这种方式可以很有效的提升界面绘制速度，使体验更加流畅。（UITableView 就是最典型的例子）</p>
 <p>这两种方法都是在资源比较紧张的情况下，优先处理马上要用到的数据，同时尽可能提前加载即将要用到的数据。在微信读书中阅读的排版是优先级最高的，所在在阅读过程中会预处理下一页、下一章的排版，同时可能会延时加载阅读相关的其它数据（如想法、划线、书签等）。</p>
-<h4>4.缓存</h4>
-<p>cache可能是所有性能优化中最常用的手段，但也是我们极不推荐的手段。cache建立的成本低，见效快，但是带来维护的成本却很高。如果一定要用，也请谨慎使用，并注意以下几点：</p>
+<h4 id="4-缓存"><a href="#4-缓存" class="headerlink" title="4.缓存"></a>4.缓存</h4><p>cache可能是所有性能优化中最常用的手段，但也是我们极不推荐的手段。cache建立的成本低，见效快，但是带来维护的成本却很高。如果一定要用，也请谨慎使用，并注意以下几点：</p>
 <ul>
 <li>并发访问 cache 时，数据一致性问题。</li>
 <li>cache 线程安全问题，防止一边修改一边遍历的 crash。</li>
 <li>cache 查找时性能问题。</li>
 <li>cache 的释放与重建，避免占用空间无限扩大，同时释放的粒度也要依实际需求而定。</li>
 </ul>
-<h4>5.使用正确的API</h4>
-<p>使用正确的 API，是指在满足业务的同时，能够选择性能更优的API。</p>
+<h4 id="5-使用正确的API"><a href="#5-使用正确的API" class="headerlink" title="5.使用正确的API"></a>5.使用正确的API</h4><p>使用正确的 API，是指在满足业务的同时，能够选择性能更优的API。</p>
 <ul>
 <li>选择合适的容器;</li>
 <li>了解 <code>imageNamed:</code> 与 <code>imageWithContentsOfFile:</code>的差异(<code>imageNamed:</code> 适用于会重复加载的小图片，因为系统会自动缓存加载的图片，<code>imageWithContentsOfFile:</code> 仅加载图片)</li>
 <li>缓存 <code>NSDateFormatter</code> 的结果。</li>
 <li>寻找 <code>(NSDate *)dateFromString:(NSString )string</code> 的替换品。</li>
 </ul>
-<p><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//#include &lt;time.h&gt;</span></span><br><span class="line"><span class="keyword">time_t</span> t;</span><br><span class="line"><span class="keyword">struct</span> tm tm;</span><br><span class="line">strptime([iso8601String cStringUsingEncoding:NSUTF8StringEncoding], <span class="string">"%Y-%m-%dT%H:%M:%S%z"</span>, &amp;tm);</span><br><span class="line">tm.tm_isdst = -<span class="number">1</span>;</span><br><span class="line">t = mktime(&amp;tm);</span><br><span class="line">[NSDate dateWithTimeIntervalSince1970:t + [[NSTimeZone localTimeZone] secondsFromGMT]];</span><br></pre></td></tr></table></figure></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//#include &lt;time.h&gt;</span></span><br><span class="line"><span class="keyword">time_t</span> t;</span><br><span class="line"><span class="keyword">struct</span> tm tm;</span><br><span class="line">strptime([iso8601String cStringUsingEncoding:NSUTF8StringEncoding], <span class="string">"%Y-%m-%dT%H:%M:%S%z"</span>, &amp;tm);</span><br><span class="line">tm.tm_isdst = -<span class="number">1</span>;</span><br><span class="line">t = mktime(&amp;tm);</span><br><span class="line">[NSDate dateWithTimeIntervalSince1970:t + [[NSTimeZone localTimeZone] secondsFromGMT]];</span><br></pre></td></tr></table></figure>
 <ul>
-<li>
-<p>不要随意使用 <code>NSLog()</code>.</p>
+<li><p>不要随意使用 <code>NSLog()</code>.</p>
 </li>
-<li>
-<p>当试图获取磁盘中一个文件的属性信息时，使用 <code>[NSFileManager attributesOfItemAtPath:error:]</code> 会浪费大量时间读取可能根本不需要的附加属性。这时可以使用 <code>stat</code> 代替 <code>NSFileManager</code>，直接获取文件属性：</p>
+<li><p>当试图获取磁盘中一个文件的属性信息时，使用 <code>[NSFileManager attributesOfItemAtPath:error:]</code> 会浪费大量时间读取可能根本不需要的附加属性。这时可以使用 <code>stat</code> 代替 <code>NSFileManager</code>，直接获取文件属性：</p>
 </li>
 </ul>
-<p><figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="preprocessor">#import <span class="title">&lt;sys/stat.h&gt;</span></span></span><br><span class="line"><span class="keyword">struct</span> stat statbuf;</span><br><span class="line"><span class="keyword">const</span> <span class="keyword">char</span> *cpath = [filePath fileSystemRepresentation];</span><br><span class="line"><span class="keyword">if</span> (cpath &amp;&amp; stat(cpath, &amp;statbuf) == <span class="number">0</span>) &#123;</span><br><span class="line">    <span class="built_in">NSNumber</span> *fileSize = [<span class="built_in">NSNumber</span> numberWithUnsignedLongLong:statbuf<span class="variable">.st_size</span>];</span><br><span class="line">    <span class="built_in">NSDate</span> *modificationDate = [<span class="built_in">NSDate</span> dateWithTimeIntervalSince1970:statbuf<span class="variable">.st_mtime</span>];</span><br><span class="line">    <span class="built_in">NSDate</span> *creationDate = [<span class="built_in">NSDate</span> dateWithTimeIntervalSince1970:statbuf<span class="variable">.st_ctime</span>];</span><br><span class="line">    <span class="comment">// etc</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
-<h2>如何预防性能问题</h2>
-<p>大部分性能问题可以通过程序员经验和能力的提升得以减少，但是因为团队成员更新、业务累积，性能问题无法避免，如何在开发测试阶段发现问题解决问题，是预防性能问题的关键。为此，我们开发了一些比较有意思的工具，用于发现各种性能问题。</p>
-<h4>1. 内存泄露检测工具</h4>
-<p><a href="https://github.com/Zepo/MLeaksFinder" target="_blank" rel="external">MLeakFinder</a>是团队成员zepo在github开源的一款内存泄露检测工具，具体原理和使用方法可以参见<a href="http://wereadteam.github.io/2016/02/22/MLeaksFinder/" target="_blank" rel="external">这篇文章</a>。在此之前，内存泄露引起的性能问题是很难被察觉的，只有泄露到了相当严重的程度，然后通过Instrument工具，不断尝试才得以定位。MLeakFinder能在开发阶段，把内存泄露问题暴露无遗，减少了很多潜在的性能问题。</p>
-<h4>2. FPS/SQL性能监测工具条</h4>
-<p>该工具条是在DEBUG模式下，以浮窗的形式，实时展示当前可能存在问题的FPS次数和执行时间较长的SQL语句个数，是团队成员tower的杰作。FPS监测的原理并不复杂，前文也有介绍，虽然并不百分百准确，但非常实用，因为可以随时查看FPS低于某个阈值时的堆栈信息，再结合当时的使用场景，开发人员使用起来非常便利，可以很快定位到引起卡顿的场景和原因。SQL语句的监测也非常实用，对于微信读书，DB的读写速度是影响性能的瓶颈之一。因此在DEBUG阶段，我们监测了每一条SQL语句的执行速度，一旦执行时间超出某个阈值，就会表现在工具条的数字上，点击后可以进一步查询到具体的SQL操作以及实际耗时。</p>
-<p>这个工具帮助我们在开发阶段发现了很多卡顿问题，尤其是一些不合理的SQL语句，例如：
-在想法圏的优化过程中，利用这个工具，我们就发现想法圈第一次加载更多，执行的SQL语句耗时竟然达到了1000多毫秒。
-<figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">_SELECT * FROM WRReview INNER JOIN WRUser ON WRReview.fromId = WRUser.vid WHERE WRReview.type &amp; ? AND WRReview.createTime &lt;= ? ORDER BY WRReview.createTime DESC , WRReview.itemId ASC  LIMIT ?_</span><br></pre></td></tr></table></figure></p>
-<p>通过explain，可以发现这条SQL效率之低:
-<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">SEARCH TABLE WRReview</span><br><span class="line">SEARCH TABLE WRUser USING INTEGER PRIMARY KEY (rowid=?)</span><br><span class="line"><span class="operator"><span class="keyword">USE</span> TEMP B-TREE <span class="keyword">FOR</span> <span class="keyword">ORDER</span> <span class="keyword">BY</span></span></span><br></pre></td></tr></table></figure></p>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="preprocessor">#import <span class="title">&lt;sys/stat.h&gt;</span></span></span><br><span class="line"><span class="keyword">struct</span> stat statbuf;</span><br><span class="line"><span class="keyword">const</span> <span class="keyword">char</span> *cpath = [filePath fileSystemRepresentation];</span><br><span class="line"><span class="keyword">if</span> (cpath &amp;&amp; stat(cpath, &amp;statbuf) == <span class="number">0</span>) &#123;</span><br><span class="line">    <span class="built_in">NSNumber</span> *fileSize = [<span class="built_in">NSNumber</span> numberWithUnsignedLongLong:statbuf<span class="variable">.st_size</span>];</span><br><span class="line">    <span class="built_in">NSDate</span> *modificationDate = [<span class="built_in">NSDate</span> dateWithTimeIntervalSince1970:statbuf<span class="variable">.st_mtime</span>];</span><br><span class="line">    <span class="built_in">NSDate</span> *creationDate = [<span class="built_in">NSDate</span> dateWithTimeIntervalSince1970:statbuf<span class="variable">.st_ctime</span>];</span><br><span class="line">    <span class="comment">// etc</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="如何预防性能问题"><a href="#如何预防性能问题" class="headerlink" title="如何预防性能问题"></a>如何预防性能问题</h2><p>大部分性能问题可以通过程序员经验和能力的提升得以减少，但是因为团队成员更新、业务累积，性能问题无法避免，如何在开发测试阶段发现问题解决问题，是预防性能问题的关键。为此，我们开发了一些比较有意思的工具，用于发现各种性能问题。</p>
+<h4 id="1-内存泄露检测工具"><a href="#1-内存泄露检测工具" class="headerlink" title="1. 内存泄露检测工具"></a>1. 内存泄露检测工具</h4><p><a href="https://github.com/Zepo/MLeaksFinder" target="_blank" rel="external">MLeakFinder</a>是团队成员zepo在github开源的一款内存泄露检测工具，具体原理和使用方法可以参见<a href="http://wereadteam.github.io/2016/02/22/MLeaksFinder/" target="_blank" rel="external">这篇文章</a>。在此之前，内存泄露引起的性能问题是很难被察觉的，只有泄露到了相当严重的程度，然后通过Instrument工具，不断尝试才得以定位。MLeakFinder能在开发阶段，把内存泄露问题暴露无遗，减少了很多潜在的性能问题。</p>
+<h4 id="2-FPS-SQL性能监测工具条"><a href="#2-FPS-SQL性能监测工具条" class="headerlink" title="2. FPS/SQL性能监测工具条"></a>2. FPS/SQL性能监测工具条</h4><p>该工具条是在DEBUG模式下，以浮窗的形式，实时展示当前可能存在问题的FPS次数和执行时间较长的SQL语句个数，是团队成员tower的杰作。FPS监测的原理并不复杂，前文也有介绍，虽然并不百分百准确，但非常实用，因为可以随时查看FPS低于某个阈值时的堆栈信息，再结合当时的使用场景，开发人员使用起来非常便利，可以很快定位到引起卡顿的场景和原因。SQL语句的监测也非常实用，对于微信读书，DB的读写速度是影响性能的瓶颈之一。因此在DEBUG阶段，我们监测了每一条SQL语句的执行速度，一旦执行时间超出某个阈值，就会表现在工具条的数字上，点击后可以进一步查询到具体的SQL操作以及实际耗时。</p>
+<p>这个工具帮助我们在开发阶段发现了很多卡顿问题，尤其是一些不合理的SQL语句，例如：<br>在想法圏的优化过程中，利用这个工具，我们就发现想法圈第一次加载更多，执行的SQL语句耗时竟然达到了1000多毫秒。<br><figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">_SELECT * FROM WRReview INNER JOIN WRUser ON WRReview.fromId = WRUser.vid WHERE WRReview.type &amp; ? AND WRReview.createTime &lt;= ? ORDER BY WRReview.createTime DESC , WRReview.itemId ASC  LIMIT ?_</span><br></pre></td></tr></table></figure></p>
+<p>通过explain，可以发现这条SQL效率之低:<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">SEARCH TABLE WRReview</span><br><span class="line">SEARCH TABLE WRUser USING INTEGER PRIMARY KEY (rowid=?)</span><br><span class="line"><span class="operator"><span class="keyword">USE</span> TEMP B-TREE <span class="keyword">FOR</span> <span class="keyword">ORDER</span> <span class="keyword">BY</span></span></span><br></pre></td></tr></table></figure></p>
 <ul>
 <li>没有建立合适的索引，导致WRReview全表扫描。</li>
 <li>排序字段没有索引，导致SQLite需要再一次B-TREE排序。</li>
 <li>两字段排序，性能更低。</li>
 </ul>
 <p>优化：给WRReview的 <code>fromId</code> <code>createTime</code> 两个字段增加了索引，并去掉一个排序字段:</p>
-<p><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="operator"><span class="keyword">SELECT</span> * <span class="keyword">FROM</span> WRReview <span class="keyword">INNER</span> <span class="keyword">JOIN</span> WRUser <span class="keyword">ON</span> WRReview.fromId = WRUser.vid <span class="keyword">WHERE</span> WRReview.<span class="keyword">type</span> &amp; ? <span class="keyword">ORDER</span> <span class="keyword">BY</span> WRReview.createTime <span class="keyword">DESC</span>  <span class="keyword">LIMIT</span> ?</span></span><br></pre></td></tr></table></figure></p>
-<p>Explain的结果：
-<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">SCAN TABLE WRReview USING INDEX WRReview_createTime</span><br><span class="line">SEARCH TABLE WRUser USING INTEGER PRIMARY KEY (rowid=?)</span><br></pre></td></tr></table></figure></p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="operator"><span class="keyword">SELECT</span> * <span class="keyword">FROM</span> WRReview <span class="keyword">INNER</span> <span class="keyword">JOIN</span> WRUser <span class="keyword">ON</span> WRReview.fromId = WRUser.vid <span class="keyword">WHERE</span> WRReview.<span class="keyword">type</span> &amp; ? <span class="keyword">ORDER</span> <span class="keyword">BY</span> WRReview.createTime <span class="keyword">DESC</span>  <span class="keyword">LIMIT</span> ?</span></span><br></pre></td></tr></table></figure>
+<p>Explain的结果：<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">SCAN TABLE WRReview USING INDEX WRReview_createTime</span><br><span class="line">SEARCH TABLE WRUser USING INTEGER PRIMARY KEY (rowid=?)</span><br></pre></td></tr></table></figure></p>
 <p>SQL执行时间直接降了一个数量级，到100毫秒左右。</p>
-<h4>3. UI / DataSource主线程检测工具。</h4>
-<p>该工具是为了保证所有的UI的操作和 DataSource 操作一定是在主线程进行，同样是由tower同学贡献。实现原理是通过 hook UIView 的 <code>-setNeedsLayout</code>，<code>-setNeedsDisplay</code>，<code>-setNeedsDisplayInRect</code> 三个方法，确保它们都是在主线程执行。子线程操作UI可能会引起什么问题，苹果说得并不清楚，实际开发中我们遇到几种神奇的问题似乎都是跟这个有关。</p>
+<h4 id="3-UI-DataSource主线程检测工具。"><a href="#3-UI-DataSource主线程检测工具。" class="headerlink" title="3. UI / DataSource主线程检测工具。"></a>3. UI / DataSource主线程检测工具。</h4><p>该工具是为了保证所有的UI的操作和 DataSource 操作一定是在主线程进行，同样是由tower同学贡献。实现原理是通过 hook UIView 的 <code>-setNeedsLayout</code>，<code>-setNeedsDisplay</code>，<code>-setNeedsDisplayInRect</code> 三个方法，确保它们都是在主线程执行。子线程操作UI可能会引起什么问题，苹果说得并不清楚，实际开发中我们遇到几种神奇的问题似乎都是跟这个有关。</p>
 <ul>
-<li>
-<p>app 突然丢动画，似乎 iOS 系统也有这个 bug。虽然没有确切的证据，但使用这个工具，改完所有的问题后，bug 也好了(不止一次是这样)。</p>
+<li><p>app 突然丢动画，似乎 iOS 系统也有这个 bug。虽然没有确切的证据，但使用这个工具，改完所有的问题后，bug 也好了(不止一次是这样)。</p>
 </li>
-<li>
-<p>UI 操作偶尔响应特别慢，从代码看没有任何耗时操作，只是简单的 push 某个 controller。</p>
+<li><p>UI 操作偶尔响应特别慢，从代码看没有任何耗时操作，只是简单的 push 某个 controller。</p>
 </li>
-<li>
-<p>莫名的 crash，这当然是因为 UI 操作非线程安全引起的。</p>
+<li><p>莫名的 crash，这当然是因为 UI 操作非线程安全引起的。</p>
 </li>
 </ul>
 <p>更多时候，子线程操作 UI 也并不一定会发生什么问题，也正因为不知道会发生什么，所以更需要我们警惕，这个工具替我们扫除了这些隐患。虽然，苹果表示，现在部分的 UI 操作也已经是线程安全了，但毕竟大部分还不是。DataSource 的监测是因为我们业务定下的原则，保证列表 DataSource 的线程安全。</p>
-<h4>4. 排版引擎自动化检测工具</h4>
-<p>排版引擎是微信读书最核心的功能，排版引擎检测工具原本是为了检验排版引擎改进过程中准确性，防止因为业务变更，而影响原来的排版特性。实现原理是结合自动化脚本和 App 本身的排版引擎，给书库中的每一本书建立一个镜像，镜像的内容包括书籍的每一章每一页的截图，然后分析同一页码的两个不同版本的图片差异，就可以知道不同版本的排版引擎渲染效果。但是我发现，只要稍加改进，排版后记录每个章节排版耗时，就可以知道每个版本变化后同一个章节的耗时变化，以此作为排版引擎的性能指标。这个工具保证了微信读书，即使在快速迭代过程中也不会丢失阅读的核心体验。虽然这个工具无法在其它项目中复用，但是提醒了我们，可以通过自动化工具来保证产品最核心功能的体验。</p>
-<h4>5. 书源检测工具</h4>
-<p>微信读书为了支持正版版权，目前书源完全依赖于后台，不允许本地导入。书源的优劣的直接影响排版的效果和性能。为了解决了部分书籍无法打开或者乱码的问题，我们借助了后台同学的书源检测工具。对线上所有 epub 书籍进行扫描，按照章节大小进行排序。对于章节内容特别大的书籍重点检测，重新排版，解决了一批 epub 书籍无法打开的问题。同时针对章节内容乱码的问题，对所有 txt 的书籍进行了一次全量扫描，发现了一些问题，但还无法准确找出所有乱码的章节，这一点还在努力改善中。</p>
-<h2>优化成果</h2>
-<ol>
+<h4 id="4-排版引擎自动化检测工具"><a href="#4-排版引擎自动化检测工具" class="headerlink" title="4. 排版引擎自动化检测工具"></a>4. 排版引擎自动化检测工具</h4><p>排版引擎是微信读书最核心的功能，排版引擎检测工具原本是为了检验排版引擎改进过程中准确性，防止因为业务变更，而影响原来的排版特性。实现原理是结合自动化脚本和 App 本身的排版引擎，给书库中的每一本书建立一个镜像，镜像的内容包括书籍的每一章每一页的截图，然后分析同一页码的两个不同版本的图片差异，就可以知道不同版本的排版引擎渲染效果。但是我发现，只要稍加改进，排版后记录每个章节排版耗时，就可以知道每个版本变化后同一个章节的耗时变化，以此作为排版引擎的性能指标。这个工具保证了微信读书，即使在快速迭代过程中也不会丢失阅读的核心体验。虽然这个工具无法在其它项目中复用，但是提醒了我们，可以通过自动化工具来保证产品最核心功能的体验。</p>
+<h4 id="5-书源检测工具"><a href="#5-书源检测工具" class="headerlink" title="5. 书源检测工具"></a>5. 书源检测工具</h4><p>微信读书为了支持正版版权，目前书源完全依赖于后台，不允许本地导入。书源的优劣的直接影响排版的效果和性能。为了解决了部分书籍无法打开或者乱码的问题，我们借助了后台同学的书源检测工具。对线上所有 epub 书籍进行扫描，按照章节大小进行排序。对于章节内容特别大的书籍重点检测，重新排版，解决了一批 epub 书籍无法打开的问题。同时针对章节内容乱码的问题，对所有 txt 的书籍进行了一次全量扫描，发现了一些问题，但还无法准确找出所有乱码的章节，这一点还在努力改善中。</p>
+<h2 id="优化成果"><a href="#优化成果" class="headerlink" title="优化成果"></a>优化成果</h2><ol>
 <li>整体使用感受上，已经可以明显区分两个版本的性能差异，这一点也可以通过每天的用户反馈数据中得到验证。1.3.0 和 1.3.1分别发布一周后反馈的卡顿数从 10 个降到了 3 个，从总体反馈比例的 2.8% 降到 0.8%。</li>
-<li>某些关键业务，耗时也有明显改善。
-<img src="/img/performance-result.jpeg" alt=""></li>
+<li>某些关键业务，耗时也有明显改善。<br> <img src="/img/performance-result.jpeg" alt=""></li>
 <li>极端案例的修复。超大的epub书籍已通过后台进行拆分，解决了无法打开书籍的情况。</li>
 <li>针对低端机型，去掉了某些动画，交互更加流畅。</li>
 </ol>
-<h2>总结</h2>
-<p>通过上述介绍，我们可以看出，性能问题普遍存在，无可避免，与其花费大量时间，查找线上版本的性能问题，不如提高整体团队成员性能优化意识，借助性能查找工具，将性能问题尽早暴露在开发阶段，达到预防为主的效果。</p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>通过上述介绍，我们可以看出，性能问题普遍存在，无可避免，与其花费大量时间，查找线上版本的性能问题，不如提高整体团队成员性能优化意识，借助性能查找工具，将性能问题尽早暴露在开发阶段，达到预防为主的效果。</p>
 
       
     </div>
@@ -561,7 +529,7 @@
               
             
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#undefined"><span class="nav-number">1.</span> <span class="nav-text">如何发现性能问题</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#undefined"><span class="nav-number">2.</span> <span class="nav-text">性能问题的解决方法</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#undefined"><span class="nav-number">2.0.1.</span> <span class="nav-text">1.优化业务流程</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#undefined"><span class="nav-number">2.0.2.</span> <span class="nav-text">2.合理的线程分配</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#undefined"><span class="nav-number">2.0.3.</span> <span class="nav-text">3.预处理和延时加载</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#undefined"><span class="nav-number">2.0.4.</span> <span class="nav-text">4.缓存</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#undefined"><span class="nav-number">2.0.5.</span> <span class="nav-text">5.使用正确的API</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#undefined"><span class="nav-number">3.</span> <span class="nav-text">如何预防性能问题</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#undefined"><span class="nav-number">3.0.1.</span> <span class="nav-text">1. 内存泄露检测工具</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#undefined"><span class="nav-number">3.0.2.</span> <span class="nav-text">2. FPS/SQL性能监测工具条</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#undefined"><span class="nav-number">3.0.3.</span> <span class="nav-text">3. UI / DataSource主线程检测工具。</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#undefined"><span class="nav-number">3.0.4.</span> <span class="nav-text">4. 排版引擎自动化检测工具</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#undefined"><span class="nav-number">3.0.5.</span> <span class="nav-text">5. 书源检测工具</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#undefined"><span class="nav-number">4.</span> <span class="nav-text">优化成果</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#undefined"><span class="nav-number">5.</span> <span class="nav-text">总结</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#如何发现性能问题"><span class="nav-number">1.</span> <span class="nav-text">如何发现性能问题</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#性能问题的解决方法"><span class="nav-number">2.</span> <span class="nav-text">性能问题的解决方法</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#1-优化业务流程"><span class="nav-number">2.0.1.</span> <span class="nav-text">1.优化业务流程</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#2-合理的线程分配"><span class="nav-number">2.0.2.</span> <span class="nav-text">2.合理的线程分配</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#3-预处理和延时加载"><span class="nav-number">2.0.3.</span> <span class="nav-text">3.预处理和延时加载</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#4-缓存"><span class="nav-number">2.0.4.</span> <span class="nav-text">4.缓存</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#5-使用正确的API"><span class="nav-number">2.0.5.</span> <span class="nav-text">5.使用正确的API</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#如何预防性能问题"><span class="nav-number">3.</span> <span class="nav-text">如何预防性能问题</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#1-内存泄露检测工具"><span class="nav-number">3.0.1.</span> <span class="nav-text">1. 内存泄露检测工具</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#2-FPS-SQL性能监测工具条"><span class="nav-number">3.0.2.</span> <span class="nav-text">2. FPS/SQL性能监测工具条</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#3-UI-DataSource主线程检测工具。"><span class="nav-number">3.0.3.</span> <span class="nav-text">3. UI / DataSource主线程检测工具。</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#4-排版引擎自动化检测工具"><span class="nav-number">3.0.4.</span> <span class="nav-text">4. 排版引擎自动化检测工具</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#5-书源检测工具"><span class="nav-number">3.0.5.</span> <span class="nav-text">5. 书源检测工具</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#优化成果"><span class="nav-number">4.</span> <span class="nav-text">优化成果</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#总结"><span class="nav-number">5.</span> <span class="nav-text">总结</span></a></li></ol></div>
             
           </div>
           <div class="post-toc-indicator-bottom post-toc-indicator">
