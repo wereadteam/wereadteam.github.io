@@ -66,19 +66,19 @@
 <meta property="og:image" content="http://weread.qq.com/img/monitor-app2.png">
 <meta property="og:image" content="http://weread.qq.com/img/monitor-cgierror.png">
 <meta property="og:image" content="http://weread.qq.com/img/monitor-recommend.png">
-<meta property="og:image" content="http://weread.qq.com/img/monitor-datacenter.png">
+<meta property="og:image" content="http://weread.qq.com/img/datacenter.png">
 <meta property="og:image" content="http://weread.qq.com/img/monitor-sql.png">
 <meta property="og:image" content="http://weread.qq.com/img/monitor-sql_cmp.png">
 <meta property="og:image" content="http://weread.qq.com/img/monitor-anr.png">
 <meta property="og:image" content="http://weread.qq.com/img/monitor-collection.png">
-<meta property="og:image" content="http://weread.qq.com/img/monitor-datasource.png">
+<meta property="og:image" content="http://weread.qq.com/img/datasource.png">
 <meta property="og:image" content="http://weread.qq.com/img/monitor-fps1.png">
 <meta property="og:image" content="http://weread.qq.com/img/monitor-fps2.png">
 <meta property="og:image" content="http://weread.qq.com/img/monitor-main_run_loop.png">
 <meta property="og:image" content="http://weread.qq.com/img/monitor-main_run_loop_cost.png">
 <meta property="og:image" content="http://weread.qq.com/img/monitor-reading_monitor.png">
 <meta property="og:image" content="http://weread.qq.com/img/monitor-assert.png">
-<meta property="og:updated_time" content="2016-12-12T12:35:39.000Z">
+<meta property="og:updated_time" content="2016-12-12T12:38:50.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="微信读书 iOS 质量保证及性能监控">
 <meta name="twitter:description" content="在实现需求的同时，能写出既优雅性能又高效的代码是每个开发者都在追求的目标，但是在实际开发中，随着每个版本需求的迭代，功能变得越来越复杂，加上开发者的意识不够或者一时疏忽，日渐复杂的工程很容易产生或多或少的问题。在使用微信读书的过程中，我们也碰到过app随机丢失动画、用户反馈app卡死、用户投诉看不了书籍等等的问题，这些问题都严重影响使用，也会降低产品口碑，因此我们开发了一些监控工具来解决这些问题，">
@@ -305,7 +305,7 @@
 <p>临近1月1日苹果要求将http请求切换到https的日子，很多app或者服务器都需要进行改造，网络层成功率的统计显示十分重要，当遇到问题时，我们都会先看网络请求是否出现大面积的失败来定位问题，如果是网络层请求失败可以根据错误码来查找原因，否则就要在其它模块找原因了。</p>
 <h2 id="数据层的性能监控"><a href="#数据层的性能监控" class="headerlink" title="数据层的性能监控"></a>数据层的性能监控</h2><p>从RDM的卡顿监控结果看，我们发现了不少卡顿都是发生在数据层，但是看到了卡顿堆栈我们也很无奈，因为当我们自己根据堆栈去重现的时候又不会卡，这种跟特定数据有关的卡顿很难重现，源码太多流程太长，单纯从审查源码来找出这些原因也是不现实的。数据层就像一个黑盒，接收输入参数然后输出数据，如果我们将数据层每一次sql执行所需要的时间都列出来，那我们就知道是什么操作最耗时了，于是我们开始了数据层的监控工作。</p>
 <p>我们使用的数据层框架是<a href="https://wereadteam.github.io/2016/07/06/GYDataCenter/" target="_blank" rel="external">GYDataCenter</a>，大概的工作流程是这样的：</p>
-<p><img src="/img/monitor-datacenter.png" width="70%" height="70%"></p>
+<p><img src="/img/datacenter.png" width="70%" height="70%"></p>
 <p>数据层主要由内存cache和sqlite组成，每一个db对应一个Cache队列和DB队列。业务层每个业务的处理可能在不同线程，当需要数据时通过DataCenter的接口将任务同步放到Cache Queue，然后等前面的任务完成。当Cache任务执行时，如果在cache就有数据就可以立即返回，否则需要查询sqlite，将任务放入db queue然后等待执行。当查询到数据库的数据时，将其转换成对象然后逐步callback回去，最终回到业务层。所以一次sql的完整操作是要经过等待cache队列 -&gt; 放入cache队列执行 -&gt; 等待db队列 -&gt; 放入db队列执行这四步，而我们需要做的就是记录这四步的时间以及对应的sql。</p>
 <p>在实际中，我们发现这些操作的数量非常多，所以最后我们没有将每一次的操作都记录，只是记录超过平均执行时间的sql操作。</p>
 <p>统计出来的结果如下图所示，可以按4个时间来排序：</p>
@@ -334,7 +334,7 @@
 <p>以前曾经遇到这个问题：</p>
 <p><img src="/img/monitor-collection.png"></p>
 <p>当一条线程在遍历数组，另一条线程又在修改它时会Crash，因为数组不是线程安全的。程序中存在很多可变数组，虽然目前还找不到方法来查找所有这种多线程读写的问题，但是对于我们的UI数据源还是有办法排查一部分问题的。这是得益于微信读书UIDataSource都有固定的模式：</p>
-<p><img src="/img/monitor-datasource.png"></p>
+<p><img src="/img/datasource.png"></p>
 <p>WRBookMarketDataSource是书城的数据源，真正为UITableView提供数据的是它的成员<em>_allBooks</em>，如果需要多线程访问这个变量就要加锁，但最方便的做法是统一都在主线程访问这个变量。但写代码一不注意就会在子线程更改了<em>_allBooks</em>，而我们可以做一些事情来防止这件事发生。我们只需hook了UIDataSource的alloc、NSMutableArray的add等方法，当调用NSMutableArray的add方法时，去遍历所有UIDataSource对象，通过class_copyIvarList、valueForKey函数把所有的成员变量都找出来看看是否为当前的NSMutableArray，通过NSAssert确保当前在主线程，否则在debug模式下会crash提醒开发者修改。通过这种方法能确保操作UIDatsSource的NSMutableArray成员对象一定在主线程操作。</p>
 <h2 id="UI主线程监控"><a href="#UI主线程监控" class="headerlink" title="UI主线程监控"></a>UI主线程监控</h2><h5 id="1-防止子线程访问UI"><a href="#1-防止子线程访问UI" class="headerlink" title="1. 防止子线程访问UI"></a>1. 防止子线程访问UI</h5><p>UIKit的大部分对象都不是线程安全的，所有继承自UIResponder的类都需要在主线程操作，如果在子线程更改了这些UI对象就会导致未知道的行为，比如随机出现丢失动画、页面错乱甚至crash。可以尝试一下以下代码，在子线程调用100次后，很可能会导致整个app丢失动画。</p>
 <figure class="highlight objectivec"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">UIImageView</span> *imageView = [[<span class="built_in">UIImageView</span> alloc] initWithImage:image];</span><br></pre></td></tr></table></figure>
