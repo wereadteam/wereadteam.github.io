@@ -211,6 +211,129 @@
             
               
                 
+                <a class="post-title-link" href="/2016/12/12/Monitor/" itemprop="url">
+                  微信读书 iOS 质量保证及性能监控
+                </a>
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">发表于</span>
+            <time itemprop="dateCreated" datetime="2016-12-12T17:31:53+08:00" content="2016-12-12">
+              2016-12-12
+            </time>
+          </span>
+
+          
+            <span class="post-category" >
+              &nbsp; | &nbsp;
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">作者:</span>
+              
+                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                  <!--a href="/categories/tower/" itemprop="url" rel="index"-->
+                    <span itemprop="name">tower</span>
+                  <!--/a-->
+                </span>
+
+                
+                
+
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                &nbsp; | &nbsp;
+                <a href="/2016/12/12/Monitor/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count ds-thread-count" data-thread-key="2016/12/12/Monitor/" itemprop="commentsCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+
+          
+          
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          <p>在实现需求的同时，能写出既优雅性能又高效的代码是每个开发者都在追求的目标，但是在实际开发中，随着每个版本需求的迭代，功能变得越来越复杂，加上开发者的意识不够或者一时疏忽，日渐复杂的工程很容易产生或多或少的问题。在使用微信读书的过程中，我们也碰到过app随机丢失动画、用户反馈app卡死、用户投诉看不了书籍等等的问题，这些问题都严重影响使用，也会降低产品口碑，因此我们开发了一些监控工具来解决这些问题，在这里总结和分享一下。</p>
+<p>先来看看app的结构，如下图:</p>
+<p><img src="https://github.com/featuretower/Images/blob/master/app2.png?raw=true" width = "30%" height = "30%" /></p>
+<p>微信读书主要分为5层，由下至上分为:</p>
+<ul>
+<li>网络层：负责和服务器通讯，使用http协议获取数据。</li>
+<li>数据层：存储用户的数据，包括内存cache和sqlite db。</li>
+<li>业务层：包含各种业务逻辑，比如书籍下载、排版等。</li>
+<li>UI数据层：负责提供UI层所需要的数据，UI只和这层打交道。</li>
+<li>UI层：包括ViewController和View，处理用户的输入。</li>
+</ul>
+<p>当UI需要数据来渲染时，会向UIDataSource获取数据，UIDataSource首先是通过Manager查询内存cache和db看有没有数据，有的话就会直接返回，同时也会发出网络请求和服务器同步数据，再使用数据层的接口存到数据库，最后回调给UI去重新获取本地数据来渲染。每一个层都是相互独立，用户遇到的每一个问题都对应着每一层，下面说说我们在每一层遇到了什么问题，以及做了什么工作来解决它们。</p>
+          <div class="post-more-link text-center">
+            <a class="btn" href="/2016/12/12/Monitor/#more" rel="contents">
+              阅读全文 &raquo;
+            </a>
+          </div>
+        
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                
                 <a class="post-title-link" href="/2016/11/22/DataCache/" itemprop="url">
                   APP 缓存数据线程安全问题探讨
                 </a>
@@ -1266,124 +1389,6 @@
 
 
     
-      
-
-  
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-            
-            
-              
-                
-                <a class="post-title-link" href="/2016/05/23/GYBootingProtection/" itemprop="url">
-                  iOS 启动连续闪退保护方案
-                </a>
-              
-            
-          </h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            <span class="post-meta-item-icon">
-              <i class="fa fa-calendar-o"></i>
-            </span>
-            <span class="post-meta-item-text">发表于</span>
-            <time itemprop="dateCreated" datetime="2016-05-23T14:37:42+08:00" content="2016-05-23">
-              2016-05-23
-            </time>
-          </span>
-
-          
-            <span class="post-category" >
-              &nbsp; | &nbsp;
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">作者:</span>
-              
-                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
-                  <!--a href="/categories/rich/" itemprop="url" rel="index"-->
-                    <span itemprop="name">rich</span>
-                  <!--/a-->
-                </span>
-
-                
-                
-
-              
-            </span>
-          
-
-          
-            
-              <span class="post-comments-count">
-                &nbsp; | &nbsp;
-                <a href="/2016/05/23/GYBootingProtection/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count ds-thread-count" data-thread-key="2016/05/23/GYBootingProtection/" itemprop="commentsCount"></span>
-                </a>
-              </span>
-            
-          
-
-          
-
-          
-          
-        </div>
-      </header>
-    
-
-
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          <h2 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h2><blockquote>
-<p>“如果某个实体表现出以下任何一种特性，它就具备自主性：自我修复、自我保护、自我维护、对目标的自我控制、自我改进。” —— 凯文·凯利 </p>
-</blockquote>
-<p>iOS App 有时可能遇到启动必 crash 的绝境：每次打开 App 都闪退，无法正常使用App。</p>
-<p>为了尝试解决这个问题，微信读书开发了 iOS 连续闪退保护工具：<a href="https://github.com/liuslevis/GYBootingProtection">GYBootingProtection</a>，检测连续闪退，在连续闪退出现时，尝试自修复 App：</p>
-<p><img src="/img/GYBootingProtectionIntro.png" alt="img"></p>
-<p>本文探讨了连续闪退问题的产生原因、检测、修复机制，以及如何在你的项目中引入、测试和使用 <a href="https://github.com/liuslevis/GYBootingProtection">GYBootingProtection</a>。</p>
-          <div class="post-more-link text-center">
-            <a class="btn" href="/2016/05/23/GYBootingProtection/#more" rel="contents">
-              阅读全文 &raquo;
-            </a>
-          </div>
-        
-      
-    </div>
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-
-
-    
 
   </section>
 
@@ -1430,7 +1435,7 @@
         <nav class="site-state motion-element">
           <div class="site-state-item site-state-posts">
             <a href="/archives">
-              <span class="site-state-item-count">14</span>
+              <span class="site-state-item-count">15</span>
               <span class="site-state-item-name">日志</span>
             </a>
           </div>
@@ -1438,7 +1443,7 @@
           
             <div class="site-state-item site-state-categories">
               
-                <span class="site-state-item-count">6</span>
+                <span class="site-state-item-count">7</span>
                 <span class="site-state-item-name">分类</span>
               
             </div>
