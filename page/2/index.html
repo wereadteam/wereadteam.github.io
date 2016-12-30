@@ -274,18 +274,137 @@
 
       
         
-          <h2 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h2><blockquote>
-<p>“如果某个实体表现出以下任何一种特性，它就具备自主性：自我修复、自我保护、自我维护、对目标的自我控制、自我改进。” —— 凯文·凯利 </p>
+          
+            <h2>引言</h2>
+<blockquote>
+<p>“如果某个实体表现出以下任何一种特性，它就具备自主性：自我修复、自我保护、自我维护、对目标的自我控制、自我改进。” —— 凯文·凯利</p>
 </blockquote>
 <p>iOS App 有时可能遇到启动必 crash 的绝境：每次打开 App 都闪退，无法正常使用App。</p>
-<p>为了尝试解决这个问题，微信读书开发了 iOS 连续闪退保护工具：<a href="https://github.com/liuslevis/GYBootingProtection">GYBootingProtection</a>，检测连续闪退，在连续闪退出现时，尝试自修复 App：</p>
+<p>为了尝试解决这个问题，微信读书开发了 iOS 连续闪退保护工具：<a href="https://github.com/liuslevis/GYBootingProtection" target="_blank" rel="external">GYBootingProtection</a>，检测连续闪退，在连续闪退出现时，尝试自修复 App：</p>
 <p><img src="/img/GYBootingProtectionIntro.png" alt="img"></p>
-<p>本文探讨了连续闪退问题的产生原因、检测、修复机制，以及如何在你的项目中引入、测试和使用 <a href="https://github.com/liuslevis/GYBootingProtection">GYBootingProtection</a>。</p>
-          <div class="post-more-link text-center">
-            <a class="btn" href="/2016/05/23/GYBootingProtection/#more" rel="contents">
-              阅读全文 &raquo;
-            </a>
-          </div>
+<p>本文探讨了连续闪退问题的产生原因、检测、修复机制，以及如何在你的项目中引入、测试和使用 <a href="https://github.com/liuslevis/GYBootingProtection" target="_blank" rel="external">GYBootingProtection</a>。</p>
+<p>&lt;!--more--&gt;</p>
+<h2>连续闪退检测</h2>
+<p>首先要检测用户 App 出现了连续闪退的情况，有两种检测方法，捕获异常和计时器。</p>
+<h4>1. 捕获异常</h4>
+<p>检测连续闪退，可以通过捕获异常来实现，异常有以下种类：</p>
+<ul>
+<li>Mach 异常：EXC_CRASH</li>
+<li>UNIX 信号：SIGABRT</li>
+<li>NSException 异常：应用层，通过 NSUncaughtExceptionHandler 捕获</li>
+</ul>
+<p>在念茜的<a href="http://mp.weixin.qq.com/s?__biz=MjM5NTIyNTUyMQ==&amp;mid=208483273&amp;idx=1&amp;sn=37ee88e06e7426f59f3074c536370317&amp;scene=21" target="_blank" rel="external">漫谈 iOS Crash 收集框架</a>一文中详细介绍了 Mach 异常和 Unix 信号捕获 crash 的机制。简单来说，异常一般产生自 iOS 的微内核 Mach，然后在 BSD 层转换成 UNIX SIGABRT 信号，以标准 POSIX 信号的形式提供给用户。NSException 是使用者在处理 App 逻辑时，用编程的方法抛出。</p>
+<h5>如何捕获异常</h5>
+<p>通过以下方法捕获异常：</p>
+<ul>
+<li>利用 Mach API 捕获 Mach 异常</li>
+<li>通过 POSIX API 注册 signal(SIGSEGV,signalHandler) 来捕获 UNIX 异常信号</li>
+<li>注册 NSUncaughtExceptionHandler 来捕获应用级异常</li>
+</ul>
+<p>Crash 上报工具如 PLCrashReporter 通过注册 Mach 异常 + UNIX信号 的 handler 达到检测的目的，对用户提供了处理异常的接口。</p>
+<h5>如何检测</h5>
+<p>可以利用 PLCrashReporter 这类工具来检测连续闪退：</p>
+<ol>
+<li>首先维护一个计数变量，表示连续闪退次数</li>
+<li>在 PLCrashReporter 的 crash handler 中加入逻辑：如果启动 5s 内 crash 使计数器加一</li>
+<li>每次启动时，如果连续闪退计数 &gt; n，则检测到了连续闪退</li>
+<li>启动后，执行一个定时任务，在 5s 后重置计数（如果 App 连续闪退则不会重置）</li>
+</ol>
+<h5>流程图</h5>
+<p><img src="/img/GYBootingProtectionCrashDetect.png" alt="img"></p>
+<h5>优缺点</h5>
+<p>通过 Mach 异常、Unix 信号、NSException 异常来检测闪退，能获得更多的 crash 上下文，但由于 crash 收集框架多使用这些方法，可能会有这样的风险：与第三方 crash 收集框架冲突导致漏检测。另外，可能会与 App 已有的异常处理代码产生耦合。</p>
+<h4>2. 计时器方法</h4>
+<p>除了通过捕获异常的方式检测连续闪退，还可以通过计数器方法来检测：</p>
+<ol>
+<li>维护一个计数变量，用于表示连续闪退的次数</li>
+<li>在启动 application:didFinishLaunchingWithOptions: 后使计数加一</li>
+<li>接着使用 dispatch_after 方法在 5s 后清零计数，如果 App 活不过 5 秒计数就不会被清零</li>
+<li>如果发现计数变量 &gt; n，表明 App 连续 n 次连续闪退，启动保护流程，重置计数。</li>
+<li>当保护流程完成后，进入 App 正常启动流程</li>
+</ol>
+<h5>流程图</h5>
+<p><img src="/img/GYBootingProtectionTimer.png" alt="img"></p>
+<h5>优缺点</h5>
+<p>而计数器方法逻辑简单，与原有的代码耦合小。虽然有误报可能（在启动后立即被 kill 掉，误认为 crash），但是可以通过设置阈值来减小误报的误报率。</p>
+<p>综上权衡，我们使用计时器方法检测连续闪退。</p>
+<h2>连续闪退修复</h2>
+<p>检测到连续闪退后，接下来要尝试对闪退进行修复，这里先分析可能的闪退原因，再结合微信读书的例子说明修复流程。</p>
+<h3>闪退原因</h3>
+<p>连续闪退，可能是 App 启动关键路径中执行了必 crash 的代码，原因可能有：</p>
+<ol>
+<li>数据库损坏：在日常使用如异常退出、断电，或者错误的操作（参考：<a href="http://blog.systoolsgroup.com/sqlite-corruption-causes.html" target="_blank" rel="external">sqlite corruption causes</a>）。</li>
+<li>文件损坏：处理文件时如果没有 <code>@try...catch</code>，损坏文件会抛出 <code>NSException</code> 导致 crash</li>
+<li>网络返回数据处理异常：比如预期返回数组，但实际返回了字典，对字典对象执行 <code>-objectAtIndex</code> 方法会产生 <code>crash： unknow selector send to object；</code>，或返回破损的 Tar 包，在解压失败导致 crash。</li>
+<li>代码 bug：当必 crash 的代码出现在启动关键路径中，就会导致连续闪退。</li>
+</ol>
+<p>针对 1，可以通过工具修复数据库，或者删除 DB。针对2，可以删除文件来进行修复。对于 3 和 4，我们需要具体地分析 crash 案例，通过 JSPatch 来进行修复。</p>
+<h3>微信读书的修复流程</h3>
+<p>为了应对上述导致连续闪退的原因，微信读书的修复流程为：</p>
+<ol>
+<li>进入 didFinishLaunch 时检查是否有连续闪退，无则执行 5</li>
+<li>弹 Toast 提示用户是否修复，轻触『修复』执行2，否则执行 5</li>
+<li>尝试下载并执行 JSPatch 补丁</li>
+</ol>
+<p>这里是为了解决上述第4点 - 代码 bug 导致的闪退，使用 JSPatch <a href="https://github.com/bang590/JSPatch" target="_blank" rel="external">[github]</a>可以进行热修复。在 didFinishLaunching 时，会卡住界面发请求检查是否有可用的 JSPatch 脚本，如果有则加载执行，解决代码 bug 导致的闪退。</p>
+<ol start="3">
+<li>尝试删除 <code>Documents</code> / <code>Library</code> / <code>Caches</code> 目录下的所有文件</li>
+</ol>
+<p>这里直接删除了所有用户数据，适用于微信读书这种所有数据都在云端，删除后可以完全从云端恢复。如果你的 App 不属于这种场景，那么应该在 repairBlock 中自定义修复逻辑，比如：</p>
+<p>a. 不删除文件，只修复数据库
+b. 修复前把用户数据备份到云端
+c. 收集 crash 样本，查明原因，定制 JSPatch 修复补丁并下发</p>
+<ol start="4">
+<li>退出微信读书登录状态</li>
+<li>进入原 didFinishLaunch</li>
+</ol>
+<p>连续闪退检测 + 保护流程如图所示：</p>
+<p><img src="/img/GYBootingProtection.png" alt="img"></p>
+<h2>实现</h2>
+<p>检测和连续 crash 并修复需要修改原 <code>-application:didFinishLaunchingWithOptions:</code> 逻辑，有几种方法：</p>
+<ol>
+<li>直接修改 <code>-application:didFinishLaunchingWithOptions:</code> 方法。</li>
+<li>新建一个 <code>SubAppDelegate</code> 类来继承 <code>AppDelegate</code>，覆盖 <code>-application:didFinishLaunchingWithOptions:</code> 方法，然后把 <code>main()</code> 函数中的 <code>AppDelegate</code> 替换为 <code>SubAppDelegate</code></li>
+<li>新建一个 <code>AppDelegate</code> 扩展，然后用 method swizzle 的方法替换 <code>-application:didFinishLaunchingWithOptions:</code> 方法。</li>
+</ol>
+<p>上述三种方案，对现有项目改动代价是 1 &gt; 2 &gt; 3。因此，我们使用对源码修改代价最小的方案 3 来替换 <code>-application:didFinishLaunchingWithOptions:</code>。</p>
+<p>检测的逻辑 GYBootingProtection 已经处理好，修复的处理预留了接口，可以由用户自定义，把自定义的修复流程传入 repairBlock 即可。</p>
+<h2>使用</h2>
+<h3>引入项目</h3>
+<ol>
+<li>
+<p>下载 <a href="https://github.com/liuslevis/GYBootingProtection" target="_blank" rel="external">(github)</a> 源码 ，将 <code>src</code> 目录下所有文件拖拽到你的 Xcode 项目</p>
+</li>
+<li>
+<p>在 <code>AppDelegate+GYBootingProtection.m</code> 的 <code>onBeforeBootingProtection</code> 方法中添加检测前需要执行的代码，比如设置crash上报：</p>
+</li>
+</ol>
+<p><figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">- (<span class="keyword">void</span>)onBeforeBootingProtection &#123;</span><br><span class="line">  [GYBootingProtection setLogger:^(<span class="built_in">NSString</span> *msg) &#123;</span><br><span class="line">      <span class="comment">// setup logger</span></span><br><span class="line">      <span class="built_in">NSLog</span>(<span class="string">@"%@"</span>, msg);</span><br><span class="line">  &#125;];</span><br><span class="line">  </span><br><span class="line">  [GYBootingProtection setReportBlock:^(<span class="built_in">NSInteger</span> crashCounts) &#123;</span><br><span class="line">      <span class="comment">// setup crash report</span></span><br><span class="line">  &#125;];</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<ol start="3">
+<li>
+<p>在 <code>onBootingProtection</code> 方法中添加修复逻辑，比如删除文件：</p>
+<p><figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">- (<span class="keyword">void</span>)onBootingProtection &#123;</span><br><span class="line">	<span class="comment">// 检查 JSPatch 更新</span></span><br><span class="line">	...</span><br><span class="line">	<span class="comment">// 删除 Documents Library Caches 目录下所有文件</span></span><br><span class="line">	[GYBootingProtection deleteAllFilesUnderDocumentsLibraryCaches];</span><br><span class="line">   	...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>如需执行异步的修复逻辑，在 <code>onBootingProtectionWithCompletion:</code> 方法添加修复逻辑，并在完成修复后调用 completion ：</p>
+<p><figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">- (<span class="keyword">void</span>)onBootingProtectionWithCompletion:(BoolCompletionBlock)completion &#123;</span><br><span class="line">  		[<span class="keyword">self</span> onBootingProtection];</span><br><span class="line">   	<span class="comment">// 异步修复</span></span><br><span class="line">  		[<span class="keyword">self</span> asyncRepairWithCompletion:^(<span class="keyword">void</span>) &#123;</span><br><span class="line">    	<span class="comment">// 正常启动流程</span></span><br><span class="line">  			<span class="keyword">if</span> (completion) completion();</span><br><span class="line">  		&#125;];</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+</li>
+</ol>
+<h3>测试</h3>
+<ol>
+<li>首先制造连续闪退场景：</li>
+</ol>
+<p>启动后 5 秒内，双击 Home 通过上划手势 kill 掉 App，重复多次。（也可以在代码里人为制造crash）</p>
+<ol start="2">
+<li>当连续闪退超过 5 次时，会提示用户修复：</li>
+</ol>
+<p><img src="/img/GYBootingProtectionTips.png" alt="img"></p>
+<ol start="3">
+<li>用户轻触修复，App 重置初始状态，连续闪退问题解决：</li>
+</ol>
+<p><img src="/img/GYBootingProtectionAfter.png" alt="img"></p>
+<h2>源码</h2>
+<p><a href="https://github.com/liuslevis/GYBootingProtection" target="_blank" rel="external">https://github.com/liuslevis/GYBootingProtection</a></p>
+
+          
         
       
     </div>
@@ -392,14 +511,123 @@
 
       
         
-          <p><a href="http://weread.qq.com/">微信读书</a>作为一款阅读类的新产品，目前还处于快速迭代，不断尝试的过程中，性能问题也在业务的不断累积中逐渐体现出来。最近的 1.3.0 版本发布后，关于性能问题的用户反馈逐渐增多，为此，团队开始做一些针对性的性能问题优化。本文将从发现问题、解决问题和预防问题三个方面进行总结。</p>
-<h2 id="如何发现性能问题"><a href="#如何发现性能问题" class="headerlink" title="如何发现性能问题"></a>如何发现性能问题</h2><p>不同于一般的 bug，性能问题因为并没有统一的标准，而且与用户的机器环境相关性较大，所以往往是在产品上线后才被发现，也导致解决问题的周期很长。微信读书 1.3.0 版本之前，性能问题基本都来自于用户反馈（包括测试人员），受限于测试时间和用户反馈的积极性，性能问题往往到了比较严重的程度，开发人员才真正发现问题。</p>
+          
+            <p><a href="http://weread.qq.com/">微信读书</a>作为一款阅读类的新产品，目前还处于快速迭代，不断尝试的过程中，性能问题也在业务的不断累积中逐渐体现出来。最近的 1.3.0 版本发布后，关于性能问题的用户反馈逐渐增多，为此，团队开始做一些针对性的性能问题优化。本文将从发现问题、解决问题和预防问题三个方面进行总结。</p>
+<h2>如何发现性能问题</h2>
+<p>不同于一般的 bug，性能问题因为并没有统一的标准，而且与用户的机器环境相关性较大，所以往往是在产品上线后才被发现，也导致解决问题的周期很长。微信读书 1.3.0 版本之前，性能问题基本都来自于用户反馈（包括测试人员），受限于测试时间和用户反馈的积极性，性能问题往往到了比较严重的程度，开发人员才真正发现问题。</p>
 <p>但是，移动应用要保证良好的用户体验，产品在性能方面的表现极其重要。为了尽可能早、尽可能全面地收集产品的性能问题，就避免不了对产品做性能监控。我们主要从两个维度进行了监控：</p>
-          <div class="post-more-link text-center">
-            <a class="btn" href="/2016/05/03/WeRead-Performance/#more" rel="contents">
-              阅读全文 &raquo;
-            </a>
-          </div>
+<p>&lt;!--more--&gt;</p>
+<ol>
+<li>
+<p>业务性能监控，是指在App本地，业务的开始和结束处打点上报，然后后台统计达到监控目的；</p>
+</li>
+<li>
+<p>卡顿监控。卡顿监控的实现一般有两种方案：</p>
+</li>
+</ol>
+<blockquote>
+<p>（1）主线程卡顿监控。通过子线程监测主线程的 runLoop，判断两个状态区域之间的耗时是否达到一定阈值。具体原理和实现，<a href="http://www.tanhao.me/code/151113.html/" target="_blank" rel="external">这篇文章</a>介绍得比较详细。</p>
+</blockquote>
+<blockquote>
+<p>（2）FPS监控。要保持流畅的UI交互，App 刷新率应该当努力保持在 60fps。监控实现原理比较简单，通过记录两次刷新时间间隔，就可以计算出当前的 FPS。</p>
+</blockquote>
+<p>但是，在实际应用过程我们发现，无论是主线程监控，还是 FPS 监控，抖动都比较大。因此，微信团队提出了一套综合的判断方法，结合了主线程监控、FPS监控，以及CPU使用率等指标，作为判断卡顿的标准。</p>
+<p><img src="/img/wechat-stuck.jpeg" alt="微信卡顿监控"></p>
+<p>微信读书接入了RDM(bugly)的卡顿监控(也是基于微信团队的卡顿标准)，通过下发配置，对现网用户进行抽样检测，并上报卡顿的堆栈信息。这对于我们掌握现网用户的卡顿状况起到了非常大的帮助。</p>
+<h2>性能问题的解决方法</h2>
+<p>产生性能问题的原因多种多样，因此解决的办法也不尽相同，比较常用的大概有以下几种：</p>
+<h4>1.优化业务流程</h4>
+<p>性能优化看似高深，真正落到实处才会发现，最大的坑往往都隐藏在于业务不断累积和频繁变更之处。优化业务流程就是在满足需求的同时，提出更加高效优雅的解决方案，从根本上解决问题。从实践来看，这种方法解决问题是最彻底的，但通常也是难度最大的。微信读书在优化阅读中各种操作（如，书签、划想、想法等）性能时，就是从业务流程的角度来进行优化。如下图：</p>
+<p><img src="/img/performance.jpeg" alt="阅读划线优化"></p>
+<h4>2.合理的线程分配</h4>
+<p>由于 GCD 实在太方便了，如果不加控制，大部分需要抛到子线程操作都会被直接加到 global 队列，这样会导致两个问题，1.开的子线程越来越多，线程的开销逐渐明显，因为开启线程需要占用一定的内存空间（默认的情况下，主线程占1M,子线程占用512KB）。2.多线程情况下，网络回调的时序问题，导致数据处理错乱，而且不容易发现。为此，我们项目定了一些基本原则。</p>
+<ul>
+<li>UI 操作和 DataSource 的操作一定在主线程。</li>
+<li>DB 操作、日志记录、网络回调都在各自的固定线程。</li>
+<li>不同业务，可以通过创建队列保证数据一致性。例如，想法列表的数据加载、书籍章节下载、书架加载等。</li>
+</ul>
+<p>合理的线程分配，最终目的就是保证主线程尽量少的处理非UI操作，同时控制整个App的子线程数量在合理的范围内。</p>
+<h4>3.预处理和延时加载</h4>
+<p>预处理，是将初次显示需要耗费大量线程时间的操作，提前放到后台线程进行计算，再将结果数据拿来显示。</p>
+<p>延时加载，是指首先加载当前必须的可视内容，在稍后一段时间内或特定事件时，再触发其他内容的加载。这种方式可以很有效的提升界面绘制速度，使体验更加流畅。（UITableView 就是最典型的例子）</p>
+<p>这两种方法都是在资源比较紧张的情况下，优先处理马上要用到的数据，同时尽可能提前加载即将要用到的数据。在微信读书中阅读的排版是优先级最高的，所在在阅读过程中会预处理下一页、下一章的排版，同时可能会延时加载阅读相关的其它数据（如想法、划线、书签等）。</p>
+<h4>4.缓存</h4>
+<p>cache可能是所有性能优化中最常用的手段，但也是我们极不推荐的手段。cache建立的成本低，见效快，但是带来维护的成本却很高。如果一定要用，也请谨慎使用，并注意以下几点：</p>
+<ul>
+<li>并发访问 cache 时，数据一致性问题。</li>
+<li>cache 线程安全问题，防止一边修改一边遍历的 crash。</li>
+<li>cache 查找时性能问题。</li>
+<li>cache 的释放与重建，避免占用空间无限扩大，同时释放的粒度也要依实际需求而定。</li>
+</ul>
+<h4>5.使用正确的API</h4>
+<p>使用正确的 API，是指在满足业务的同时，能够选择性能更优的API。</p>
+<ul>
+<li>选择合适的容器;</li>
+<li>了解 <code>imageNamed:</code> 与 <code>imageWithContentsOfFile:</code>的差异(<code>imageNamed:</code> 适用于会重复加载的小图片，因为系统会自动缓存加载的图片，<code>imageWithContentsOfFile:</code> 仅加载图片)</li>
+<li>缓存 <code>NSDateFormatter</code> 的结果。</li>
+<li>寻找 <code>(NSDate *)dateFromString:(NSString )string</code> 的替换品。</li>
+</ul>
+<p><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//#include &lt;time.h&gt;</span></span><br><span class="line"><span class="keyword">time_t</span> t;</span><br><span class="line"><span class="keyword">struct</span> tm tm;</span><br><span class="line">strptime([iso8601String cStringUsingEncoding:NSUTF8StringEncoding], <span class="string">"%Y-%m-%dT%H:%M:%S%z"</span>, &amp;tm);</span><br><span class="line">tm.tm_isdst = -<span class="number">1</span>;</span><br><span class="line">t = mktime(&amp;tm);</span><br><span class="line">[NSDate dateWithTimeIntervalSince1970:t + [[NSTimeZone localTimeZone] secondsFromGMT]];</span><br></pre></td></tr></table></figure></p>
+<ul>
+<li>
+<p>不要随意使用 <code>NSLog()</code>.</p>
+</li>
+<li>
+<p>当试图获取磁盘中一个文件的属性信息时，使用 <code>[NSFileManager attributesOfItemAtPath:error:]</code> 会浪费大量时间读取可能根本不需要的附加属性。这时可以使用 <code>stat</code> 代替 <code>NSFileManager</code>，直接获取文件属性：</p>
+</li>
+</ul>
+<p><figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="preprocessor">#import <span class="title">&lt;sys/stat.h&gt;</span></span></span><br><span class="line"><span class="keyword">struct</span> stat statbuf;</span><br><span class="line"><span class="keyword">const</span> <span class="keyword">char</span> *cpath = [filePath fileSystemRepresentation];</span><br><span class="line"><span class="keyword">if</span> (cpath &amp;&amp; stat(cpath, &amp;statbuf) == <span class="number">0</span>) &#123;</span><br><span class="line">    <span class="built_in">NSNumber</span> *fileSize = [<span class="built_in">NSNumber</span> numberWithUnsignedLongLong:statbuf<span class="variable">.st_size</span>];</span><br><span class="line">    <span class="built_in">NSDate</span> *modificationDate = [<span class="built_in">NSDate</span> dateWithTimeIntervalSince1970:statbuf<span class="variable">.st_mtime</span>];</span><br><span class="line">    <span class="built_in">NSDate</span> *creationDate = [<span class="built_in">NSDate</span> dateWithTimeIntervalSince1970:statbuf<span class="variable">.st_ctime</span>];</span><br><span class="line">    <span class="comment">// etc</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<h2>如何预防性能问题</h2>
+<p>大部分性能问题可以通过程序员经验和能力的提升得以减少，但是因为团队成员更新、业务累积，性能问题无法避免，如何在开发测试阶段发现问题解决问题，是预防性能问题的关键。为此，我们开发了一些比较有意思的工具，用于发现各种性能问题。</p>
+<h4>1. 内存泄露检测工具</h4>
+<p><a href="https://github.com/Zepo/MLeaksFinder" target="_blank" rel="external">MLeakFinder</a>是团队成员zepo在github开源的一款内存泄露检测工具，具体原理和使用方法可以参见<a href="http://wereadteam.github.io/2016/02/22/MLeaksFinder/" target="_blank" rel="external">这篇文章</a>。在此之前，内存泄露引起的性能问题是很难被察觉的，只有泄露到了相当严重的程度，然后通过Instrument工具，不断尝试才得以定位。MLeakFinder能在开发阶段，把内存泄露问题暴露无遗，减少了很多潜在的性能问题。</p>
+<h4>2. FPS/SQL性能监测工具条</h4>
+<p>该工具条是在DEBUG模式下，以浮窗的形式，实时展示当前可能存在问题的FPS次数和执行时间较长的SQL语句个数，是团队成员tower的杰作。FPS监测的原理并不复杂，前文也有介绍，虽然并不百分百准确，但非常实用，因为可以随时查看FPS低于某个阈值时的堆栈信息，再结合当时的使用场景，开发人员使用起来非常便利，可以很快定位到引起卡顿的场景和原因。SQL语句的监测也非常实用，对于微信读书，DB的读写速度是影响性能的瓶颈之一。因此在DEBUG阶段，我们监测了每一条SQL语句的执行速度，一旦执行时间超出某个阈值，就会表现在工具条的数字上，点击后可以进一步查询到具体的SQL操作以及实际耗时。</p>
+<p>这个工具帮助我们在开发阶段发现了很多卡顿问题，尤其是一些不合理的SQL语句，例如：
+在想法圏的优化过程中，利用这个工具，我们就发现想法圈第一次加载更多，执行的SQL语句耗时竟然达到了1000多毫秒。
+<figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">_SELECT * FROM WRReview INNER JOIN WRUser ON WRReview.fromId = WRUser.vid WHERE WRReview.type &amp; ? AND WRReview.createTime &lt;= ? ORDER BY WRReview.createTime DESC , WRReview.itemId ASC  LIMIT ?_</span><br></pre></td></tr></table></figure></p>
+<p>通过explain，可以发现这条SQL效率之低:
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">SEARCH TABLE WRReview</span><br><span class="line">SEARCH TABLE WRUser USING INTEGER PRIMARY KEY (rowid=?)</span><br><span class="line"><span class="operator"><span class="keyword">USE</span> TEMP B-TREE <span class="keyword">FOR</span> <span class="keyword">ORDER</span> <span class="keyword">BY</span></span></span><br></pre></td></tr></table></figure></p>
+<ul>
+<li>没有建立合适的索引，导致WRReview全表扫描。</li>
+<li>排序字段没有索引，导致SQLite需要再一次B-TREE排序。</li>
+<li>两字段排序，性能更低。</li>
+</ul>
+<p>优化：给WRReview的 <code>fromId</code> <code>createTime</code> 两个字段增加了索引，并去掉一个排序字段:</p>
+<p><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="operator"><span class="keyword">SELECT</span> * <span class="keyword">FROM</span> WRReview <span class="keyword">INNER</span> <span class="keyword">JOIN</span> WRUser <span class="keyword">ON</span> WRReview.fromId = WRUser.vid <span class="keyword">WHERE</span> WRReview.<span class="keyword">type</span> &amp; ? <span class="keyword">ORDER</span> <span class="keyword">BY</span> WRReview.createTime <span class="keyword">DESC</span>  <span class="keyword">LIMIT</span> ?</span></span><br></pre></td></tr></table></figure></p>
+<p>Explain的结果：
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">SCAN TABLE WRReview USING INDEX WRReview_createTime</span><br><span class="line">SEARCH TABLE WRUser USING INTEGER PRIMARY KEY (rowid=?)</span><br></pre></td></tr></table></figure></p>
+<p>SQL执行时间直接降了一个数量级，到100毫秒左右。</p>
+<h4>3. UI / DataSource主线程检测工具。</h4>
+<p>该工具是为了保证所有的UI的操作和 DataSource 操作一定是在主线程进行，同样是由tower同学贡献。实现原理是通过 hook UIView 的 <code>-setNeedsLayout</code>，<code>-setNeedsDisplay</code>，<code>-setNeedsDisplayInRect</code> 三个方法，确保它们都是在主线程执行。子线程操作UI可能会引起什么问题，苹果说得并不清楚，实际开发中我们遇到几种神奇的问题似乎都是跟这个有关。</p>
+<ul>
+<li>
+<p>app 突然丢动画，似乎 iOS 系统也有这个 bug。虽然没有确切的证据，但使用这个工具，改完所有的问题后，bug 也好了(不止一次是这样)。</p>
+</li>
+<li>
+<p>UI 操作偶尔响应特别慢，从代码看没有任何耗时操作，只是简单的 push 某个 controller。</p>
+</li>
+<li>
+<p>莫名的 crash，这当然是因为 UI 操作非线程安全引起的。</p>
+</li>
+</ul>
+<p>更多时候，子线程操作 UI 也并不一定会发生什么问题，也正因为不知道会发生什么，所以更需要我们警惕，这个工具替我们扫除了这些隐患。虽然，苹果表示，现在部分的 UI 操作也已经是线程安全了，但毕竟大部分还不是。DataSource 的监测是因为我们业务定下的原则，保证列表 DataSource 的线程安全。</p>
+<h4>4. 排版引擎自动化检测工具</h4>
+<p>排版引擎是微信读书最核心的功能，排版引擎检测工具原本是为了检验排版引擎改进过程中准确性，防止因为业务变更，而影响原来的排版特性。实现原理是结合自动化脚本和 App 本身的排版引擎，给书库中的每一本书建立一个镜像，镜像的内容包括书籍的每一章每一页的截图，然后分析同一页码的两个不同版本的图片差异，就可以知道不同版本的排版引擎渲染效果。但是我发现，只要稍加改进，排版后记录每个章节排版耗时，就可以知道每个版本变化后同一个章节的耗时变化，以此作为排版引擎的性能指标。这个工具保证了微信读书，即使在快速迭代过程中也不会丢失阅读的核心体验。虽然这个工具无法在其它项目中复用，但是提醒了我们，可以通过自动化工具来保证产品最核心功能的体验。</p>
+<h4>5. 书源检测工具</h4>
+<p>微信读书为了支持正版版权，目前书源完全依赖于后台，不允许本地导入。书源的优劣的直接影响排版的效果和性能。为了解决了部分书籍无法打开或者乱码的问题，我们借助了后台同学的书源检测工具。对线上所有 epub 书籍进行扫描，按照章节大小进行排序。对于章节内容特别大的书籍重点检测，重新排版，解决了一批 epub 书籍无法打开的问题。同时针对章节内容乱码的问题，对所有 txt 的书籍进行了一次全量扫描，发现了一些问题，但还无法准确找出所有乱码的章节，这一点还在努力改善中。</p>
+<h2>优化成果</h2>
+<ol>
+<li>整体使用感受上，已经可以明显区分两个版本的性能差异，这一点也可以通过每天的用户反馈数据中得到验证。1.3.0 和 1.3.1分别发布一周后反馈的卡顿数从 10 个降到了 3 个，从总体反馈比例的 2.8% 降到 0.8%。</li>
+<li>某些关键业务，耗时也有明显改善。
+<img src="/img/performance-result.jpeg" alt=""></li>
+<li>极端案例的修复。超大的epub书籍已通过后台进行拆分，解决了无法打开书籍的情况。</li>
+<li>针对低端机型，去掉了某些动画，交互更加流畅。</li>
+</ol>
+<h2>总结</h2>
+<p>通过上述介绍，我们可以看出，性能问题普遍存在，无可避免，与其花费大量时间，查找线上版本的性能问题，不如提高整体团队成员性能优化意识，借助性能查找工具，将性能问题尽早暴露在开发阶段，达到预防为主的效果。</p>
+
+          
         
       
     </div>
@@ -506,15 +734,95 @@
 
       
         
-          <p>看了 Limboy(<a href="http://limboy.me/ios/2016/03/10/mgj-components.html">文章1</a> <a href="http://limboy.me/ios/2016/03/14/mgj-components-continued.html">文章2</a>) 和 Casa (<a href="http://casatwy.com/iOS-Modulization.html">文章</a>) 对 iOS 组件化方案的讨论，写篇文章梳理下思路。</p>
-<p>首先我觉得”组件”在这里不太合适，因为按我理解组件是指比较小的功能块，这些组件不需要多少组件间通信，没什么依赖，也就不需要做什么其他处理，面向对象就能搞定。而这里提到的是较大粒度的业务功能，我们习惯称为”模块”。为了方便表述，下面模块和组件代表同一个意思，都是指较大粒度的业务模块。</p>
+          
+            <p>看了 Limboy(<a href="http://limboy.me/ios/2016/03/10/mgj-components.html" target="_blank" rel="external">文章1</a> <a href="http://limboy.me/ios/2016/03/14/mgj-components-continued.html" target="_blank" rel="external">文章2</a>) 和 Casa (<a href="http://casatwy.com/iOS-Modulization.html" target="_blank" rel="external">文章</a>) 对 iOS 组件化方案的讨论，写篇文章梳理下思路。</p>
+<p>首先我觉得&quot;组件&quot;在这里不太合适，因为按我理解组件是指比较小的功能块，这些组件不需要多少组件间通信，没什么依赖，也就不需要做什么其他处理，面向对象就能搞定。而这里提到的是较大粒度的业务功能，我们习惯称为&quot;模块&quot;。为了方便表述，下面模块和组件代表同一个意思，都是指较大粒度的业务模块。</p>
 <p>一个 APP 有多个模块，模块之间会通信，互相调用，例如微信读书有 书籍详情  想法列表  阅读器  发现卡片  等等模块，这些模块会互相调用，例如 书籍详情要调起阅读器和想法列表，阅读器要调起想法列表和书籍详情，等等，一般我们是怎样调用呢，以阅读器为例，会这样写：</p>
-<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="preprocessor">#import <span class="title">"WRBookDetailViewController.h"</span></span></span><br><span class="line"><span class="preprocessor">#import <span class="title">"WRReviewViewController.h"</span></span></span><br><span class="line"><span class="class"><span class="keyword">@implementation</span> <span class="title">Mediator</span></span></span><br><span class="line">- (<span class="keyword">void</span>)gotoDetail &#123;</span><br><span class="line">    WRBookDetailViewController *detailVC = [[WRBookDetailViewController alloc] initWithBookId:<span class="keyword">self</span><span class="variable">.bookId</span>];</span><br><span class="line">    [<span class="keyword">self</span><span class="variable">.navigationController</span><span class="variable">.pushViewController</span>:detailVC animated:<span class="literal">YES</span>];</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">- (<span class="keyword">void</span>)gotoReview &#123;</span><br><span class="line">    WRReviewViewController *reviewVC = [[WRReviewViewController alloc] initWithBookId:<span class="keyword">self</span><span class="variable">.bookId</span> reviewType:<span class="number">1</span>];</span><br><span class="line">    [<span class="keyword">self</span><span class="variable">.navigationController</span><span class="variable">.pushViewController</span>:reviewVC animated:<span class="literal">YES</span>];</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">@end</span></span><br></pre></td></tr></table></figure>
-          <div class="post-more-link text-center">
-            <a class="btn" href="/2016/03/19/iOS-Component/#more" rel="contents">
-              阅读全文 &raquo;
-            </a>
-          </div>
+<p><figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="preprocessor">#import <span class="title">"WRBookDetailViewController.h"</span></span></span><br><span class="line"><span class="preprocessor">#import <span class="title">"WRReviewViewController.h"</span></span></span><br><span class="line"><span class="class"><span class="keyword">@implementation</span> <span class="title">Mediator</span></span></span><br><span class="line">- (<span class="keyword">void</span>)gotoDetail &#123;</span><br><span class="line">    WRBookDetailViewController *detailVC = [[WRBookDetailViewController alloc] initWithBookId:<span class="keyword">self</span><span class="variable">.bookId</span>];</span><br><span class="line">    [<span class="keyword">self</span><span class="variable">.navigationController</span><span class="variable">.pushViewController</span>:detailVC animated:<span class="literal">YES</span>];</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">- (<span class="keyword">void</span>)gotoReview &#123;</span><br><span class="line">    WRReviewViewController *reviewVC = [[WRReviewViewController alloc] initWithBookId:<span class="keyword">self</span><span class="variable">.bookId</span> reviewType:<span class="number">1</span>];</span><br><span class="line">    [<span class="keyword">self</span><span class="variable">.navigationController</span><span class="variable">.pushViewController</span>:reviewVC animated:<span class="literal">YES</span>];</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">@end</span></span><br></pre></td></tr></table></figure></p>
+<p>&lt;!--more--&gt;</p>
+<p>看起来挺好，这样做简单明了，没有多余的东西，项目初期推荐这样快速开发，但到了项目越来越庞大，这种方式会有什么问题呢？显而易见，每个模块都离不开其他模块，互相依赖粘在一起成为一坨：</p>
+<p><img src="/img/component1.png" alt=""></p>
+<p>这样揉成一坨对测试/编译/开发效率/后续扩展都有一些坏处，那怎么解开这一坨呢。很简单，按软件工程的思路，下意识就会加一个中间层：</p>
+<p><img src="/img/component2.png" alt=""></p>
+<p>叫他 Mediator Manager Router 什么都行，反正就是负责转发信息的中间层，暂且叫他 Mediator。</p>
+<p>看起来顺眼多了，但这里有几个问题：</p>
+<ol>
+<li>Mediator 怎么去转发组件间调用？</li>
+<li>一个模块只跟 Mediator 通信，怎么知道另一个模块提供了什么接口？</li>
+<li>按上图的画法，模块和 Mediator 间互相依赖，怎样破除这个依赖？</li>
+</ol>
+<h2>方案1</h2>
+<p>对于前两个问题，最直接的反应就是在 Mediator 直接提供接口，调用对应模块的方法：
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//Mediator.m</span></span><br><span class="line"><span class="preprocessor">#import <span class="title">"BookDetailComponent.h"</span></span></span><br><span class="line"><span class="preprocessor">#import <span class="title">"ReviewComponent.h"</span></span></span><br><span class="line"><span class="class"><span class="keyword">@implementation</span> <span class="title">Mediator</span></span></span><br><span class="line">+ (<span class="built_in">UIViewController</span> *)BookDetailComponent_viewController:(<span class="built_in">NSString</span> *)bookId &#123;</span><br><span class="line">    <span class="keyword">return</span> [BookDetailComponent detailViewController:bookId];</span><br><span class="line">&#125;</span><br><span class="line">+ (<span class="built_in">UIViewController</span> *)ReviewComponent_viewController:(<span class="built_in">NSString</span> *)bookId reviewType:(<span class="built_in">NSInteger</span>)type &#123;</span><br><span class="line">    <span class="keyword">return</span> [ReviewComponent reviewViewController:bookId type:type];</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">@end</span></span><br></pre></td></tr></table></figure></p>
+<p><figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//BookDetailComponent  组件</span></span><br><span class="line"><span class="preprocessor">#import <span class="title">"Mediator.h"</span></span></span><br><span class="line"><span class="preprocessor">#import <span class="title">"WRBookDetailViewController.h"</span></span></span><br><span class="line"><span class="class"><span class="keyword">@implementation</span> <span class="title">BookDetailComponent</span></span></span><br><span class="line">+ (<span class="built_in">UIViewController</span> *)detailViewController:(<span class="built_in">NSString</span> *)bookId &#123;</span><br><span class="line">    WRBookDetailViewController *detailVC = [[WRBookDetailViewController alloc] initWithBookId:bookId];</span><br><span class="line">    <span class="keyword">return</span> detailVC;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">@end</span></span><br></pre></td></tr></table></figure></p>
+<p><figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//ReviewComponent  组件</span></span><br><span class="line"><span class="preprocessor">#import <span class="title">"Mediator.h"</span></span></span><br><span class="line"><span class="preprocessor">#import <span class="title">"WRReviewViewController.h"</span></span></span><br><span class="line"><span class="class"><span class="keyword">@implementation</span> <span class="title">ReviewComponent</span></span></span><br><span class="line">+ (<span class="built_in">UIViewController</span> *)reviewViewController:(<span class="built_in">NSString</span> *)bookId type:(<span class="built_in">NSInteger</span>)type &#123;</span><br><span class="line">    <span class="built_in">UIViewController</span> *reviewVC = [[WRReviewViewController alloc] initWithBookId:bookId type:type];</span><br><span class="line">    <span class="keyword">return</span> reviewVC;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">@end</span></span><br></pre></td></tr></table></figure></p>
+<p>然后在阅读模块里：
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//WRReadingViewController.m</span></span><br><span class="line"><span class="preprocessor">#import <span class="title">"Mediator.h"</span></span></span><br><span class="line"><span class="class"><span class="keyword">@implementation</span> <span class="title">WRReadingViewController</span></span></span><br><span class="line">- (<span class="keyword">void</span>)gotoDetail:(<span class="built_in">NSString</span> *)bookId &#123;</span><br><span class="line">    <span class="built_in">UIViewController</span> *detailVC = [Mediator BookDetailComponent_viewControllerForDetail:bookId];</span><br><span class="line">    [<span class="keyword">self</span><span class="variable">.navigationController</span> pushViewController:detailVC];</span><br><span class="line"></span><br><span class="line">    <span class="built_in">UIViewController</span> *reviewVC = [Mediator ReviewComponent_viewController:bookId type:<span class="number">1</span>];</span><br><span class="line">    [<span class="keyword">self</span><span class="variable">.navigationController</span> pushViewController:reviewVC];</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">@end</span></span><br></pre></td></tr></table></figure></p>
+<p>这就是一开始架构图的实现，看起来显然这样做并没有什么好处，依赖关系并没有解除，Mediator 依赖了所有模块，而调用者又依赖 Mediator，最后还是一坨互相依赖，跟原来没有 Mediator 的方案相比除了更麻烦点其他没区别。</p>
+<p>那怎么办呢。</p>
+<p>怎样让Mediator解除对各个组件的依赖，同时又能调到各个组件暴露出来的方法？对于OC有一个法宝可以做到，就是runtime反射调用：
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//Mediator.m</span></span><br><span class="line"><span class="class"><span class="keyword">@implementation</span> <span class="title">Mediator</span></span></span><br><span class="line">+ (<span class="built_in">UIViewController</span> *)BookDetailComponent_viewController:(<span class="built_in">NSString</span> *)bookId &#123;</span><br><span class="line">    Class cls = <span class="built_in">NSClassFromString</span>(<span class="string">@"BookDetailComponent"</span>);</span><br><span class="line">    <span class="keyword">id</span> obj = [[cls alloc] init];</span><br><span class="line">    <span class="keyword">return</span> [obj performSelector:<span class="built_in">NSSelectorFromString</span>(<span class="string">@"detailViewController:"</span>) withObject:@&#123;<span class="string">@"bookId"</span>:bookId&#125;];</span><br><span class="line">&#125;</span><br><span class="line">+ (<span class="built_in">UIViewController</span> *)ReviewComponent_viewController:(<span class="built_in">NSString</span> *)bookId type:(<span class="built_in">NSInteger</span>)type &#123;</span><br><span class="line">    Class cls = <span class="built_in">NSClassFromString</span>(<span class="string">@"ReviewComponent"</span>);</span><br><span class="line">    <span class="keyword">id</span> obj = [[cls alloc] init];</span><br><span class="line">    <span class="keyword">return</span> [obj performSelector:<span class="built_in">NSSelectorFromString</span>(<span class="string">@"reviewViewController:"</span>) withObject:@&#123;<span class="string">@"bookId"</span>:bookId, <span class="string">@"type"</span>: @(type)&#125;];</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">@end</span></span><br></pre></td></tr></table></figure></p>
+<p>这下 Mediator 没有再对各个组件有依赖了，你看已经不需要 #import 什么东西了，对应的架构图就变成：</p>
+<p><img src="/img/component3.png" alt=""></p>
+<p>只有调用其他组件接口时才需要依赖 Mediator，组件开发者不需要知道 Mediator 的存在。</p>
+<p>等等，既然用runtime就可以解耦取消依赖，那还要Mediator做什么？组件间调用时直接用runtime接口调不就行了，这样就可以没有任何依赖就完成调用：
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//WRReadingViewController.m</span></span><br><span class="line"><span class="class"><span class="keyword">@implementation</span> <span class="title">WRReadingViewController</span></span></span><br><span class="line">- (<span class="keyword">void</span>)gotoReview:(<span class="built_in">NSString</span> *)bookId &#123;</span><br><span class="line">    Class cls = <span class="built_in">NSClassFromString</span>(<span class="string">@"BookDetailComponent"</span>);</span><br><span class="line">    <span class="keyword">id</span> obj = [[cls alloc] init];</span><br><span class="line">    <span class="built_in">UIViewController</span> *reviewVC = [obj performSelector:<span class="built_in">NSSelectorFromString</span>(<span class="string">@"reviewViewController:"</span>) withObject:@&#123;<span class="string">@"bookId"</span>:bookId, <span class="string">@"type"</span>: @(<span class="number">1</span>)&#125;];</span><br><span class="line">    [<span class="keyword">self</span><span class="variable">.navigationController</span> pushViewController:reviewVC];</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">@end</span></span><br></pre></td></tr></table></figure></p>
+<p>这样就完全解耦了，但这样做的问题是：</p>
+<ol>
+<li>调用者写起来很恶心，代码提示都没有，每次调用写一坨。</li>
+<li>runtime方法的参数个数和类型限制，导致只能每个接口都统一传一个 <code>NSDictionary</code>。这个 <code>NSDictionary</code>里的key value是什么不明确，需要找个地方写文档说明和查看。</li>
+<li>编译器层面不依赖其他组件，实际上还是依赖了，直接在这里调用，没有引入调用的组件时就挂了</li>
+</ol>
+<p>把它移到Mediator后：</p>
+<ol>
+<li>调用者写起来不恶心，代码提示也有了。</li>
+<li>参数类型和个数无限制，由 Mediator 去转就行了，组件提供的还是一个 <code>NSDictionary</code> 参数的接口，但在Mediator 里可以提供任意类型和个数的参数，像上面的例子显式要求参数 <code>NSString *bookId</code> 和 <code>NSInteger type</code>。</li>
+<li>Mediator可以做统一处理，调用某个组件方法时如果某个组件不存在，可以做相应操作，让调用者与组件间没有耦合。</li>
+</ol>
+<p>到这里，基本上能解决我们的问题：各组件互不依赖，组件间调用只依赖中间件Mediator，Mediator不依赖其他组件。接下来就是优化这套写法，有两个优化点：</p>
+<ol>
+<li>Mediator 每一个方法里都要写 runtime 方法，格式是确定的，这是可以抽取出来的。</li>
+<li>每个组件对外方法都要在 Mediator 写一遍，组件一多 Mediator 类的长度是恐怖的。</li>
+</ol>
+<p>优化后就成了 casa 的方案，target-action 对应第一点，target就是class，action就是selector，通过一些规则简化动态调用。Category 对应第二点，每个组件写一个 Mediator 的 Category，让 Mediator 不至于太长。这里有个<a href="https://github.com/casatwy/CTMediator" target="_blank" rel="external">demo</a>。</p>
+<p>总结起来就是，组件通过中间件通信，中间件通过 runtime 接口解耦，通过 target-action 简化写法，通过 category 感官上分离组件接口代码。这里可以看到这个实现的 <a href="https://github.com/casatwy/CTMediator" target="_blank" rel="external">Demo</a>。</p>
+<h2>方案2</h2>
+<p>回到 Mediator 最初的三个问题，蘑菇街用的是另一种方式解决：注册表的方式，用URL表示接口，在模块启动时注册模块提供的接口，一个简化的实现：
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//Mediator.m  中间件</span></span><br><span class="line"><span class="class"><span class="keyword">@implementation</span> <span class="title">Mediator</span></span></span><br><span class="line"><span class="keyword">typedef</span> <span class="keyword">void</span> (^componentBlock) (<span class="keyword">id</span> param);</span><br><span class="line"><span class="keyword">@property</span> (<span class="keyword">nonatomic</span>, storng) <span class="built_in">NSMutableDictionary</span> *cache</span><br><span class="line">- (<span class="keyword">void</span>)registerURLPattern:(<span class="built_in">NSString</span> *)urlPattern toHandler:(componentBlock)blk &#123;</span><br><span class="line">    [cache setObject:blk forKey:urlPattern];</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">- (<span class="keyword">void</span>)openURL:(<span class="built_in">NSString</span> *)url withParam:(<span class="keyword">id</span>)param &#123;</span><br><span class="line">   componentBlock blk = [cache objectForKey:url];</span><br><span class="line">   <span class="keyword">if</span> (bulk) blk(param);</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">@end</span></span><br></pre></td></tr></table></figure></p>
+<p><figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//BookDetailComponent  组件</span></span><br><span class="line"><span class="preprocessor">#import <span class="title">"Mediator.h"</span></span></span><br><span class="line"><span class="preprocessor">#import <span class="title">"WRBookDetailViewController.h"</span></span></span><br><span class="line">+ (<span class="keyword">void</span>)initComponent &#123;</span><br><span class="line">   [[Mediator sharedInstance] registerURLPattern:<span class="string">@"weread://bookDetail"</span> toHandler:^(<span class="built_in">NSDictionary</span> *param) &#123;</span><br><span class="line">    WRBookDetailViewController *detailVC = [[WRBookDetailViewController alloc] initWithBookId:param[<span class="string">@"bookId"</span>]];</span><br><span class="line">    [[<span class="built_in">UIApplication</span> sharedApplication]<span class="variable">.keyWindow</span><span class="variable">.rootViewController</span><span class="variable">.navigationController</span> pushViewController:detailVC animated:<span class="literal">YES</span>];</span><br><span class="line">   &#125;];</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p><figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//WRReadingViewController.m  调用者</span></span><br><span class="line"><span class="comment">//ReadingViewController.m</span></span><br><span class="line"><span class="preprocessor">#import <span class="title">"Mediator.h"</span></span></span><br><span class="line"></span><br><span class="line">+ (<span class="keyword">void</span>)gotoDetail:(<span class="built_in">NSString</span> *)bookId &#123;</span><br><span class="line">    [[Mediator sharedInstance] openURL:<span class="string">@"weread://bookDetail"</span> withParam:@&#123;<span class="string">@"bookId"</span>: bookId&#125;];</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>这样同样做到每个模块间没有依赖，Mediator 也不依赖其他组件，不过这里不一样的一点是组件本身和调用者都依赖了Mediator，不过这不是重点，架构图还是跟方案1一样。</p>
+<p>各个组件初始化时向 Mediator 注册对外提供的接口，Mediator 通过保存在内存的表去知道有哪些模块哪些接口，接口的形式是 <code>URL-&gt;block</code>。</p>
+<p>这里抛开URL的远程调用和本地调用混在一起导致的问题，先说只用于本地调用的情况，对于本地调用，URL只是一个表示组件的key，没有其他作用，这样做有三个问题：</p>
+<ol>
+<li>需要有个地方列出各个组件里有什么 URL 接口可供调用。蘑菇街做了个后台专门管理。</li>
+<li>每个组件都需要初始化，内存里需要保存一份表，组件多了会有内存问题。</li>
+<li>参数的格式不明确，是个灵活的 dictionary，也需要有个地方可以查参数格式。</li>
+</ol>
+<p>第二点没法解决，第一点和第三点可以跟前面那个方案一样，在 Mediator 每个组件暴露方法的转接口，然后使用起来就跟前面那种方式一样了。</p>
+<p>抛开URL不说，这种方案跟方案1的共同思路就是：Mediator 不能直接去调用组件的方法，因为这样会产生依赖，那我就要通过其他方法去调用，也就是通过 字符串-&gt;方法 的映射去调用。runtime 接口的 <code>className + selectorName -&gt; IMP</code> 是一种，注册表的 <code>key -&gt; block</code> 是一种，而前一种是 OC 自带的特性，后一种需要内存维持一份注册表，这是不必要的。</p>
+<p>现在说回 URL，组件化是不应该跟 URL 扯上关系的，因为组件对外提供的接口主要是模块间代码层面上的调用，我们先称为本地调用，而 URL 主要用于 APP 间通信，姑且称为远程调用。按常规思路者应该是对于远程调用，再加个中间层转发到本地调用，让这两者分开。那这里这两者混在一起有什么问题呢？</p>
+<p>如果是 URL 的形式，那组件对外提供接口时就要同时考虑本地调用和远程调用两种情况，而远程调用有个限制，传递的参数类型有限制，只能传能被字符串化的数据，或者说只能传能被转成 json 的数据，像 UIImage 这类对象是不行的，所以如果组件接口要考虑远程调用，这里的参数就不能是这类非常规对象，接口的定义就受限了。</p>
+<p>用理论的话来说就是，远程调用是本地调用的子集，这里混在一起导致组件只能提供子集功能，无法提供像方案1那样提供全集功能。所以这个方案是天生有缺陷的，对于遗漏的这部分功能，蘑菇街使用了另一种方案补全，请看方案3。</p>
+<h2>方案3</h2>
+<p>蘑菇街为了补全本地调用的功能，为组件多加了另一种方案，就是通过 protocol-class 注册表的方式。首先有一个新的中间件：</p>
+<p><figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//ProtocolMediator.m  新中间件</span></span><br><span class="line"><span class="class"><span class="keyword">@implementation</span> <span class="title">ProtocolMediator</span></span></span><br><span class="line"><span class="keyword">@property</span> (<span class="keyword">nonatomic</span>, storng) <span class="built_in">NSMutableDictionary</span> *protocolCache</span><br><span class="line">- (<span class="keyword">void</span>)registerProtocol:(Protocol *)proto forClass:(Class)cls &#123;</span><br><span class="line">    <span class="built_in">NSMutableDictionary</span> *protocolCache;</span><br><span class="line">    [protocolCache setObject:cls forKey:<span class="built_in">NSStringFromProtocol</span>(proto)];</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">- (Class)classForProtocol:(Protocol *)proto &#123;</span><br><span class="line">  <span class="keyword">return</span> protocolCache[<span class="built_in">NSStringFromProtocol</span>(proto)];</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">@end</span></span><br></pre></td></tr></table></figure></p>
+<p>然后有一个公共Protocol文件，定义了每一个组件对外提供的接口：
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//ComponentProtocol.h</span></span><br><span class="line"><span class="class"><span class="keyword">@protocol</span> <span class="title">BookDetailComponentProtocol</span> &lt;<span class="title">NSObject</span>&gt;</span></span><br><span class="line">- (<span class="built_in">UIViewController</span> *)bookDetailController:(<span class="built_in">NSString</span> *)bookId;</span><br><span class="line">- (<span class="built_in">UIImage</span> *)coverImageWithBookId:(<span class="built_in">NSString</span> *)bookId;</span><br><span class="line"><span class="keyword">@end</span></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">@protocol</span> <span class="title">ReviewComponentProtocol</span> &lt;<span class="title">NSObject</span>&gt;</span></span><br><span class="line">- (<span class="built_in">UIViewController</span> *)ReviewController:(<span class="built_in">NSString</span> *)bookId;</span><br><span class="line"><span class="keyword">@end</span></span><br></pre></td></tr></table></figure></p>
+<p>再在模块里实现这些接口，并在初始化时调用 registerProtocol 注册。
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//BookDetailComponent  组件</span></span><br><span class="line"><span class="preprocessor">#import <span class="title">"ProtocolMediator.h"</span></span></span><br><span class="line"><span class="preprocessor">#import <span class="title">"ComponentProtocol.h"</span></span></span><br><span class="line"><span class="preprocessor">#import <span class="title">"WRBookDetailViewController.h"</span></span></span><br><span class="line">+ (<span class="keyword">void</span>)initComponent</span><br><span class="line">&#123;</span><br><span class="line">   [[ProtocolMediator sharedInstance] registerProtocol:<span class="class"><span class="keyword">@protocol</span>(<span class="title">BookDetailComponentProtocol</span>) <span class="title">forClass</span>:[<span class="title">self</span> <span class="title">class</span>];</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">- (<span class="built_in">UIViewController</span> *)bookDetailController:(<span class="built_in">NSString</span> *)bookId &#123;</span><br><span class="line">    WRBookDetailViewController *detailVC = [[WRBookDetailViewController alloc] initWithBookId:param[<span class="string">@"bookId"</span>]];</span><br><span class="line">    <span class="keyword">return</span> detailVC;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">- (<span class="built_in">UIImage</span> *)coverImageWithBookId:(<span class="built_in">NSString</span> *)bookId &#123;</span><br><span class="line">    ….</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>最后调用者通过 protocol 从 ProtocolMediator 拿到提供这些方法的 Class，再进行调用：</p>
+<p><figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//WRReadingViewController.m  调用者</span></span><br><span class="line"><span class="comment">//ReadingViewController.m</span></span><br><span class="line"><span class="preprocessor">#import <span class="title">"ProtocolMediator.h"</span></span></span><br><span class="line"><span class="preprocessor">#import <span class="title">"ComponentProtocol.h"</span></span></span><br><span class="line">+ (<span class="keyword">void</span>)gotoDetail:(<span class="built_in">NSString</span> *)bookId &#123;</span><br><span class="line">    Class cls = [[ProtocolMediator sharedInstance] classForProtocol:BookDetailComponentProtocol];</span><br><span class="line">    <span class="keyword">id</span> bookDetailComponent = [[cls alloc] init];</span><br><span class="line">    <span class="built_in">UIViewController</span> *vc = [bookDetailComponent bookDetailController:bookId];</span><br><span class="line">    [[<span class="built_in">UIApplication</span> sharedApplication]<span class="variable">.keyWindow</span><span class="variable">.rootViewController</span><span class="variable">.navigationController</span><span class="variable">.navigationController</span> pushViewController:vc animated:<span class="literal">YES</span>];</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>这种思路有点绕，这个方案跟刚才两个最大的不同就是，它不是直接通过 Mediator 调用组件方法，而是通过 Mediator 拿到组件对象，再自行去调用组件方法。</p>
+<p>结果就是组件方法的调用是分散在各地的，没有统一的入口，也就没法做组件不存在时的统一处理。组件1调用了组件2的方法，如果用前面两种方式，组件间是没有依赖的，组件1+Mediator可以单独抽离出来，只需要在Mediator里做好调用组件2方法时的异常处理就行。而这种方法组件1对组件2的调用分散在各个地方，没法做这些处理，在不修改组件1代码的情况下，组件1和组件2是分不开的。</p>
+<p>当然你也可以在这上面跟方案1一样在 Mediator 对每一个组件接口 wrapper 一层，那这样这种方案跟方案1比除了更复杂点，其他没什么区别。</p>
+<p>在 protocol-class 这个方案上，主要存在的问题就是分散调用导致耦合，另外实现上会有一些绕，其他就没什么了。casa 说的 &quot;protocol对业务产生了侵入，且不符合黑盒模型。&quot; 其实并没有这么夸张，实际上 protocol 对外提供组件方法，跟方案1在 Mediator wrapper 对外提供组件方法是差不多的。</p>
+<h2>最后</h2>
+<p>蘑菇街在一个项目里同时用了方案2和方案3两种方式，会让写组件的人不知所措，新增一个接口时不知道该用方案2的方式还是方案3的方式，可能这个在蘑菇街内部会通过一些文档规则去规范，但其实是没有必要的。可能是蘑菇街作为电商平台一开始就注重APP页面间跳转的概念，每个模块已经有一个对应的URL，于是组件化时自然想到通过URL的方式表示组件，后续发现URL方式的限制，于是加上方案3的方式，这也是正常的探索过程。</p>
+<p>上面论述下方案1确实比方案2+方案3简单明了，没有 注册表常驻内存/参数传递限制/调用分散 这些缺点，方案1多做的一步是需要对所有组件方法进行一层 wrapper，但若想要明确提供组件的方法和参数类型，解耦统一处理，方案2和方案3同样需要多加这层。</p>
+<p>实际上我没有组件化相关的实践，这里仅从 limboy 和 casa 提供的这几个方案对比分析，我还对组件化带来的收益是否大于组件化增加的成本这点存疑，相信真正实践起来还会碰到很多坑，继续探索中。</p>
+
+          
         
       
     </div>
@@ -621,14 +929,76 @@
 
       
         
-          <p><a href="http://github.com/hypoyao/GYHttpMock">GYHttpMock</a> 是刚开源的 iOS 请求模拟工具，用于iOS App网络层开发，可以截获指定的 HTTP request，并根据规则，完全替换或部分修改真实的网络返回数据。</p>
-<h2 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h2><p>iOS App开发过程中，前台开发过程通常都是并行进行的，因此难免会出现一些客户端需要等待后台开发联调的情景，等待的过程往往痛若而无奈（后台被催得痛苦，前端无奈等待）。通常解决办法是，客户端在某处 hardcode 网络返回数据，当然，一不小心，这种测试代码被提交到了线上也是常有的事情。还有更“高级”一点，通过设置代理，用抓包工具修改网络数据，但这种效率低得令人抓狂。</p>
+          
+            <p><a href="http://github.com/hypoyao/GYHttpMock" target="_blank" rel="external">GYHttpMock</a> 是刚开源的 iOS 请求模拟工具，用于iOS App网络层开发，可以截获指定的 HTTP request，并根据规则，完全替换或部分修改真实的网络返回数据。</p>
+<h2>背景</h2>
+<p>iOS App开发过程中，前台开发过程通常都是并行进行的，因此难免会出现一些客户端需要等待后台开发联调的情景，等待的过程往往痛若而无奈（后台被催得痛苦，前端无奈等待）。通常解决办法是，客户端在某处 hardcode 网络返回数据，当然，一不小心，这种测试代码被提交到了线上也是常有的事情。还有更“高级”一点，通过设置代理，用抓包工具修改网络数据，但这种效率低得令人抓狂。</p>
 <p>引入一个可以模拟网络请求的工具似乎就可以轻松满足需求，但实践证明，“模拟网络请求”这个需求并不简单。例如对于全新的业务，后台如果还没有数据，前端完全可以根据协议自己制造假数据返回。但是，很多情况下，可能是对已有业务的变更，也就是需要修改后台已有的业务数据。</p>
-          <div class="post-more-link text-center">
-            <a class="btn" href="/2016/02/25/GYHttpMock/#more" rel="contents">
-              阅读全文 &raquo;
-            </a>
-          </div>
+<p>&lt;!--more--&gt;</p>
+<h2>业界解决方案</h2>
+<p>为了满足开发过程中模拟网络请求的需求，HttpMock 工具应运而生，目前业界已经有许多不同的实现方式，基本可以分为两类：</p>
+<p><strong>1.自建HTTP Server</strong></p>
+<p>可以在本地搭建 HTTP Server 模拟返回客户端所需要的数据。以 <a href="https://www.nuget.org/packages/HttpMock/" target="_blank" rel="external">hibri/HttpMock</a> 为例，它就是在本地搭建了一个HTTP Mock Server，然后根据需求返回指定数据。对于不需要模拟的请求，直接到达真实的Server，需要模拟的请求就转向MockServer。</p>
+<p><img src="/img/HttpMock2.png" alt=""></p>
+<p>这种方案的优势在于可以应用于多平台，也可以用各种语言来实现。但是局限性在于，要建立一个 HTTP Server，一方面得自己搭建并维护这个 Server，对于使用者的门槛较高，另一方面，使用时需要一边修改客户端代码，一边切换到Server环境修改返回数据，比较麻烦。此外这种方案只能选择替换或不替换，无法做到替换某个请求返回的数据。</p>
+<p><strong>2.客户端截获</strong></p>
+<p>客户端可以在网络层截获自己的网络请求，然后返回指定数据。这种方式实现的 HttpMock 更加灵活，但是不同的客户端实现方式会完全不一样。实现原理是 Hook 系统网络层的请求分发，对于符合规则的 http request 进行拦截，然后用之前定义的数据直接回调给上层，并不发出真实的请求。</p>
+<p><img src="/img/HttpMock2.png" alt=""></p>
+<p>iOS 上目前应用比较广泛的是<a href="https://github.com/AliSoftware/OHHTTPStubs" target="_blank" rel="external">OHHTTPStubs</a>和<a href="https://github.com/luisobo/Nocilla" target="_blank" rel="external">Nocilla</a>，这两种实现的功能都类似。Nocilla选择用领域专用语言（DSL）的形式创建模拟请求，更容易理解，但是mock的功能需要应用中主动开启和关闭，一旦开启或关闭会影响应用中所有的HTTP请求。OHHTTPStubs 安装后自动启动，根据 request 自动判断是否需要截获。但目前这些开源库都未能做到灵活修改网络返回的数据。</p>
+<h2>GYHttpMock 优势</h2>
+<p><a href="http://github.com/hypoyao/GYHttpMock" target="_blank" rel="external">GYHttpMock</a> 采用客户端截获的方式，在 Nocilla DSL 特性基础上，同时学习OHHTTPStubs的自动开启和识别，实现了 http response 的部分替换功能。具体优势：</p>
+<ul>
+<li>支持部分替换 HTTP Response，也就是可以修改真实网络返回的数据，这是相对于其它 HttpMock 独有的核心功能。</li>
+<li>客户端引入 GYHttpMock 后，只需一行代码就可以截获指定请求，并返回所需要的数据。不需服务端支持，也不需要建立本地HTTP Server。</li>
+<li>支持 NSURLConnection， NSURLSession，AFNetworking 以及所有采用 iOS Cocoa URL 加载方式的网络框架。</li>
+<li>支持正则匹配 HTTP Request，这样一条 httpMock 可以同时支持多个请求。</li>
+<li>mocked response 支持 json 内容的文件。一般情况下，mocked response 直接用 NSString 表达会比较清晰，但是返回内容比较多的情况下，因为转义符的原因，将内容以 json 格式写入文件会更容易些。</li>
+</ul>
+<h2>使用</h2>
+<h4>安装</h4>
+<p>直接将 <a href="http://github.com/hypoyao/GYHttpMock" target="_blank" rel="external">GYHttpMock</a> 的源文件加入项目中即可。也可以通过 CocoaPods 的方式接入。</p>
+<h4>应用</h4>
+<p>在需要拦截的请求之前创建正确的mockRequest：</p>
+<p>1.创建一个最简单的 mockRequest。截获应用中访问 www.weread.com 的 get 请求，并返回一个 response body为空的数据。</p>
+<p><figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">mockRequest(<span class="string">@"GET"</span>, <span class="string">@"http://www.weread.com"</span>);</span><br></pre></td></tr></table></figure></p>
+<p>2.创建一个拦截条件更复杂的 mockRequest。截获应用中 url 包含 weread.com，而且包含了 <code>name=abc</code> 的参数</p>
+<p><figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">mockRequest(<span class="string">@"GET"</span>, <span class="string">@"(.*?)weread.com(.*?)"</span><span class="variable">.regex</span>).</span><br><span class="line">    withBody(<span class="string">@"&#123;\"name\":\"abc\"&#125;"</span><span class="variable">.regex</span>);</span><br></pre></td></tr></table></figure></p>
+<p>3.创建一个指定返回数据的 mockRequest。withBody的值也可以是某个 <code>xxx.json</code> 文件，不过这个 json 文件需要加入到项目中。</p>
+<p><figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">mockRequest(<span class="string">@"POST"</span>, <span class="string">@"http://www.weread.com"</span>).</span><br><span class="line">    withBody(<span class="string">@"&#123;\"name\":\"abc\"&#125;"</span><span class="variable">.regex</span>);</span><br><span class="line">    andReturn(<span class="number">200</span>).</span><br><span class="line">    withBody(<span class="string">@"&#123;\"key\":\"value\"&#125;"</span>);</span><br></pre></td></tr></table></figure></p>
+<p>4.创建一个修改部分返回数据的 mockRequest。这里会根据 <code>weread.json</code> 的内容修改正常网络返回的数据</p>
+<p><figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">mockRequest(<span class="string">@"POST"</span>, <span class="string">@"http://www.weread.com"</span>).</span><br><span class="line">    isUpdatePartResponseBody(<span class="literal">YES</span>).</span><br><span class="line">    withBody(<span class="string">@"&#123;\"name\":\"abc\"&#125;"</span><span class="variable">.regex</span>);</span><br><span class="line">    andReturn(<span class="number">200</span>).</span><br><span class="line">    withBody(@“weread<span class="variable">.json</span><span class="string">");</span></span><br></pre></td></tr></table></figure></p>
+<p>假设正常网络返回的原始数据是这样：</p>
+<p><figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">&#123;"<span class="attribute">data</span>": <span class="value">[ &#123;</span><br><span class="line">      "<span class="attribute">bookId</span>":<span class="value"><span class="string">"0000001"</span></span>,</span><br><span class="line">      "<span class="attribute">updated</span>": <span class="value">[</span><br><span class="line">        &#123;</span><br><span class="line">          "<span class="attribute">chapterIdx</span>": <span class="value"><span class="number">1</span></span>,</span><br><span class="line">          "<span class="attribute">title</span>": <span class="value"><span class="string">"序言"</span></span>,</span><br><span class="line">        &#125;,</span><br><span class="line">        &#123;</span><br><span class="line">          "<span class="attribute">chapterIdx</span>": <span class="value"><span class="number">2</span></span>,</span><br><span class="line">          "<span class="attribute">title</span>": <span class="value"><span class="string">"第2章"</span></span>,</span><br><span class="line">        &#125;</span><br><span class="line">      ]</span><br><span class="line"></span>&#125;]</span>&#125;</span><br></pre></td></tr></table></figure></p>
+<p><code>weread.json</code>的内容是这样：</p>
+<p><figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">&#123;"<span class="attribute">data</span>": <span class="value">[&#123;</span><br><span class="line">      "<span class="attribute">updated</span>": <span class="value">[</span><br><span class="line">        &#123;</span><br><span class="line">           "<span class="attribute">hello</span>":<span class="value"><span class="string">"world"</span></span><br><span class="line">        </span>&#125;</span><br><span class="line">      ]</span><br><span class="line"></span>&#125;]</span>&#125;</span><br></pre></td></tr></table></figure></p>
+<p>修改后的数据就会就成这样：</p>
+<p><figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">&#123;"<span class="attribute">data</span>": <span class="value">[ &#123;</span><br><span class="line">      "<span class="attribute">bookId</span>":<span class="value"><span class="string">"0000001"</span></span>,</span><br><span class="line">      "<span class="attribute">updated</span>": <span class="value">[</span><br><span class="line">        &#123;</span><br><span class="line">          "<span class="attribute">chapterIdx</span>": <span class="value"><span class="number">1</span></span>,</span><br><span class="line">          "<span class="attribute">title</span>": <span class="value"><span class="string">"序言"</span></span>,</span><br><span class="line">           "<span class="attribute">hello</span>":<span class="value"><span class="string">"world"</span></span><br><span class="line">        </span>&#125;,</span><br><span class="line">        &#123;</span><br><span class="line">          "<span class="attribute">chapterIdx</span>": <span class="value"><span class="number">2</span></span>,</span><br><span class="line">          "<span class="attribute">title</span>": <span class="value"><span class="string">"第2章"</span></span>,</span><br><span class="line">          "<span class="attribute">hello</span>":<span class="value"><span class="string">"world"</span></span><br><span class="line">        </span>&#125;</span><br><span class="line">      ]</span><br><span class="line"></span>&#125;]</span>&#125;</span><br></pre></td></tr></table></figure></p>
+<p>GYHttpMock会根据 <code>weread.json</code>指定的层次结构来修改原始数据，前提是 <code>wearied.json</code>的数据结构需要和正常的返回数据一致，否则会导致修改失败或者不可预知的错误。</p>
+<h2>实现原理</h2>
+<p>GYHttpMock的工作流程如下：
+<img src="/img/HttpMock3.png" alt=""></p>
+<p>其核心实现主要包括request匹配、request拦截、response替换三个部分。</p>
+<h3>request匹配</h3>
+<p>用于判断应用中的某个HTTP Request是否应该被mock。判断的条件包括method、URL、Headers、Body，其中URL和Body都支持正规匹配的方式，一个httpMock可以同时匹配多个HTTP Request。</p>
+<h3>request拦截</h3>
+<p>request拦截是通过继承<code>NSURLProtocol</code>的子类来实现。<code>NSURLProtocol</code>是iOS URL网络加载中功能非常强大的一个类,官方文档也有说明<a href="https://developer.apple.com/library/mac/documentation/Cocoa/Reference/Foundation/Classes/NSURLProtocol_Class/" target="_blank" rel="external">NSURLProtocol</a>，通过重写它的方法，可以重新定义系统网络加载行为。在此之前，对于<code>NSURLConnection</code>的网络请求，需要这样注册<code>NSURLProtocol</code>的子类<code>GYMockURLProtocol</code></p>
+<p><figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">[<span class="built_in">NSURLProtocol</span> registerClass:[GYMockURLProtocol class]];</span><br></pre></td></tr></table></figure></p>
+<p>对于<code>NSURLSession</code>的网络请求，需要替换<code>protocolClasses</code>方法</p>
+<p><figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">Class cls = <span class="built_in">NSClassFromString</span>(<span class="string">@"__NSCFURLSessionConfiguration"</span>) ?: <span class="built_in">NSClassFromString</span>(<span class="string">@"NSURLSessionConfiguration"</span>);</span><br><span class="line">[<span class="keyword">self</span> swizzleSelector:<span class="keyword">@selector</span>(protocolClasses) fromClass:cls toClass:[<span class="keyword">self</span> class]];</span><br></pre></td></tr></table></figure></p>
+<p>最后，重点是重写<code>NSURLProtocol</code>类的<code>canInitWithRequest</code>和<code>startLoading</code>方法。<code>canInitWithRequest</code>是用于判断是否可以发起网络请求，可以通过这个过滤不在拦截范围内的request，不影响App的正常网络请求。<code>startLoading</code>是替换response数据的核心所在，成功截拦的request会进入该方法，在这个方法中替换或修改response数据，再回调给上层。</p>
+<h3>response替换</h3>
+<p>对于需要全部替换的response，实现方式是在<code>startLoading</code>方法中调中<code>NSURLProtocol</code>的<code>URLProtocol:didReceiveResponse:cacheStoragePolicy:</code>方法，将替换好的response回调给上层。对于需要部分替换的response，GYHttpMock会用NSURLConnection的方式，发起一次真正的网络请求，待数据回来后，再与mockRequest中的response数据进行合并，最后将合并后的数据回调上层。部分替换过程中遇到两个问题:</p>
+<ol>
+<li>
+<p>部分替换时要发出一个真实网络请求拿到原始数据，这个请求按照之前的规则又会被NSURLProtocol截获，从而进入死循环。解决办法是，start request前将这个GYHttpRequest打上标记，表明是不需要再次截获的，等拿到reponse后再将GYHttpRequest上的标记去掉，避免死循环。</p>
+</li>
+<li>
+<p>两个response内容合并的问题。因为json的数据结构非常灵活，可以任意层次嵌套，如何指定修改或添加某个节点下的数据是比较困难的，尤其是json中数组的嵌套，导致要指定修改数组中某个位置的元素变得非常困难。GYHttpMock采用的方式是，在mockRequest的response中指出需要修改的节点完整位置，然后用这个数据结构去匹配目标数据（具体算法请查看<a href="http://github.com/hypoyao/GYHttpMock" target="_blank" rel="external">GYHttpMock源码</a>，好处在于可以支持比较复杂的数据结构，但这就要求使用者对目标数据结构非常清楚。</p>
+</li>
+</ol>
+<p>GYHttpMock已经在<a href="http://github.com/hypoyao/GYHttpMock" target="_blank" rel="external">GitHub</a>开源，目前已用于<a href="http://weread.qq.com">微信读书</a>项目中，使用过程如果有问题或者建议，欢迎提交 issue 和 pull request。</p>
+
+          
         
       
     </div>
@@ -735,22 +1105,90 @@
 
       
         
-          <h1 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h1><p>平常我们都会用 Instrument 的 Leaks / Allocations 或其他一些开源库进行内存泄露的排查，但它们都存在各种问题和不便，我们逐个来看这些工具的使用和存在的问题。</p>
-<h3 id="Leaks"><a href="#Leaks" class="headerlink" title="Leaks"></a>Leaks</h3><p>先看看 Leaks，从苹果的开发者文档里可以看到，一个 app 的内存分三类：</p>
+          
+            <h1>背景</h1>
+<p>平常我们都会用 Instrument 的 Leaks / Allocations 或其他一些开源库进行内存泄露的排查，但它们都存在各种问题和不便，我们逐个来看这些工具的使用和存在的问题。</p>
+<h3>Leaks</h3>
+<p>先看看 Leaks，从苹果的开发者文档里可以看到，一个 app 的内存分三类：</p>
 <ul>
-<li><p><strong>Leaked memory</strong>: Memory unreferenced by your application that cannot be used again or freed (also detectable by using the Leaks instrument).</p>
+<li>
+<p><strong>Leaked memory</strong>: Memory unreferenced by your application that cannot be used again or freed (also detectable by using the Leaks instrument).</p>
 </li>
-<li><p><strong>Abandoned memory</strong>: Memory still referenced by your application that has no useful purpose.</p>
+<li>
+<p><strong>Abandoned memory</strong>: Memory still referenced by your application that has no useful purpose.</p>
 </li>
-<li><p><strong>Cached memory</strong>: Memory still referenced by your application that might be used again for better performance.</p>
+<li>
+<p><strong>Cached memory</strong>: Memory still referenced by your application that might be used again for better performance.</p>
 </li>
 </ul>
 <p>其中 Leaked memory 和 Abandoned memory 都属于应该释放而没释放的内存，都是内存泄露，而 Leaks 工具只负责检测 Leaked memory，而不管 Abandoned memory。在 MRC 时代 Leaked memory 很常见，因为很容易忘了调用 release，但在 ARC 时代更常见的内存泄露是循环引用导致的 Abandoned memory，Leaks 工具查不出这类内存泄露，应用有限。</p>
-          <div class="post-more-link text-center">
-            <a class="btn" href="/2016/02/22/MLeaksFinder/#more" rel="contents">
-              阅读全文 &raquo;
-            </a>
-          </div>
+<p>&lt;!--more--&gt;</p>
+<h3>Allocations</h3>
+<p>对于 Abandoned memory，可以用 Instrument 的 Allocations 检测出来。检测方法是用 Mark Generation 的方式，当你每次点击 Mark Generation 时，Allocations 会生成当前 App 的内存快照，而且 Allocations 会记录从上回内存快照到这次内存快照这个时间段内，新分配的内存信息。举一个最简单的例子：</p>
+<p>我们可以不断重复 push 和 pop 同一个 UIViewController，理论上来说，push 之前跟 pop 之后，app 会回到相同的状态。因此，在 push 过程中新分配的内存，在 pop 之后应该被 dealloc 掉，除了前几次 push 可能有预热数据和 cache 数据的情况。如果在数次 push 跟 pop 之后，内存还不断增长，则有内存泄露。因此，我们在每回 push 之前跟 pop 之后，都 Mark Generation 一下，以此观察内存是不是无限制增长。这个方法在 WWDC 的视频里：<a href="http://developer.apple.com/videos/wwdc/2010/" target="_blank" rel="external">Session 311 - Advanced Memory Analysis with Instruments</a>，以及苹果的开发者文档：<a href="https://developer.apple.com/library/mac/recipes/Instruments_help_articles/FindingAbandonedMemory/FindingAbandonedMemory.html" target="_blank" rel="external">Finding Abandoned Memory</a> 里有介绍。</p>
+<p>用这种方法来发现内存泄露还是很不方便的：</p>
+<ul>
+<li>首先，你得打开 Allocations</li>
+<li>其次，你得一个个场景去重复的操作</li>
+<li>无法及时得知泄露，得专门做一遍上述操作，十分繁琐</li>
+</ul>
+<h3>开源库</h3>
+<p>在 GitHub 上有一些内存泄露检测相关的项目，例如 <a href="https://github.com/tapwork/HeapInspector-for-iOS" target="_blank" rel="external">HeapInspector-for-iOS</a> 和 <a href="https://github.com/mindsnacks/MSLeakHunter" target="_blank" rel="external">MSLeakHunter</a>。</p>
+<p>HeapInspector-for-iOS 可以说是 Allocations 的改进。它通过 hook 掉 alloc，dealloc，retain，release 等方法，来记录对象的生命周期。具体的检测内存泄露的方法和原理，与 Instrument 的 Allocations 一致。然而它跟 Allocations 一样，存在的问题是，你需要一个个场景去重复的操作，还有检测不及时。</p>
+<p>MSLeakHunter 就简单得多，它只检测 UIViewController 和 UIView，通过 hook 掉 UIViewController 的 <code>-viewDidDisappear:</code> 方法，并认为 <code>-viewDidDisappear:</code> 后，UIViewController 将很快被释放，如果 UIViewController 没有被释放，则打个建议日志。这种做法其实不是很好，<code>-viewDidDisappear:</code> 被调用可能是因为又 push 进来一个新的 ViewController，把当前的 ViewController 挡住了，所以可能有很多错误的建议，需要结合你实际的操作去具体地分析日志。</p>
+<h1>MLeaksFinder</h1>
+<p><a href="https://github.com/Zepo/MLeaksFinder" target="_blank" rel="external">MLeaksFinder</a> 提供了内存泄露检测更好的解决方案。只需要引入 MLeaksFinder，就可以自动在 App 运行过程检测到内存泄露的对象并立即提醒，无需打开额外的工具，也无需为了检测内存泄露而一个个场景去重复地操作。MLeaksFinder 目前能自动检测 UIViewController 和 UIView 对象的内存泄露，而且也可以扩展以检测其它类型的对象。</p>
+<p>MLeaksFinder 的使用很简单，参照 <a href="https://github.com/Zepo/MLeaksFinder" target="_blank" rel="external">https://github.com/Zepo/MLeaksFinder</a>，基本上就是把 MLeaksFinder 目录下的文件添加到你的项目中，就可以在运行时（debug 模式下）帮助你检测项目里的内存泄露了，无需修改任何业务逻辑代码，而且只在 debug 下开启，完全不影响你的 release 包。</p>
+<p>当发生内存泄露时，MLeaksFinder 会中断言，并准确的告诉你哪个对象泄露了。这里设计为中断言而不是打日志让程序继续跑，是因为很多人不会去看日志，断言则能强制开发者注意到并去修改，而不是犯拖延症。</p>
+<p>中断言时，控制台会有如下提示，View-ViewController stack 从上往下看，该 stack 告诉你，MyTableViewController 的 UITableView 的 subview UITableViewWrapperView 的 subview MyTableViewCell 没被释放。而且，这里我们可以肯定的是 MyTableViewController，UITableView，UITableViewWrapperView 这三个已经成功释放了。</p>
+<p><figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">*** Terminating app due to uncaught exception 'NSInternalInconsistencyException', reason: 'Possibly Memory Leak.</span><br><span class="line">In case that MyTableViewCell should not be dealloced, override -willDealloc in MyTableViewCell by returning NO.</span><br><span class="line">View-ViewController stack: (</span><br><span class="line">    MyTableViewController,</span><br><span class="line">    UITableView,</span><br><span class="line">    UITableViewWrapperView,</span><br><span class="line">    MyTableViewCell</span><br><span class="line">)'</span><br></pre></td></tr></table></figure></p>
+<p>从 MLeaksFinder 的使用方法可以看出，MLeaksFinder 具备以下优点：</p>
+<ul>
+<li>使用简单，不侵入业务逻辑代码，不用打开 Instrument</li>
+<li>不需要额外的操作，你只需开发你的业务逻辑，在你运行调试时就能帮你检测</li>
+<li>内存泄露发现及时，更改完代码后一运行即能发现（这点很重要，你马上就能意识到哪里写错了）</li>
+<li>精准，能准确地告诉你哪个对象没被释放</li>
+</ul>
+<h1>原理</h1>
+<p>MLeaksFinder 一开始从 UIViewController 入手。我们知道，当一个 UIViewController 被 pop 或 dismiss 后，该 UIViewController 包括它的 view，view 的 subviews 等等将很快被释放（除非你把它设计成单例，或者持有它的强引用，但一般很少这样做）。于是，我们只需在一个 ViewController 被 pop 或 dismiss 一小段时间后，看看该 UIViewController，它的 view，view 的 subviews 等等是否还存在。</p>
+<p>具体的方法是，为基类 NSObject 添加一个方法 <code>-willDealloc</code> 方法，该方法的作用是，先用一个弱指针指向 self，并在一小段时间(3秒)后，通过这个弱指针调用 <code>-assertNotDealloc</code>，而 <code>-assertNotDealloc</code> 主要作用是直接中断言。</p>
+<p><figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">- (<span class="built_in">BOOL</span>)willDealloc &#123;</span><br><span class="line">    __<span class="keyword">weak</span> <span class="keyword">id</span> weakSelf = <span class="keyword">self</span>;</span><br><span class="line">    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(<span class="number">3</span> * <span class="built_in">NSEC_PER_SEC</span>)), dispatch_get_main_queue(), ^&#123;</span><br><span class="line">        [weakSelf assertNotDealloc];</span><br><span class="line">    &#125;);</span><br><span class="line">    <span class="keyword">return</span> <span class="literal">YES</span>;</span><br><span class="line">&#125;</span><br><span class="line">- (<span class="keyword">void</span>)assertNotDealloc &#123;</span><br><span class="line">     <span class="built_in">NSAssert</span>(<span class="literal">NO</span>, @“”);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>这样，当我们认为某个对象应该要被释放了，在释放前调用这个方法，如果3秒后它被释放成功，weakSelf 就指向 nil，不会调用到 <code>-assertNotDealloc</code> 方法，也就不会中断言，如果它没被释放（泄露了），<code>-assertNotDealloc</code> 就会被调用中断言。这样，当一个 UIViewController 被 pop 或 dismiss 时（我们认为它应该要被释放了），我们遍历该 UIViewController 上的所有 view，依次调 <code>-willDealloc</code>，若3秒后没被释放，就会中断言。</p>
+<p>在这里，有几个问题需要解决：</p>
+<ol>
+<li>不入侵开发代码</li>
+</ol>
+<p>这里使用了 AOP 技术，hook 掉 UIViewController 和 UINavigationController 的 pop 跟 dismiss 方法，关于如何 hook，请参考 <a href="http://nshipster.com/method-swizzling/" target="_blank" rel="external">Method Swizzling</a>。</p>
+<ol start="2">
+<li>遍历相关对象</li>
+</ol>
+<p>在实际项目中，我们发现有时候一个 UIViewController 被释放了，但它的 view 没被释放，或者一个 UIView 被释放了，但它的某个 subview 没被释放。这种内存泄露的情况很常见，因此，我们有必要遍历基于 UIViewController 的整棵 View-ViewController 树。我们通过 UIViewController 的 presentedViewController 和 view 属性，UIView 的 subviews 属性等递归遍历。对于某些 ViewController，如 UINavigationController，UISplitViewController 等，我们还需要遍历 viewControllers 属性。</p>
+<ol start="3">
+<li>构建堆栈信息</li>
+</ol>
+<p>需要构建 View-ViewController stack 信息以告诉开发者是哪个对象没被释放。在递归遍历 View-ViewController 树时，子节点的 stack 信息由父节点的 stack 信息加上子结点信息即可。</p>
+<ol start="4">
+<li>例外机制</li>
+</ol>
+<p>对于有些 ViewController，在被 pop 或 dismiss 后，不会被释放（比如单例），因此需要提供机制让开发者指定哪个对象不会被释放，这里可以通过重载上面的 <code>-willDealloc</code> 方法，直接 return NO 即可。</p>
+<ol start="5">
+<li>特殊情况</li>
+</ol>
+<p>对于某些特殊情况，释放的时机不大一样（比如系统手势返回时，在划到一半时 hold 住，虽然已被 pop，但这时还不会被释放，ViewController 要等到完全 disappear 后才释放），需要做特殊处理，具体的特殊处理视具体情况而定。</p>
+<ol start="6">
+<li>系统View</li>
+</ol>
+<p>某些系统的私有 View，不会被释放（可能是系统 bug 或者是系统出于某些原因故意这样做的，这里就不去深究了），因此需要建立白名单</p>
+<ol start="7">
+<li>手动扩展</li>
+</ol>
+<p>MLeaksFinder目前只检测 ViewController 跟 View 对象。为此，MLeaksFinder 提供了一个手动扩展的机制，你可以从 UIViewController 跟 UIView 出发，去检测其它类型的对象的内存泄露。如下所示，我们可以检测 UIViewController 底下的 View Model：</p>
+<p><figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">- (<span class="built_in">BOOL</span>)willDealloc &#123;</span><br><span class="line">    <span class="keyword">if</span> (![<span class="keyword">super</span> willDealloc]) &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">NO</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    MLCheck(<span class="keyword">self</span><span class="variable">.viewModel</span>);</span><br><span class="line">    <span class="keyword">return</span> <span class="literal">YES</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>这里的原理跟上面的是一样的，宏 MLCheck() 做的事就是为传进来的对象建立 View-ViewController stack 信息，并对传进来的对象调用 <code>-willDealloc</code> 方法。</p>
+<h1>未来</h1>
+<p>MLeaksFinder 目前还在起步阶段，它的内存泄露检测的想法是很简单，很直接的。虽然目前只能自动地检测 UIViewController 和 UIView 相关的对象，然而在我们几个大的项目中，已经起到很大的作用，帮助我们发现很多历史存在的内存泄露，而且确保新提交的 UI 相关代码不会引进新的问题。MLeaksFinder 会继续探索覆盖更广的情况，提供更全面的检测，包括网络层，数据存储层等等。</p>
+
+          
         
       
     </div>

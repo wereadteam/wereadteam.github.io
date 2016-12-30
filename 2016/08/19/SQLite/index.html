@@ -57,37 +57,40 @@
 
 
 
-<meta name="description" content="背景最近微信 iOS 团队发表了一篇文章《微信iOS SQLite源码优化实践》，该文章介绍了微信 iOS 客户端对 SQLite 进行的源码层级的优化，以及其所取得的成果。优化点包括：
+<meta name="description" content="背景
+最近微信 iOS 团队发表了一篇文章《微信iOS SQLite源码优化实践》，该文章介绍了微信 iOS 客户端对 SQLite 进行的源码层级的优化，以及其所取得的成果。优化点包括：
 
 多线程并发优化（Busy Retry 的优化）
 I/O 性能优化（保留 WAL 文件大小，mmap 优化）
 其他优化（禁用文件锁，禁用内存统计锁）
 
-其中，单是禁用内存统计锁这点优化，就取得了非常显著的效果，这">
+其中，单是禁用内存统计锁这点优化，就取得了非常显著的效果，">
 <meta property="og:type" content="article">
 <meta property="og:title" content="SQLite线程模式探讨">
 <meta property="og:url" content="http://weread.qq.com/2016/08/19/SQLite/index.html">
 <meta property="og:site_name" content="WeRead团队博客">
-<meta property="og:description" content="背景最近微信 iOS 团队发表了一篇文章《微信iOS SQLite源码优化实践》，该文章介绍了微信 iOS 客户端对 SQLite 进行的源码层级的优化，以及其所取得的成果。优化点包括：
+<meta property="og:description" content="背景
+最近微信 iOS 团队发表了一篇文章《微信iOS SQLite源码优化实践》，该文章介绍了微信 iOS 客户端对 SQLite 进行的源码层级的优化，以及其所取得的成果。优化点包括：
 
 多线程并发优化（Busy Retry 的优化）
 I/O 性能优化（保留 WAL 文件大小，mmap 优化）
 其他优化（禁用文件锁，禁用内存统计锁）
 
-其中，单是禁用内存统计锁这点优化，就取得了非常显著的效果，这">
+其中，单是禁用内存统计锁这点优化，就取得了非常显著的效果，">
 <meta property="og:image" content="http://weread.qq.com/./img/wechat_stutter.png">
 <meta property="og:image" content="http://weread.qq.com/./img/memstatus_performance.png">
 <meta property="og:image" content="http://weread.qq.com/./img/concurrence.png">
 <meta property="og:updated_time" content="2016-08-20T08:46:45.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="SQLite线程模式探讨">
-<meta name="twitter:description" content="背景最近微信 iOS 团队发表了一篇文章《微信iOS SQLite源码优化实践》，该文章介绍了微信 iOS 客户端对 SQLite 进行的源码层级的优化，以及其所取得的成果。优化点包括：
+<meta name="twitter:description" content="背景
+最近微信 iOS 团队发表了一篇文章《微信iOS SQLite源码优化实践》，该文章介绍了微信 iOS 客户端对 SQLite 进行的源码层级的优化，以及其所取得的成果。优化点包括：
 
 多线程并发优化（Busy Retry 的优化）
 I/O 性能优化（保留 WAL 文件大小，mmap 优化）
 其他优化（禁用文件锁，禁用内存统计锁）
 
-其中，单是禁用内存统计锁这点优化，就取得了非常显著的效果，这">
+其中，单是禁用内存统计锁这点优化，就取得了非常显著的效果，">
 
 
 
@@ -279,7 +282,8 @@ I/O 性能优化（保留 WAL 文件大小，mmap 优化）
       
 
       
-        <h1 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h1><p>最近微信 iOS 团队发表了一篇文章<a href="http://mp.weixin.qq.com/s?__biz=MzAwNDY1ODY2OQ==&amp;mid=2649286361&amp;idx=1&amp;sn=78bbcda7f41a14291ad71289e4821f71&amp;scene=4#wechat_redirect" target="_blank" rel="external">《微信iOS SQLite源码优化实践》</a>，该文章介绍了微信 iOS 客户端对 SQLite 进行的源码层级的优化，以及其所取得的成果。优化点包括：</p>
+        <h1>背景</h1>
+<p>最近微信 iOS 团队发表了一篇文章<a href="http://mp.weixin.qq.com/s?__biz=MzAwNDY1ODY2OQ==&amp;mid=2649286361&amp;idx=1&amp;sn=78bbcda7f41a14291ad71289e4821f71&amp;scene=4#wechat_redirect" target="_blank" rel="external">《微信iOS SQLite源码优化实践》</a>，该文章介绍了微信 iOS 客户端对 SQLite 进行的源码层级的优化，以及其所取得的成果。优化点包括：</p>
 <ol>
 <li>多线程并发优化（Busy Retry 的优化）</li>
 <li>I/O 性能优化（保留 WAL 文件大小，mmap 优化）</li>
@@ -293,7 +297,7 @@ I/O 性能优化（保留 WAL 文件大小，mmap 优化）
 <li>DB读操作造成的卡顿下降超过85%</li>
 </ul>
 </blockquote>
-<a id="more"></a>
+<p>&lt;!--more--&gt;</p>
 <blockquote>
 <p><img src="/./img/wechat_stutter.png" alt=""></p>
 </blockquote>
@@ -308,7 +312,9 @@ I/O 性能优化（保留 WAL 文件大小，mmap 优化）
 <p>从结果我们可以看出，<strong>打开或关闭 SQLite 的内存统计，性能基本没差别</strong>，仅有的一点点差别都是在误差范围内的。我们又对读操作进行了同样的测试，结果依然没有差别。</p>
 <p>问题出在于哪？究竟是哪个数据有问题？又或者是两个数据都没问题，只是我们打开的方式不对？于是，又重读了一遍微信的文章，发现该文章给出了这样的解释：</p>
 <blockquote>
-<p>多线程并发时，各线程很容易互相阻塞。<br>阻塞虽然也很短暂，但频繁地切换线程，却是个很影响性能的操作，尤其是单核设备。<br>因此，如果不需要内存统计的特性，可以通过sqlite3_config(SQLITE_CONFIG_MEMSTATUS, 0)进行关闭。</p>
+<p>多线程并发时，各线程很容易互相阻塞。
+阻塞虽然也很短暂，但频繁地切换线程，却是个很影响性能的操作，尤其是单核设备。
+因此，如果不需要内存统计的特性，可以通过sqlite3_config(SQLITE_CONFIG_MEMSTATUS, 0)进行关闭。</p>
 </blockquote>
 <p><strong>加锁和释放锁本身是有性能损耗，但这种损耗是很小的，基本上可以忽略，通常锁所带来的性能损耗正是在于等待其他线程释放锁的时间上</strong>。这正是两者的区别所在：</p>
 <ol>
@@ -317,23 +323,27 @@ I/O 性能优化（保留 WAL 文件大小，mmap 优化）
 </ol>
 <p>GYDataCenter 在关闭 SQLite 的内存统计后，性能没有得到提升，正是因为 GYDataCenter 使用的是单线程模式，不会有多线程间等待锁的问题。GYDataCenter 从设计上根本地避免了多线程间等待锁的问题。而反观微信的文章，大部分的优化都是在解决多线程间等待锁所引起的性能损耗问题，解决 Busy Retry 使<code>等待线程锁的造成的卡顿下降超过90%</code>，解决内存统计的锁使<code>卡顿下降超过 80%</code>。这似乎也说明了<strong>多线程模式带来了很严重的竞争锁的问题</strong>。并且，Busy Retry 的线程锁，内存统计的锁只是其中两种锁，可能还有其他各种各样的锁急需优化。</p>
 <p>然而，单从这点就说单线程单句柄模式比多线程多句柄模式好是不正确的，多线程多句柄模式有它自己的优点，其中最明显的一点正是这种模式支持读与读，读与写的并发（WAL 模式下）。那么，我们就来具体分析一下，在移动客户端这个场景下，哪种模式可能更适用。</p>
-<h1 id="多线程多句柄-vs-单线程单句柄"><a href="#多线程多句柄-vs-单线程单句柄" class="headerlink" title="多线程多句柄 vs 单线程单句柄"></a>多线程多句柄 vs 单线程单句柄</h1><h2 id="并发的需求"><a href="#并发的需求" class="headerlink" title="并发的需求"></a>并发的需求</h2><p>要回答这个问题，首先我们要问，<strong>在移动客户端下，数据库的读与读，读与写的并发的需求有多强</strong>？</p>
+<h1>多线程多句柄 vs 单线程单句柄</h1>
+<h2>并发的需求</h2>
+<p>要回答这个问题，首先我们要问，<strong>在移动客户端下，数据库的读与读，读与写的并发的需求有多强</strong>？</p>
 <p>还是拿数据说话。在 iPhone 6s 上对微信读书 app 的主要场景进行了数据库并发性的统计。由于不同 app 不尽相同，不同机器性能也不一样，因此下面的统计数据只能做参考意义。</p>
 <p><img src="/./img/concurrence.png" alt=""></p>
 <p>在上面的结果中，对于<strong>n读0写</strong>跟<strong>n读1写</strong>的情况，多线程模式能起到优化作用。这两种情况分别占了 2% 跟 7%。我们进一步分析发现，出现这两种情况的场景，大多数是在网络请求回来时处理数据。</p>
-<p><strong>分析：移动客户端 app 的运行，都是用户操作驱动的。用户在界面上进行一系列操作，从主线程发起请求，app 响应请求，处理数据，显示结果，一般来说这一系列动作是一条线串起来执行的，没有并发的需求。移动客户端出现的最多的并发情况，在于发起网络请求，和网络请求回来后的数据处理。然而，在网络请求回来的情况下，数据库执行最多的操作是存储返回的数据。对于这种情况，我们都知道，通过事务把多个写操作包在一起能极大地提升性能。</strong>下面，我们分析一下两种方案在这种情况下的表现：</p>
+<p>**分析：移动客户端 app 的运行，都是用户操作驱动的。用户在界面上进行一系列操作，从主线程发起请求，app 响应请求，处理数据，显示结果，一般来说这一系列动作是一条线串起来执行的，没有并发的需求。移动客户端出现的最多的并发情况，在于发起网络请求，和网络请求回来后的数据处理。然而，在网络请求回来的情况下，数据库执行最多的操作是存储返回的数据。对于这种情况，我们都知道，通过事务把多个写操作包在一起能极大地提升性能。**下面，我们分析一下两种方案在这种情况下的表现：</p>
 <ol>
 <li>多线程多句柄：如果把写操作放在一个事务中，在事务结束前，其他线程其他句柄的操作都会被卡住，返回 Busy Retry，造成空等待。</li>
 <li>单线程单句柄：自动地把多个写操作包在一个事务中，由于所有操作都放到一个队列，其他的读写操作可以穿插其中，不会被卡住。</li>
 </ol>
 <p>当然，如果你对返回的数据的存储有原子性要求，即要求在存储期间不能有其他任何的读写操作，那么其他读写操作是一定会被卡住的，两种方案都是无法解决的。</p>
-<h2 id="Cache-的管理"><a href="#Cache-的管理" class="headerlink" title="Cache 的管理"></a>Cache 的管理</h2><p>我们都知道，cache 能很好地提升性能。如果采用单线程的方案，cache 的实现就比较简单了。由于所有操作都是在一个队列上排队操作，cache 的维护与查询也在一个队列上排队进行即可，cache 与 db 数据的一致性可以得到保证。</p>
+<h2>Cache 的管理</h2>
+<p>我们都知道，cache 能很好地提升性能。如果采用单线程的方案，cache 的实现就比较简单了。由于所有操作都是在一个队列上排队操作，cache 的维护与查询也在一个队列上排队进行即可，cache 与 db 数据的一致性可以得到保证。</p>
 <p>而如果在多线程多句柄方案上做 cache，可能会有以下两个难点：</p>
 <ol>
 <li>保证 cache 与 db 数据的一到性；</li>
 <li>由于 cache 也是在多线程访问的，因此也需要加锁，也有可能引进竞争锁的性能问题；</li>
 </ol>
-<h1 id="结语"><a href="#结语" class="headerlink" title="结语"></a>结语</h1><p>通过上面的分析，我个人更偏向于使用单线程单句柄的模式。然而，世事无绝对，还是要具体情况具体分析。</p>
+<h1>结语</h1>
+<p>通过上面的分析，我个人更偏向于使用单线程单句柄的模式。然而，世事无绝对，还是要具体情况具体分析。</p>
 
       
     </div>
@@ -514,7 +524,7 @@ I/O 性能优化（保留 WAL 文件大小，mmap 优化）
               
             
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#背景"><span class="nav-number">1.</span> <span class="nav-text">背景</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#多线程多句柄-vs-单线程单句柄"><span class="nav-number">2.</span> <span class="nav-text">多线程多句柄 vs 单线程单句柄</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#并发的需求"><span class="nav-number">2.1.</span> <span class="nav-text">并发的需求</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Cache-的管理"><span class="nav-number">2.2.</span> <span class="nav-text">Cache 的管理</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#结语"><span class="nav-number">3.</span> <span class="nav-text">结语</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#undefined"><span class="nav-number">1.</span> <span class="nav-text">背景</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#undefined"><span class="nav-number">2.</span> <span class="nav-text">多线程多句柄 vs 单线程单句柄</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#undefined"><span class="nav-number">2.1.</span> <span class="nav-text">并发的需求</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#undefined"><span class="nav-number">2.2.</span> <span class="nav-text">Cache 的管理</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#undefined"><span class="nav-number">3.</span> <span class="nav-text">结语</span></a></li></ol></div>
             
           </div>
           <div class="post-toc-indicator-bottom post-toc-indicator">
