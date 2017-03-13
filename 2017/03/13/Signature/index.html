@@ -70,7 +70,7 @@
 <meta property="og:image" content="http://weread.qq.com/img/sign2.png">
 <meta property="og:image" content="http://weread.qq.com/img/sign3.png">
 <meta property="og:image" content="http://weread.qq.com/img/sign4.png">
-<meta property="og:updated_time" content="2017-03-13T13:11:34.000Z">
+<meta property="og:updated_time" content="2017-03-13T13:13:05.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="iOS App 签名的原理">
 <meta name="twitter:description" content="iOS 签名机制挺复杂，各种证书，Provisioning Profile，entitlements，CertificateSigningRequest，p12，AppID，概念一堆，也很容易出错，本文尝试从原理出发，一步步推出为什么会有这么多概念，希望能有助于理解 iOS App 签名的原理和流程。
@@ -276,7 +276,7 @@
 <li>经过一系列数学公式，算出一个数字 <code>d</code>，满足：<br>a. 通过 <code>n</code> 和 <code>e</code> 这两个数据一组数据进行数学运算后，可以通过 n 和 d 去反解运算，反过来也可以。<br>b. 如果只知道 <code>n</code> 和 <code>e</code>，要推导出 <code>d</code>，需要知道 <code>p</code> 和 <code>q</code>，也就是要需要把 n 因数分解。</li>
 </ol>
 <p>上述的 <code>(n,e)</code> 这两个数据在一起就是公钥，<code>(n,d)</code> 这两个数据就是私钥，满足用公钥加密，私钥解密，或反过来公钥加密，私钥解密，也满足在只暴露公钥（只知道 <code>n</code> 和 e）的情况下，要推导出私钥 <code>(n,d)</code>，需要把大整数 <code>n</code> 因数分解。目前因数分解只能靠暴力穷举，而n数字越大，越难以用穷举计算出因数 <code>p</code> 和 <code>q</code>，也就越安全，当 <code>n</code> 大到二进制 1024 位或 2048 位时，以目前技术要破解几乎不可能，所以非常安全。</p>
-<p>若对数字 <code>d</code> 是怎样计算出来的感兴趣，可以详读这两篇文章：RSA 算法原理（一）（二）（<a href="http://www.ruanyifeng.com/blog/2013/07/rsa_algorithm_part_two.html）" target="_blank" rel="external">http://www.ruanyifeng.com/blog/2013/07/rsa_algorithm_part_two.html）</a></p>
+<p>若对数字 <code>d</code> 是怎样计算出来的感兴趣，可以详读这两篇文章：RSA 算法原理<a href="http://www.ruanyifeng.com/blog/2013/06/rsa_algorithm_part_one.html" target="_blank" rel="external">（一）</a><a href="http://www.ruanyifeng.com/blog/2013/07/rsa_algorithm_part_two.html" target="_blank" rel="external">（二）</a></p>
 <h1 id="数字签名"><a href="#数字签名" class="headerlink" title="数字签名"></a>数字签名</h1><p>现在知道了有非对称加密这东西，那数字签名是怎么回事呢？</p>
 <p>数字签名的作用是我对某一份数据打个标记，表示我认可了这份数据（签了个名），然后我发送给其他人，其他人可以知道这份数据是经过我认证的，数据没有被篡改过。</p>
 <p>有了上述非对称加密算法，就可以实现这个需求：</p>
