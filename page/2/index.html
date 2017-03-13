@@ -207,6 +207,121 @@
             
               
                 
+                <a class="post-title-link" href="/2016/06/30/Aspects/" itemprop="url">
+                  面向切面编程之 Aspects 源码解析及应用
+                </a>
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">发表于</span>
+            <time itemprop="dateCreated" datetime="2016-06-30T10:42:03+08:00" content="2016-06-30">
+              2016-06-30
+            </time>
+          </span>
+
+          
+            <span class="post-category" >
+              &nbsp; | &nbsp;
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">作者:</span>
+              
+                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                  <!--a href="/categories/zach/" itemprop="url" rel="index"-->
+                    <span itemprop="name">zach</span>
+                  <!--/a-->
+                </span>
+
+                
+                
+
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                &nbsp; | &nbsp;
+                <a href="/2016/06/30/Aspects/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count ds-thread-count" data-thread-key="2016/06/30/Aspects/" itemprop="commentsCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+
+          
+          
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          <h1 id="1-背景"><a href="#1-背景" class="headerlink" title="1. 背景"></a>1. 背景</h1><p>最近在做项目的打点统计的时候，发现业务逻辑和打点逻辑经常耦合在一起，这样一方面影响了正常的业务逻辑，同时也很容易搞乱打点逻辑，而且要查看打点情况的时候也很分散，因此想着如何将两者解耦，并将打点逻辑集中起来。其实在 web 编程时候，这种场景很早就有了很成熟的方案，也就是所谓的 aop 编程(面向切面编程)，其原理也就是在不更改正常的业务处理流程的前提下，通过生成一个动态代理类，从而实现对目标对象嵌入附加的操作。</p>
+<p>在 iOS 中，要想实现相似的效果也很简单，利用 OC 的动态性，通过 swizzling method 改变目标函数的 selector 所指向的实现，然后在新的实现中实现附加的操作，完成之后再回到原来的处理逻辑。想明白这些之后，我就打算动手实现，当然并没有重复造轮子，我在 github 发现了一个基于 swizzling method 的开源框架 <a href="https://github.com/steipete/Aspects">Aspects</a> 。这个库的代码量比较小，总共就一个类文件，使用起来也比较方便，比如你想统计某个  controller 的 viewwillappear 的调用次数，你只需要引入 Aspect.h 头文件，然后在合适的地方初始化如下代码即可。</p>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">- (<span class="keyword">void</span>)addKvLogAspect &#123;</span><br><span class="line">    [<span class="keyword">self</span> wr_Aspect_hookSelector:<span class="keyword">@selector</span>(viewWillAppear:) withOptions:AspectPositionAfter usingBlock:^&#123;</span><br><span class="line">        KVLog_ReviewTimeline(ReviewTimeline_Open_Tab);</span><br><span class="line">    &#125;error:<span class="literal">NULL</span>];</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这篇文章主要是介绍 Aspects 源码以及其思路，以及我在实际应用中遇到的一些问题。对 swizzling method 不了解的同学可以先去网上了解一下，下面的内容是基于大家对 swizzling method 有一定的了解的基础上的。</p>
+          <div class="post-more-link text-center">
+            <a class="btn" href="/2016/06/30/Aspects/#more" rel="contents">
+              阅读全文 &raquo;
+            </a>
+          </div>
+        
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                
                 <a class="post-title-link" href="/2016/05/23/GYBootingProtection/" itemprop="url">
                   iOS 启动连续闪退保护方案
                 </a>
@@ -815,7 +930,7 @@
         <nav class="site-state motion-element">
           <div class="site-state-item site-state-posts">
             <a href="/archives">
-              <span class="site-state-item-count">15</span>
+              <span class="site-state-item-count">16</span>
               <span class="site-state-item-name">日志</span>
             </a>
           </div>
@@ -915,7 +1030,7 @@
         <div class="copyright" >
   
   &copy; 
-  <span itemprop="copyrightYear">2016</span>
+  <span itemprop="copyrightYear">2017</span>
   <span class="with-love">
     <i class="icon-next-heart fa fa-heart"></i>
   </span>
