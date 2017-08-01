@@ -57,14 +57,13 @@
 
 
 
-<meta name="description" content="iOS 签名机制挺复杂，各种证书，Provisioning Profile，entitlements，CertificateSigningRequest，p12，AppID，概念一堆，也很容易出错，本文尝试从原理出发，一步步推出为什么会有这么多概念，希望能有助于理解 iOS App 签名的原理和流程。
-目的先来看看苹果的签名机制是为了做什么。在 iOS 出来之前，在主流操作系统(Mac/Windo">
+<meta name="description" content="iOS 签名机制挺复杂，各种证书，Provisioning Profile，entitlements，CertificateSigningRequest，p12，AppID，概念一堆，也很容易出错，本文尝试从原理出发，一步步推出为什么会有这么多概念，希望能有助于理解 iOS App 签名的原理和流程。 目的先来看看苹果的签名机制是为了做什么。在 iOS 出来之前，在主流操作系统(Mac/Windo">
 <meta property="og:type" content="article">
 <meta property="og:title" content="iOS App 签名的原理">
 <meta property="og:url" content="http://weread.qq.com/2017/03/13/Signature/index.html">
 <meta property="og:site_name" content="WeRead团队博客">
-<meta property="og:description" content="iOS 签名机制挺复杂，各种证书，Provisioning Profile，entitlements，CertificateSigningRequest，p12，AppID，概念一堆，也很容易出错，本文尝试从原理出发，一步步推出为什么会有这么多概念，希望能有助于理解 iOS App 签名的原理和流程。
-目的先来看看苹果的签名机制是为了做什么。在 iOS 出来之前，在主流操作系统(Mac/Windo">
+<meta property="og:description" content="iOS 签名机制挺复杂，各种证书，Provisioning Profile，entitlements，CertificateSigningRequest，p12，AppID，概念一堆，也很容易出错，本文尝试从原理出发，一步步推出为什么会有这么多概念，希望能有助于理解 iOS App 签名的原理和流程。 目的先来看看苹果的签名机制是为了做什么。在 iOS 出来之前，在主流操作系统(Mac/Windo">
+<meta property="og:locale" content="zh-Hans">
 <meta property="og:image" content="http://weread.qq.com/img/sign0.png">
 <meta property="og:image" content="http://weread.qq.com/img/sign1.png">
 <meta property="og:image" content="http://weread.qq.com/img/sign2.png">
@@ -73,8 +72,8 @@
 <meta property="og:updated_time" content="2017-03-13T13:16:28.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="iOS App 签名的原理">
-<meta name="twitter:description" content="iOS 签名机制挺复杂，各种证书，Provisioning Profile，entitlements，CertificateSigningRequest，p12，AppID，概念一堆，也很容易出错，本文尝试从原理出发，一步步推出为什么会有这么多概念，希望能有助于理解 iOS App 签名的原理和流程。
-目的先来看看苹果的签名机制是为了做什么。在 iOS 出来之前，在主流操作系统(Mac/Windo">
+<meta name="twitter:description" content="iOS 签名机制挺复杂，各种证书，Provisioning Profile，entitlements，CertificateSigningRequest，p12，AppID，概念一堆，也很容易出错，本文尝试从原理出发，一步步推出为什么会有这么多概念，希望能有助于理解 iOS App 签名的原理和流程。 目的先来看看苹果的签名机制是为了做什么。在 iOS 出来之前，在主流操作系统(Mac/Windo">
+<meta name="twitter:image" content="http://weread.qq.com/img/sign0.png">
 
 
 

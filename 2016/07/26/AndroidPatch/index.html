@@ -57,24 +57,20 @@
 
 
 
-<meta name="description" content="Android 不仅系统版本众多，机型众多，而且各个市场都各有各的政策和审核速度，每次发布一个版本对于开发同学来讲都是一种漫长的煎熬。相比于 iOS 两三天就能达到 80% 的覆盖速度而言，Android 应用版本升级至少需要两周才能达到 80% 的升级率，严重阻碍了版本迭代速度。也导致市场上 App 版本分散，处理 bug 和投诉等也越来越麻烦。
-
-修复的 bug 需要等待下个版本发布窗口才能发">
+<meta name="description" content="Android 不仅系统版本众多，机型众多，而且各个市场都各有各的政策和审核速度，每次发布一个版本对于开发同学来讲都是一种漫长的煎熬。相比于 iOS 两三天就能达到 80% 的覆盖速度而言，Android 应用版本升级至少需要两周才能达到 80% 的升级率，严重阻碍了版本迭代速度。也导致市场上 App 版本分散，处理 bug 和投诉等也越来越麻烦。  修复的 bug 需要等待下个版本发布窗口才能发">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Android Patch 方案与持续交付">
 <meta property="og:url" content="http://weread.qq.com/2016/07/26/AndroidPatch/index.html">
 <meta property="og:site_name" content="WeRead团队博客">
-<meta property="og:description" content="Android 不仅系统版本众多，机型众多，而且各个市场都各有各的政策和审核速度，每次发布一个版本对于开发同学来讲都是一种漫长的煎熬。相比于 iOS 两三天就能达到 80% 的覆盖速度而言，Android 应用版本升级至少需要两周才能达到 80% 的升级率，严重阻碍了版本迭代速度。也导致市场上 App 版本分散，处理 bug 和投诉等也越来越麻烦。
-
-修复的 bug 需要等待下个版本发布窗口才能发">
+<meta property="og:description" content="Android 不仅系统版本众多，机型众多，而且各个市场都各有各的政策和审核速度，每次发布一个版本对于开发同学来讲都是一种漫长的煎熬。相比于 iOS 两三天就能达到 80% 的覆盖速度而言，Android 应用版本升级至少需要两周才能达到 80% 的升级率，严重阻碍了版本迭代速度。也导致市场上 App 版本分散，处理 bug 和投诉等也越来越麻烦。  修复的 bug 需要等待下个版本发布窗口才能发">
+<meta property="og:locale" content="zh-Hans">
 <meta property="og:image" content="http://weread.qq.com/img/androidPatch1.png">
 <meta property="og:image" content="http://weread.qq.com/img/androidPatch2.png">
 <meta property="og:updated_time" content="2016-08-20T11:24:56.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Android Patch 方案与持续交付">
-<meta name="twitter:description" content="Android 不仅系统版本众多，机型众多，而且各个市场都各有各的政策和审核速度，每次发布一个版本对于开发同学来讲都是一种漫长的煎熬。相比于 iOS 两三天就能达到 80% 的覆盖速度而言，Android 应用版本升级至少需要两周才能达到 80% 的升级率，严重阻碍了版本迭代速度。也导致市场上 App 版本分散，处理 bug 和投诉等也越来越麻烦。
-
-修复的 bug 需要等待下个版本发布窗口才能发">
+<meta name="twitter:description" content="Android 不仅系统版本众多，机型众多，而且各个市场都各有各的政策和审核速度，每次发布一个版本对于开发同学来讲都是一种漫长的煎熬。相比于 iOS 两三天就能达到 80% 的覆盖速度而言，Android 应用版本升级至少需要两周才能达到 80% 的升级率，严重阻碍了版本迭代速度。也导致市场上 App 版本分散，处理 bug 和投诉等也越来越麻烦。  修复的 bug 需要等待下个版本发布窗口才能发">
+<meta name="twitter:image" content="http://weread.qq.com/img/androidPatch1.png">
 
 
 
@@ -289,7 +285,7 @@
 <p>针对上面三个问题，<strong> 我们的设计是把 App 仅仅当做一个加载器</strong>。系统启动 App 之后，加载器决定将要运行的代码和资源的位置。当有新功能或者 bugfix 需要推送给用户，替换加载器内容即可。</p>
 <p><img src="/img/androidPatch1.png" alt=""></p>
 <h2 id="支持更新全部代码"><a href="#支持更新全部代码" class="headerlink" title="支持更新全部代码"></a>支持更新全部代码</h2><p>上面提到 <code>Application</code> 由于启动就被加载而不能被更新的问题，我们<strong>代理了真实 Application 类的创建过程</strong>。通过代理 <code>Application</code>，控制 <code>Application</code> <strong>从新 dex 文件中加载</strong>。假设真实的 <code>Application</code> 类是 <code>MyApplication</code>。我们在编译期间自动修改 <code>AndroidManifest.xml</code> 文件，把 <code>MyApplication</code> 替换为 <code>MoaiApplication</code>（是 App 的入口 <code>Application</code>）。App 启动后由 <code>MoaiApplication</code> 加载完相应的文件（dex/资源文件/so 文件）后，再将控制权交回给 <code>MyApplication</code>。</p>
-<h4 id="代理生命周期"><a href="#代理生命周期" class="headerlink" title="代理生命周期"></a>代理生命周期</h4><p>将控制权交回给 <code>MyApplication</code>，我们最初是代理 <code>MyApplication</code> 的生命周期。具体做法是，<code>MoaiApplication</code> 决定加载哪里的业务代码、资源文件以及 so 文件之后依然负责接收 App 的全部生命周期，然后把生命周期代理给 <code>MyApplication</code>，简单例子如下：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> MyApplication delegate;</span><br><span class="line"></span><br><span class="line"><span class="annotation">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">attachBaseContext</span><span class="params">(Context base)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">super</span>.attachBaseContext(base);</span><br><span class="line">  delegate = MyApplication.class.newInstance();</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="annotation">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onCreate</span><span class="params">()</span> </span>&#123;</span><br><span class="line">  <span class="keyword">super</span>.onCreate();</span><br><span class="line">  delegate.onCreate();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<h4 id="代理生命周期"><a href="#代理生命周期" class="headerlink" title="代理生命周期"></a>代理生命周期</h4><p>将控制权交回给 <code>MyApplication</code>，我们最初是代理 <code>MyApplication</code> 的生命周期。具体做法是，<code>MoaiApplication</code> 决定加载哪里的业务代码、资源文件以及 so 文件之后依然负责接收 App 的全部生命周期，然后把生命周期代理给 <code>MyApplication</code>，简单例子如下：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">private</span> MyApplication delegate;</div><div class="line"></div><div class="line"><span class="meta">@Override</span></div><div class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">attachBaseContext</span><span class="params">(Context base)</span> </span>&#123;</div><div class="line">  <span class="keyword">super</span>.attachBaseContext(base);</div><div class="line">  delegate = MyApplication.class.newInstance();</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="meta">@Override</span></div><div class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onCreate</span><span class="params">()</span> </span>&#123;</div><div class="line">  <span class="keyword">super</span>.onCreate();</div><div class="line">  delegate.onCreate();</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
 <p>还有比较多生命周期函数上面代码就没一一列举。</p>
 <p>从上面代码容易想到代理方案的缺点：<strong>必须要完整代理所有生命周期接口</strong>。否则 <code>MyApplication</code> 会由于生命周期<strong>不完整</strong>而出现奇怪的 bug。比如我们最初版本在测试过程中就出现了没有代理 <code>registerActivityLifecycleCallbacks</code> 函数而导致拿不到 <code>Activity</code> 生命周期 <code>onActivityCreated</code>/<code>onActivityDestroyed</code> 等回调。</p>
 <h4 id="反射-Application"><a href="#反射-Application" class="headerlink" title="反射 Application"></a>反射 <code>Application</code></h4><p>踩到生命周期回调不完整的坑之后，我们开始考虑能不能把 App 运行期间 <code>Application</code> 的引用<strong>全部</strong>替换成 <code>MyApplication</code> ？这样就无需 <code>MoaiApplication</code> 把生命周期代理给 <code>MyApplication</code>，而是由 <code>MyApplication</code> 直接接收系统回调。安卓系统 <code>ContextWrapper</code> 的实现是包装了一层真正的 <code>mBase</code> 上下文，App 真正使用到的就是这个 <code>mBase</code>。通过反射 <code>mBase</code> 以及其中字段对 <code>Application</code> 的引用，『彻底』解决了需要手写代理 <code>Application</code> 全部生命周期的方法。</p>

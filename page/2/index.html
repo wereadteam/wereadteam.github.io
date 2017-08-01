@@ -57,15 +57,13 @@
 
 
 
-<meta name="description">
 <meta property="og:type" content="website">
 <meta property="og:title" content="WeRead团队博客">
 <meta property="og:url" content="http://weread.qq.com/page/2/index.html">
 <meta property="og:site_name" content="WeRead团队博客">
-<meta property="og:description">
+<meta property="og:locale" content="zh-Hans">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="WeRead团队博客">
-<meta name="twitter:description">
 
 
 
@@ -179,11 +177,6 @@
 
     
     
-      
-      
-
-      
-    
 
     
       
@@ -275,8 +268,8 @@
       
         
           <h1 id="1-背景"><a href="#1-背景" class="headerlink" title="1. 背景"></a>1. 背景</h1><p>最近在做项目的打点统计的时候，发现业务逻辑和打点逻辑经常耦合在一起，这样一方面影响了正常的业务逻辑，同时也很容易搞乱打点逻辑，而且要查看打点情况的时候也很分散，因此想着如何将两者解耦，并将打点逻辑集中起来。其实在 web 编程时候，这种场景很早就有了很成熟的方案，也就是所谓的 aop 编程(面向切面编程)，其原理也就是在不更改正常的业务处理流程的前提下，通过生成一个动态代理类，从而实现对目标对象嵌入附加的操作。</p>
-<p>在 iOS 中，要想实现相似的效果也很简单，利用 OC 的动态性，通过 swizzling method 改变目标函数的 selector 所指向的实现，然后在新的实现中实现附加的操作，完成之后再回到原来的处理逻辑。想明白这些之后，我就打算动手实现，当然并没有重复造轮子，我在 github 发现了一个基于 swizzling method 的开源框架 <a href="https://github.com/steipete/Aspects">Aspects</a> 。这个库的代码量比较小，总共就一个类文件，使用起来也比较方便，比如你想统计某个  controller 的 viewwillappear 的调用次数，你只需要引入 Aspect.h 头文件，然后在合适的地方初始化如下代码即可。</p>
-<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">- (<span class="keyword">void</span>)addKvLogAspect &#123;</span><br><span class="line">    [<span class="keyword">self</span> wr_Aspect_hookSelector:<span class="keyword">@selector</span>(viewWillAppear:) withOptions:AspectPositionAfter usingBlock:^&#123;</span><br><span class="line">        KVLog_ReviewTimeline(ReviewTimeline_Open_Tab);</span><br><span class="line">    &#125;error:<span class="literal">NULL</span>];</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在 iOS 中，要想实现相似的效果也很简单，利用 OC 的动态性，通过 swizzling method 改变目标函数的 selector 所指向的实现，然后在新的实现中实现附加的操作，完成之后再回到原来的处理逻辑。想明白这些之后，我就打算动手实现，当然并没有重复造轮子，我在 github 发现了一个基于 swizzling method 的开源框架 <a href="https://github.com/steipete/Aspects" target="_blank" rel="external">Aspects</a> 。这个库的代码量比较小，总共就一个类文件，使用起来也比较方便，比如你想统计某个  controller 的 viewwillappear 的调用次数，你只需要引入 Aspect.h 头文件，然后在合适的地方初始化如下代码即可。</p>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">- (<span class="keyword">void</span>)addKvLogAspect &#123;</div><div class="line">    [<span class="keyword">self</span> wr_Aspect_hookSelector:<span class="keyword">@selector</span>(viewWillAppear:) withOptions:AspectPositionAfter usingBlock:^&#123;</div><div class="line">        KVLog_ReviewTimeline(ReviewTimeline_Open_Tab);</div><div class="line">    &#125;error:<span class="literal">NULL</span>];</div><div class="line">&#125;</div></pre></td></tr></table></figure>
 <p>这篇文章主要是介绍 Aspects 源码以及其思路，以及我在实际应用中遇到的一些问题。对 swizzling method 不了解的同学可以先去网上了解一下，下面的内容是基于大家对 swizzling method 有一定的了解的基础上的。</p>
           <div class="post-more-link text-center">
             <a class="btn" href="/2016/06/30/Aspects/#more" rel="contents">
@@ -393,9 +386,9 @@
 <p>“如果某个实体表现出以下任何一种特性，它就具备自主性：自我修复、自我保护、自我维护、对目标的自我控制、自我改进。” —— 凯文·凯利 </p>
 </blockquote>
 <p>iOS App 有时可能遇到启动必 crash 的绝境：每次打开 App 都闪退，无法正常使用App。</p>
-<p>为了尝试解决这个问题，微信读书开发了 iOS 连续闪退保护工具：<a href="https://github.com/liuslevis/GYBootingProtection">GYBootingProtection</a>，检测连续闪退，在连续闪退出现时，尝试自修复 App：</p>
+<p>为了尝试解决这个问题，微信读书开发了 iOS 连续闪退保护工具：<a href="https://github.com/liuslevis/GYBootingProtection" target="_blank" rel="external">GYBootingProtection</a>，检测连续闪退，在连续闪退出现时，尝试自修复 App：</p>
 <p><img src="/img/GYBootingProtectionIntro.png" alt="img"></p>
-<p>本文探讨了连续闪退问题的产生原因、检测、修复机制，以及如何在你的项目中引入、测试和使用 <a href="https://github.com/liuslevis/GYBootingProtection">GYBootingProtection</a>。</p>
+<p>本文探讨了连续闪退问题的产生原因、检测、修复机制，以及如何在你的项目中引入、测试和使用 <a href="https://github.com/liuslevis/GYBootingProtection" target="_blank" rel="external">GYBootingProtection</a>。</p>
           <div class="post-more-link text-center">
             <a class="btn" href="/2016/05/23/GYBootingProtection/#more" rel="contents">
               阅读全文 &raquo;
@@ -621,10 +614,10 @@
 
       
         
-          <p>看了 Limboy(<a href="http://limboy.me/ios/2016/03/10/mgj-components.html">文章1</a> <a href="http://limboy.me/ios/2016/03/14/mgj-components-continued.html">文章2</a>) 和 Casa (<a href="http://casatwy.com/iOS-Modulization.html">文章</a>) 对 iOS 组件化方案的讨论，写篇文章梳理下思路。</p>
+          <p>看了 Limboy(<a href="http://limboy.me/ios/2016/03/10/mgj-components.html" target="_blank" rel="external">文章1</a> <a href="http://limboy.me/ios/2016/03/14/mgj-components-continued.html" target="_blank" rel="external">文章2</a>) 和 Casa (<a href="http://casatwy.com/iOS-Modulization.html" target="_blank" rel="external">文章</a>) 对 iOS 组件化方案的讨论，写篇文章梳理下思路。</p>
 <p>首先我觉得”组件”在这里不太合适，因为按我理解组件是指比较小的功能块，这些组件不需要多少组件间通信，没什么依赖，也就不需要做什么其他处理，面向对象就能搞定。而这里提到的是较大粒度的业务功能，我们习惯称为”模块”。为了方便表述，下面模块和组件代表同一个意思，都是指较大粒度的业务模块。</p>
 <p>一个 APP 有多个模块，模块之间会通信，互相调用，例如微信读书有 书籍详情  想法列表  阅读器  发现卡片  等等模块，这些模块会互相调用，例如 书籍详情要调起阅读器和想法列表，阅读器要调起想法列表和书籍详情，等等，一般我们是怎样调用呢，以阅读器为例，会这样写：</p>
-<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="preprocessor">#import <span class="title">"WRBookDetailViewController.h"</span></span></span><br><span class="line"><span class="preprocessor">#import <span class="title">"WRReviewViewController.h"</span></span></span><br><span class="line"><span class="class"><span class="keyword">@implementation</span> <span class="title">Mediator</span></span></span><br><span class="line">- (<span class="keyword">void</span>)gotoDetail &#123;</span><br><span class="line">    WRBookDetailViewController *detailVC = [[WRBookDetailViewController alloc] initWithBookId:<span class="keyword">self</span><span class="variable">.bookId</span>];</span><br><span class="line">    [<span class="keyword">self</span><span class="variable">.navigationController</span><span class="variable">.pushViewController</span>:detailVC animated:<span class="literal">YES</span>];</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">- (<span class="keyword">void</span>)gotoReview &#123;</span><br><span class="line">    WRReviewViewController *reviewVC = [[WRReviewViewController alloc] initWithBookId:<span class="keyword">self</span><span class="variable">.bookId</span> reviewType:<span class="number">1</span>];</span><br><span class="line">    [<span class="keyword">self</span><span class="variable">.navigationController</span><span class="variable">.pushViewController</span>:reviewVC animated:<span class="literal">YES</span>];</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">@end</span></span><br></pre></td></tr></table></figure>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div></pre></td><td class="code"><pre><div class="line"><span class="meta">#import <span class="meta-string">"WRBookDetailViewController.h"</span></span></div><div class="line"><span class="meta">#import <span class="meta-string">"WRReviewViewController.h"</span></span></div><div class="line"><span class="class"><span class="keyword">@implementation</span> <span class="title">Mediator</span></span></div><div class="line">- (<span class="keyword">void</span>)gotoDetail &#123;</div><div class="line">    WRBookDetailViewController *detailVC = [[WRBookDetailViewController alloc] initWithBookId:<span class="keyword">self</span>.bookId];</div><div class="line">    [<span class="keyword">self</span>.navigationController.pushViewController:detailVC animated:<span class="literal">YES</span>];</div><div class="line">&#125;</div><div class="line"></div><div class="line">- (<span class="keyword">void</span>)gotoReview &#123;</div><div class="line">    WRReviewViewController *reviewVC = [[WRReviewViewController alloc] initWithBookId:<span class="keyword">self</span>.bookId reviewType:<span class="number">1</span>];</div><div class="line">    [<span class="keyword">self</span>.navigationController.pushViewController:reviewVC animated:<span class="literal">YES</span>];</div><div class="line">&#125;</div><div class="line"><span class="keyword">@end</span></div></pre></td></tr></table></figure>
           <div class="post-more-link text-center">
             <a class="btn" href="/2016/03/19/iOS-Component/#more" rel="contents">
               阅读全文 &raquo;
@@ -736,7 +729,7 @@
 
       
         
-          <p><a href="http://github.com/hypoyao/GYHttpMock">GYHttpMock</a> 是刚开源的 iOS 请求模拟工具，用于iOS App网络层开发，可以截获指定的 HTTP request，并根据规则，完全替换或部分修改真实的网络返回数据。</p>
+          <p><a href="http://github.com/hypoyao/GYHttpMock" target="_blank" rel="external">GYHttpMock</a> 是刚开源的 iOS 请求模拟工具，用于iOS App网络层开发，可以截获指定的 HTTP request，并根据规则，完全替换或部分修改真实的网络返回数据。</p>
 <h2 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h2><p>iOS App开发过程中，前台开发过程通常都是并行进行的，因此难免会出现一些客户端需要等待后台开发联调的情景，等待的过程往往痛若而无奈（后台被催得痛苦，前端无奈等待）。通常解决办法是，客户端在某处 hardcode 网络返回数据，当然，一不小心，这种测试代码被提交到了线上也是常有的事情。还有更“高级”一点，通过设置代理，用抓包工具修改网络数据，但这种效率低得令人抓狂。</p>
 <p>引入一个可以模拟网络请求的工具似乎就可以轻松满足需求，但实践证明，“模拟网络请求”这个需求并不简单。例如对于全新的业务，后台如果还没有数据，前端完全可以根据协议自己制造假数据返回。但是，很多情况下，可能是对已有业务的变更，也就是需要修改后台已有的业务数据。</p>
           <div class="post-more-link text-center">

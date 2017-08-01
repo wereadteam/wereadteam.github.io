@@ -57,15 +57,13 @@
 
 
 
-<meta name="description">
 <meta property="og:type" content="website">
 <meta property="og:title" content="WeRead团队博客">
 <meta property="og:url" content="http://weread.qq.com/index.html">
 <meta property="og:site_name" content="WeRead团队博客">
-<meta property="og:description">
+<meta property="og:locale" content="zh-Hans">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="WeRead团队博客">
-<meta name="twitter:description">
 
 
 
@@ -178,15 +176,6 @@
     
 
     
-    
-      
-      
-        
-        
-        
-      
-
-      
     
 
     
@@ -486,7 +475,7 @@
         
           <p>在实现需求的同时，能写出既优雅性能又高效的代码是每个开发者都在追求的目标，但是在实际开发中，随着每个版本需求的迭代，功能变得越来越复杂，加上开发者的意识不够或者一时疏忽，日渐复杂的工程很容易产生或多或少的问题。在使用微信读书的过程中，我们也碰到过app随机丢失动画、用户反馈app卡死、用户投诉看不了书籍等等的问题，这些问题都严重影响使用，也会降低产品口碑，因此我们开发了一些监控工具来解决这些问题，在这里总结和分享一下。</p>
 <p>先来看看app的结构，如下图:</p>
-<p><img src="/img/monitor-app2.png" width = "30%" height = "30%" /></p>
+<p><img src="/img/monitor-app2.png" width="30%" height="30%"></p>
 <p>微信读书主要分为5层，由下至上分为:</p>
 <ul>
 <li>网络层：负责和服务器通讯，使用http协议获取数据。</li>
@@ -963,7 +952,7 @@
 
       
         
-          <h1 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h1><p>最近微信 iOS 团队发表了一篇文章<a href="http://mp.weixin.qq.com/s?__biz=MzAwNDY1ODY2OQ==&amp;mid=2649286361&amp;idx=1&amp;sn=78bbcda7f41a14291ad71289e4821f71&amp;scene=4#wechat_redirect">《微信iOS SQLite源码优化实践》</a>，该文章介绍了微信 iOS 客户端对 SQLite 进行的源码层级的优化，以及其所取得的成果。优化点包括：</p>
+          <h1 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h1><p>最近微信 iOS 团队发表了一篇文章<a href="http://mp.weixin.qq.com/s?__biz=MzAwNDY1ODY2OQ==&amp;mid=2649286361&amp;idx=1&amp;sn=78bbcda7f41a14291ad71289e4821f71&amp;scene=4#wechat_redirect" target="_blank" rel="external">《微信iOS SQLite源码优化实践》</a>，该文章介绍了微信 iOS 客户端对 SQLite 进行的源码层级的优化，以及其所取得的成果。优化点包括：</p>
 <ol>
 <li>多线程并发优化（Busy Retry 的优化）</li>
 <li>I/O 性能优化（保留 WAL 文件大小，mmap 优化）</li>
@@ -1095,7 +1084,7 @@
 <li>老版本升级速度慢？频繁上线版本提醒用户升级，影响用户体验？</li>
 </ul>
 <p>这几个问题是每个 App 开发同学都必然要面对的。那么有没有方法能在用户无感知的情况下<strong>加速 bug 处理和版本迭代速度</strong>？</p>
-<p>在这方面 PC 端 Chrome 浏览器的 <strong><a href="https://www.chromium.org/developers/design-documents/software-updates-courgette">patch 升级方案</a></strong>给我们了一个很好的借鉴：当 Chrome 有版本升级的时候会自动下载 patch 文件。下次启动后，Chrome 就已经是新版本。</p>
+<p>在这方面 PC 端 Chrome 浏览器的 <strong><a href="https://www.chromium.org/developers/design-documents/software-updates-courgette" target="_blank" rel="external">patch 升级方案</a></strong>给我们了一个很好的借鉴：当 Chrome 有版本升级的时候会自动下载 patch 文件。下次启动后，Chrome 就已经是新版本。</p>
           <div class="post-more-link text-center">
             <a class="btn" href="/2016/07/26/AndroidPatch/#more" rel="contents">
               阅读全文 &raquo;
@@ -1207,8 +1196,8 @@
 
       
         
-          <p><a href="https://github.com/Zepo/MLeaksFinder">MLeaksFinder</a> 是 iOS 平台的自动内存泄漏检测工具，引进 MLeaksFinder 后，就可以在日常的开发，调试业务逻辑的过程中自动地发现并警告内存泄漏。开发者无需打开 instrument 等工具，也无需为了找内存泄漏而去跑额外的流程。并且，由于开发者是在修改代码之后一跑业务逻辑就能发现内存泄漏的，这使得开发者能很快地意识到是哪里的代码写得问题。这种及时的内存泄漏的发现在很大的程度上降低了修复内存泄漏的成本。</p>
-<p>MLeaksFinder 0.1 开源已经有一段时间，关于 MLeaksFinder 的基本原理，可以参考这篇<a href="http://wereadteam.github.io/2016/02/22/MLeaksFinder/">文章</a>。在 MLeaksFinder 开源之后，收到的最多的反馈是：MLeaksFinder 帮忙发现了内存泄漏，但是要去修复这些内存泄漏，找到造成问题的代码很难，特别是对于历史遗留的内存泄漏。</p>
+          <p><a href="https://github.com/Zepo/MLeaksFinder" target="_blank" rel="external">MLeaksFinder</a> 是 iOS 平台的自动内存泄漏检测工具，引进 MLeaksFinder 后，就可以在日常的开发，调试业务逻辑的过程中自动地发现并警告内存泄漏。开发者无需打开 instrument 等工具，也无需为了找内存泄漏而去跑额外的流程。并且，由于开发者是在修改代码之后一跑业务逻辑就能发现内存泄漏的，这使得开发者能很快地意识到是哪里的代码写得问题。这种及时的内存泄漏的发现在很大的程度上降低了修复内存泄漏的成本。</p>
+<p>MLeaksFinder 0.1 开源已经有一段时间，关于 MLeaksFinder 的基本原理，可以参考这篇<a href="http://wereadteam.github.io/2016/02/22/MLeaksFinder/" target="_blank" rel="external">文章</a>。在 MLeaksFinder 开源之后，收到的最多的反馈是：MLeaksFinder 帮忙发现了内存泄漏，但是要去修复这些内存泄漏，找到造成问题的代码很难，特别是对于历史遗留的内存泄漏。</p>
 <p>现在，MLeaksFinder 0.2 来了。如果说 0.1 版本旨在帮助开发者发现内存泄漏，那么 0.2 版本的新特性，正是旨在帮助开发者更好地解决内存泄漏。MLeaksFinder 0.2 包括以下几个新特性：</p>
 <ul>
 <li>assert 改为 alert</li>
@@ -1327,7 +1316,7 @@
 
       
         
-          <p><a href="https://github.com/Zepo/GYDataCenter">GYDataCenter</a> 是一个 SQLite 数据库框架，提供了一套简单易用的面向对象的数据操作接口，同时保留了 SQL 查询的灵活性。GYDataCenter 简单易上手，相对于 CoreData，GYDataCenter 的学习成本更低。同时，根据自己的需求，开发者可以更方便地划分数据库，设计数据库表，数据库索引等。</p>
+          <p><a href="https://github.com/Zepo/GYDataCenter" target="_blank" rel="external">GYDataCenter</a> 是一个 SQLite 数据库框架，提供了一套简单易用的面向对象的数据操作接口，同时保留了 SQL 查询的灵活性。GYDataCenter 简单易上手，相对于 CoreData，GYDataCenter 的学习成本更低。同时，根据自己的需求，开发者可以更方便地划分数据库，设计数据库表，数据库索引等。</p>
 <h1 id="概览"><a href="#概览" class="headerlink" title="概览"></a>概览</h1><p>GYDataCenter 具有以下特性：</p>
 <ul>
 <li>面向对象的数据操作接口</li>
@@ -1336,7 +1325,7 @@
 <li>高性能 cache 层</li>
 <li>faulting 机制（类似 Core Data）</li>
 <li>自动批量写入磁盘</li>
-<li>使用 <a href="https://www.sqlite.org/lang_analyze.html">ANALYZE</a> 优化查询</li>
+<li>使用 <a href="https://www.sqlite.org/lang_analyze.html" target="_blank" rel="external">ANALYZE</a> 优化查询</li>
 </ul>
           <div class="post-more-link text-center">
             <a class="btn" href="/2016/07/06/GYDataCenter/#more" rel="contents">
@@ -1449,13 +1438,13 @@
 
       
         
-          <p><a href="https://github.com/bang590/JSPatch">JSPatch</a> 支持了动态调用 C 函数，无需在编译前桥接每个要调用的 C 函数，只需要在 JS 里调用前声明下这个函数，就可以直接调用：</p>
-<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">require</span>(<span class="string">'JPEngine'</span>).addExtensions([<span class="string">'JPCFunction'</span>])</span><br><span class="line">defineCFunction(<span class="string">"malloc"</span>, <span class="string">"void *, size_t"</span>)</span><br><span class="line">malloc(<span class="number">10</span>)</span><br></pre></td></tr></table></figure>
+          <p><a href="https://github.com/bang590/JSPatch" target="_blank" rel="external">JSPatch</a> 支持了动态调用 C 函数，无需在编译前桥接每个要调用的 C 函数，只需要在 JS 里调用前声明下这个函数，就可以直接调用：</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"><span class="built_in">require</span>(<span class="string">'JPEngine'</span>).addExtensions([<span class="string">'JPCFunction'</span>])</div><div class="line">defineCFunction(<span class="string">"malloc"</span>, <span class="string">"void *, size_t"</span>)</div><div class="line">malloc(<span class="number">10</span>)</div></pre></td></tr></table></figure>
 <p>我们一步步来看看怎样可以做到动态调用 C 函数。</p>
 <h2 id="函数地址"><a href="#函数地址" class="headerlink" title="函数地址"></a>函数地址</h2><p>首先若要动态调用 C 函数，第一步就是需要通过传入一个函数名字符串找到这个函数地址，这里一个必要的前提条件就是 C 编译后的可执行文件里必须有原函数名的信息，才有可能做到通过函数名字符串找到函数地址。我们写个简单的程序来看看它编译后可执行文件的内容有没有这个信息：</p>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//main.m</span></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">test</span><span class="params">()</span> </span>&#123;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line"><span class="comment">//main.m</span></div><div class="line"><span class="function"><span class="keyword">void</span> <span class="title">test</span><span class="params">()</span> </span>&#123;</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">()</span> </span>&#123;</div><div class="line">    <span class="keyword">return</span> <span class="number">0</span>;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
 <p>编译这个文件，并用otool看下它的汇编：</p>
-<figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">gcc main.m -o main.o&#10;otool -tV main.o</span><br></pre></td></tr></table></figure>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">gcc main.m -o main.o</div><div class="line">otool -tV main.o</div></pre></td></tr></table></figure>
 <p>输出：</p>
           <div class="post-more-link text-center">
             <a class="btn" href="/2016/07/05/CFunction/#more" rel="contents">

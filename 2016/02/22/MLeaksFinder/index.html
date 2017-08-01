@@ -57,25 +57,17 @@
 
 
 
-<meta name="description" content="背景平常我们都会用 Instrument 的 Leaks / Allocations 或其他一些开源库进行内存泄露的排查，但它们都存在各种问题和不便，我们逐个来看这些工具的使用和存在的问题。
-Leaks先看看 Leaks，从苹果的开发者文档里可以看到，一个 app 的内存分三类：
-
-Leaked memory: Memory unreferenced by your application tha">
+<meta name="description" content="背景平常我们都会用 Instrument 的 Leaks / Allocations 或其他一些开源库进行内存泄露的排查，但它们都存在各种问题和不便，我们逐个来看这些工具的使用和存在的问题。 Leaks先看看 Leaks，从苹果的开发者文档里可以看到，一个 app 的内存分三类：  Leaked memory: Memory unreferenced by your application tha">
 <meta property="og:type" content="article">
 <meta property="og:title" content="MLeaksFinder：精准 iOS 内存泄露检测工具">
 <meta property="og:url" content="http://weread.qq.com/2016/02/22/MLeaksFinder/index.html">
 <meta property="og:site_name" content="WeRead团队博客">
-<meta property="og:description" content="背景平常我们都会用 Instrument 的 Leaks / Allocations 或其他一些开源库进行内存泄露的排查，但它们都存在各种问题和不便，我们逐个来看这些工具的使用和存在的问题。
-Leaks先看看 Leaks，从苹果的开发者文档里可以看到，一个 app 的内存分三类：
-
-Leaked memory: Memory unreferenced by your application tha">
+<meta property="og:description" content="背景平常我们都会用 Instrument 的 Leaks / Allocations 或其他一些开源库进行内存泄露的排查，但它们都存在各种问题和不便，我们逐个来看这些工具的使用和存在的问题。 Leaks先看看 Leaks，从苹果的开发者文档里可以看到，一个 app 的内存分三类：  Leaked memory: Memory unreferenced by your application tha">
+<meta property="og:locale" content="zh-Hans">
 <meta property="og:updated_time" content="2016-08-20T11:23:27.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="MLeaksFinder：精准 iOS 内存泄露检测工具">
-<meta name="twitter:description" content="背景平常我们都会用 Instrument 的 Leaks / Allocations 或其他一些开源库进行内存泄露的排查，但它们都存在各种问题和不便，我们逐个来看这些工具的使用和存在的问题。
-Leaks先看看 Leaks，从苹果的开发者文档里可以看到，一个 app 的内存分三类：
-
-Leaked memory: Memory unreferenced by your application tha">
+<meta name="twitter:description" content="背景平常我们都会用 Instrument 的 Leaks / Allocations 或其他一些开源库进行内存泄露的排查，但它们都存在各种问题和不便，我们逐个来看这些工具的使用和存在的问题。 Leaks先看看 Leaks，从苹果的开发者文档里可以看到，一个 app 的内存分三类：  Leaked memory: Memory unreferenced by your application tha">
 
 
 
@@ -294,7 +286,7 @@ Leaked memory: Memory unreferenced by your application tha">
 <p>MLeaksFinder 的使用很简单，参照 <a href="https://github.com/Zepo/MLeaksFinder" target="_blank" rel="external">https://github.com/Zepo/MLeaksFinder</a>，基本上就是把 MLeaksFinder 目录下的文件添加到你的项目中，就可以在运行时（debug 模式下）帮助你检测项目里的内存泄露了，无需修改任何业务逻辑代码，而且只在 debug 下开启，完全不影响你的 release 包。</p>
 <p>当发生内存泄露时，MLeaksFinder 会中断言，并准确的告诉你哪个对象泄露了。这里设计为中断言而不是打日志让程序继续跑，是因为很多人不会去看日志，断言则能强制开发者注意到并去修改，而不是犯拖延症。</p>
 <p>中断言时，控制台会有如下提示，View-ViewController stack 从上往下看，该 stack 告诉你，MyTableViewController 的 UITableView 的 subview UITableViewWrapperView 的 subview MyTableViewCell 没被释放。而且，这里我们可以肯定的是 MyTableViewController，UITableView，UITableViewWrapperView 这三个已经成功释放了。</p>
-<figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">*** Terminating app due to uncaught exception 'NSInternalInconsistencyException', reason: 'Possibly Memory Leak.</span><br><span class="line">In case that MyTableViewCell should not be dealloced, override -willDealloc in MyTableViewCell by returning NO.</span><br><span class="line">View-ViewController stack: (</span><br><span class="line">    MyTableViewController,</span><br><span class="line">    UITableView,</span><br><span class="line">    UITableViewWrapperView,</span><br><span class="line">    MyTableViewCell</span><br><span class="line">)'</span><br></pre></td></tr></table></figure>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line">*** Terminating app due to uncaught exception 'NSInternalInconsistencyException', reason: 'Possibly Memory Leak.</div><div class="line">In <span class="keyword">case</span> that MyTableViewCell should not be dealloced, override -willDealloc <span class="keyword">in</span> MyTableViewCell by returning <span class="literal">NO</span>.</div><div class="line">View-ViewController stack: (</div><div class="line">    MyTableViewController,</div><div class="line">    <span class="built_in">UITableView</span>,</div><div class="line">    <span class="built_in">UITableViewWrapperView</span>,</div><div class="line">    MyTableViewCell</div><div class="line">)<span class="string">'</span></div></pre></td></tr></table></figure>
 <p>从 MLeaksFinder 的使用方法可以看出，MLeaksFinder 具备以下优点：</p>
 <ul>
 <li>使用简单，不侵入业务逻辑代码，不用打开 Instrument</li>
@@ -304,7 +296,7 @@ Leaked memory: Memory unreferenced by your application tha">
 </ul>
 <h1 id="原理"><a href="#原理" class="headerlink" title="原理"></a>原理</h1><p>MLeaksFinder 一开始从 UIViewController 入手。我们知道，当一个 UIViewController 被 pop 或 dismiss 后，该 UIViewController 包括它的 view，view 的 subviews 等等将很快被释放（除非你把它设计成单例，或者持有它的强引用，但一般很少这样做）。于是，我们只需在一个 ViewController 被 pop 或 dismiss 一小段时间后，看看该 UIViewController，它的 view，view 的 subviews 等等是否还存在。</p>
 <p>具体的方法是，为基类 NSObject 添加一个方法 <code>-willDealloc</code> 方法，该方法的作用是，先用一个弱指针指向 self，并在一小段时间(3秒)后，通过这个弱指针调用 <code>-assertNotDealloc</code>，而 <code>-assertNotDealloc</code> 主要作用是直接中断言。</p>
-<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">- (<span class="built_in">BOOL</span>)willDealloc &#123;</span><br><span class="line">    __<span class="keyword">weak</span> <span class="keyword">id</span> weakSelf = <span class="keyword">self</span>;</span><br><span class="line">    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(<span class="number">3</span> * <span class="built_in">NSEC_PER_SEC</span>)), dispatch_get_main_queue(), ^&#123;</span><br><span class="line">        [weakSelf assertNotDealloc];</span><br><span class="line">    &#125;);</span><br><span class="line">    <span class="keyword">return</span> <span class="literal">YES</span>;</span><br><span class="line">&#125;</span><br><span class="line">- (<span class="keyword">void</span>)assertNotDealloc &#123;</span><br><span class="line">     <span class="built_in">NSAssert</span>(<span class="literal">NO</span>, @“”);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div></pre></td><td class="code"><pre><div class="line">- (<span class="built_in">BOOL</span>)willDealloc &#123;</div><div class="line">    __<span class="keyword">weak</span> <span class="keyword">id</span> weakSelf = <span class="keyword">self</span>;</div><div class="line">    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(<span class="number">3</span> * <span class="built_in">NSEC_PER_SEC</span>)), dispatch_get_main_queue(), ^&#123;</div><div class="line">        [weakSelf assertNotDealloc];</div><div class="line">    &#125;);</div><div class="line">    <span class="keyword">return</span> <span class="literal">YES</span>;</div><div class="line">&#125;</div><div class="line">- (<span class="keyword">void</span>)assertNotDealloc &#123;</div><div class="line">     <span class="built_in">NSAssert</span>(<span class="literal">NO</span>, @“”);</div><div class="line">&#125;</div></pre></td></tr></table></figure>
 <p>这样，当我们认为某个对象应该要被释放了，在释放前调用这个方法，如果3秒后它被释放成功，weakSelf 就指向 nil，不会调用到 <code>-assertNotDealloc</code> 方法，也就不会中断言，如果它没被释放（泄露了），<code>-assertNotDealloc</code> 就会被调用中断言。这样，当一个 UIViewController 被 pop 或 dismiss 时（我们认为它应该要被释放了），我们遍历该 UIViewController 上的所有 view，依次调 <code>-willDealloc</code>，若3秒后没被释放，就会中断言。</p>
 <p>在这里，有几个问题需要解决：</p>
 <ol>
@@ -330,7 +322,7 @@ Leaked memory: Memory unreferenced by your application tha">
 <p>MLeaksFinder目前只检测 ViewController 跟 View 对象。为此，MLeaksFinder 提供了一个手动扩展的机制，你可以从 UIViewController 跟 UIView 出发，去检测其它类型的对象的内存泄露。如下所示，我们可以检测 UIViewController 底下的 View Model：</p>
 </li>
 </ol>
-<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">- (<span class="built_in">BOOL</span>)willDealloc &#123;</span><br><span class="line">    <span class="keyword">if</span> (![<span class="keyword">super</span> willDealloc]) &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">NO</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    MLCheck(<span class="keyword">self</span><span class="variable">.viewModel</span>);</span><br><span class="line">    <span class="keyword">return</span> <span class="literal">YES</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line">- (<span class="built_in">BOOL</span>)willDealloc &#123;</div><div class="line">    <span class="keyword">if</span> (![<span class="keyword">super</span> willDealloc]) &#123;</div><div class="line">        <span class="keyword">return</span> <span class="literal">NO</span>;</div><div class="line">    &#125;</div><div class="line">    MLCheck(<span class="keyword">self</span>.viewModel);</div><div class="line">    <span class="keyword">return</span> <span class="literal">YES</span>;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
 <p>这里的原理跟上面的是一样的，宏 MLCheck() 做的事就是为传进来的对象建立 View-ViewController stack 信息，并对传进来的对象调用 <code>-willDealloc</code> 方法。</p>
 <h1 id="未来"><a href="#未来" class="headerlink" title="未来"></a>未来</h1><p>MLeaksFinder 目前还在起步阶段，它的内存泄露检测的想法是很简单，很直接的。虽然目前只能自动地检测 UIViewController 和 UIView 相关的对象，然而在我们几个大的项目中，已经起到很大的作用，帮助我们发现很多历史存在的内存泄露，而且确保新提交的 UI 相关代码不会引进新的问题。MLeaksFinder 会继续探索覆盖更广的情况，提供更全面的检测，包括网络层，数据存储层等等。</p>
 

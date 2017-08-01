@@ -57,14 +57,13 @@
 
 
 
-<meta name="description" content="引言在 微信读书 App 中，排版引擎负责解析 EPUB 或 TXT 格式的书籍源文件，将排版后的书籍内容如文字、图像、注解等元素渲染至屏幕上，是最常用、最复杂的组件之一。
-而开发同学对排版引擎的日常修改，可能影响了海量书籍的排版结果。对排版引擎代码变更的测试，往往耗时多、难度大、容易漏测。本文介绍了为解决测试的难题，如何逐步将人工测试步骤自动化，最终构建了一套微信读书排版引擎自动化测试流程，以确">
+<meta name="description" content="引言在 微信读书 App 中，排版引擎负责解析 EPUB 或 TXT 格式的书籍源文件，将排版后的书籍内容如文字、图像、注解等元素渲染至屏幕上，是最常用、最复杂的组件之一。 而开发同学对排版引擎的日常修改，可能影响了海量书籍的排版结果。对排版引擎代码变更的测试，往往耗时多、难度大、容易漏测。本文介绍了为解决测试的难题，如何逐步将人工测试步骤自动化，最终构建了一套微信读书排版引擎自动化测试流程，以确">
 <meta property="og:type" content="article">
 <meta property="og:title" content="微信读书排版引擎自动化测试方案">
 <meta property="og:url" content="http://weread.qq.com/2016/08/23/Typesetter/index.html">
 <meta property="og:site_name" content="WeRead团队博客">
-<meta property="og:description" content="引言在 微信读书 App 中，排版引擎负责解析 EPUB 或 TXT 格式的书籍源文件，将排版后的书籍内容如文字、图像、注解等元素渲染至屏幕上，是最常用、最复杂的组件之一。
-而开发同学对排版引擎的日常修改，可能影响了海量书籍的排版结果。对排版引擎代码变更的测试，往往耗时多、难度大、容易漏测。本文介绍了为解决测试的难题，如何逐步将人工测试步骤自动化，最终构建了一套微信读书排版引擎自动化测试流程，以确">
+<meta property="og:description" content="引言在 微信读书 App 中，排版引擎负责解析 EPUB 或 TXT 格式的书籍源文件，将排版后的书籍内容如文字、图像、注解等元素渲染至屏幕上，是最常用、最复杂的组件之一。 而开发同学对排版引擎的日常修改，可能影响了海量书籍的排版结果。对排版引擎代码变更的测试，往往耗时多、难度大、容易漏测。本文介绍了为解决测试的难题，如何逐步将人工测试步骤自动化，最终构建了一套微信读书排版引擎自动化测试流程，以确">
+<meta property="og:locale" content="zh-Hans">
 <meta property="og:image" content="http://weread.qq.com/img/dailychange1.png">
 <meta property="og:image" content="http://weread.qq.com/img/dailychange2.png">
 <meta property="og:image" content="http://weread.qq.com/img/diff.png">
@@ -76,8 +75,8 @@
 <meta property="og:updated_time" content="2016-08-23T05:26:28.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="微信读书排版引擎自动化测试方案">
-<meta name="twitter:description" content="引言在 微信读书 App 中，排版引擎负责解析 EPUB 或 TXT 格式的书籍源文件，将排版后的书籍内容如文字、图像、注解等元素渲染至屏幕上，是最常用、最复杂的组件之一。
-而开发同学对排版引擎的日常修改，可能影响了海量书籍的排版结果。对排版引擎代码变更的测试，往往耗时多、难度大、容易漏测。本文介绍了为解决测试的难题，如何逐步将人工测试步骤自动化，最终构建了一套微信读书排版引擎自动化测试流程，以确">
+<meta name="twitter:description" content="引言在 微信读书 App 中，排版引擎负责解析 EPUB 或 TXT 格式的书籍源文件，将排版后的书籍内容如文字、图像、注解等元素渲染至屏幕上，是最常用、最复杂的组件之一。 而开发同学对排版引擎的日常修改，可能影响了海量书籍的排版结果。对排版引擎代码变更的测试，往往耗时多、难度大、容易漏测。本文介绍了为解决测试的难题，如何逐步将人工测试步骤自动化，最终构建了一套微信读书排版引擎自动化测试流程，以确">
+<meta name="twitter:image" content="http://weread.qq.com/img/dailychange1.png">
 
 
 
@@ -329,7 +328,7 @@
 <p>在 App 设置彩蛋的『执行 Scheme 页面』中，输入 scheme 并执行后，App 会在后台对指定书籍购买、加入书架、排版、生成排版结果截图，并把结果保存在本地磁盘。用户也可以选择 AirDrop 到 Mac 上。</p>
 <p><img src="/img/runscheme.png" alt="运行scheme"></p>
 <p>scheme 格式如下：</p>
-<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">weread:<span class="comment">//typeset?books=三体,乔布斯传,失控,1984,乌兰拖拉机简史&amp;indent=1&amp;fontSize=2&amp;font=2&amp;theme=3&amp;folder=f1223</span></span><br><span class="line">  输出排版结果到目录/Libary/[vid]/[folder]/[bookId]<span class="variable">.zip</span></span><br><span class="line">  @param books 需要排版的书单</span><br><span class="line">  @param indent <span class="number">0</span>首行不缩进 <span class="number">1</span>首行缩进，默认<span class="number">0</span></span><br><span class="line">  @param fontSize  <span class="number">1</span>,<span class="number">2</span>,<span class="number">3</span>,<span class="number">4</span>,<span class="number">5</span>,<span class="number">6</span>,<span class="number">7</span> 字体大小，默认<span class="number">4</span></span><br><span class="line">  @param font 字体  <span class="number">1</span>系统字体 <span class="number">2</span> <span class="number">3</span> <span class="number">4</span> 为对应选项字体，默认<span class="number">1</span></span><br><span class="line">  @param bgcolor 背景颜色 <span class="number">1</span>白 <span class="number">2</span>黄 <span class="number">3</span>绿色 <span class="number">4</span>夜间，默认<span class="number">1</span></span><br><span class="line">  @param folder 输出文件夹名，默认<span class="string">"cropImage"</span></span><br></pre></td></tr></table></figure>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line">weread:<span class="comment">//typeset?books=三体,乔布斯传,失控,1984,乌兰拖拉机简史&amp;indent=1&amp;fontSize=2&amp;font=2&amp;theme=3&amp;folder=f1223</span></div><div class="line">  输出排版结果到目录/Libary/[vid]/[folder]/[bookId].zip</div><div class="line">  @param books 需要排版的书单</div><div class="line">  @param indent <span class="number">0</span>首行不缩进 <span class="number">1</span>首行缩进，默认<span class="number">0</span></div><div class="line">  @param fontSize  <span class="number">1</span>,<span class="number">2</span>,<span class="number">3</span>,<span class="number">4</span>,<span class="number">5</span>,<span class="number">6</span>,<span class="number">7</span> 字体大小，默认<span class="number">4</span></div><div class="line">  @param font 字体  <span class="number">1</span>系统字体 <span class="number">2</span> <span class="number">3</span> <span class="number">4</span> 为对应选项字体，默认<span class="number">1</span></div><div class="line">  @param bgcolor 背景颜色 <span class="number">1</span>白 <span class="number">2</span>黄 <span class="number">3</span>绿色 <span class="number">4</span>夜间，默认<span class="number">1</span></div><div class="line">  @param folder 输出文件夹名，默认<span class="string">"cropImage"</span></div></pre></td></tr></table></figure>
 <p>通过这个 scheme，在真机或者模拟器都可以随时得到排版结果，而且速度比模拟翻页要快10x。</p>
 <h1 id="自动化测试流程"><a href="#自动化测试流程" class="headerlink" title="自动化测试流程"></a>自动化测试流程</h1><p>下面，将介绍我们完整的排版引擎自动化测试流程。</p>
 <h2 id="1-生成排版结果"><a href="#1-生成排版结果" class="headerlink" title="1 生成排版结果"></a>1 生成排版结果</h2><p>首先，用户需要确定参数：待生成排版结果的 svn 版本范围 <code>r1~rn</code>、书单、阅读偏好设置（字体、缩进、主题模式）。把这些参数传给脚本<code>batch_scan.py</code>，然后自动化流程开始，脚本会执行以下步骤：</p>

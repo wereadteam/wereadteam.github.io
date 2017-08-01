@@ -63,6 +63,7 @@
 <meta property="og:url" content="http://weread.qq.com/2016/07/20/MLeaksFinder2/index.html">
 <meta property="og:site_name" content="WeRead团队博客">
 <meta property="og:description" content="MLeaksFinder 是 iOS 平台的自动内存泄漏检测工具，引进 MLeaksFinder 后，就可以在日常的开发，调试业务逻辑的过程中自动地发现并警告内存泄漏。开发者无需打开 instrument 等工具，也无需为了找内存泄漏而去跑额外的流程。并且，由于开发者是在修改代码之后一跑业务逻辑就能发现内存泄漏的，这使得开发者能很快地意识到是哪里的代码写得问题。这种及时的内存泄漏的发现在很大的程度">
+<meta property="og:locale" content="zh-Hans">
 <meta property="og:updated_time" content="2016-08-23T03:51:40.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="MLeaksFinder 新特性">
@@ -285,13 +286,13 @@
 <p>下面我们来看如何利用对象的生命周期来分析内存的真正使用情况，分三种情况：</p>
 <p><strong>1) 单例或者被 cache 起来复用</strong></p>
 <p>如下面所示，在第一次 pop 的时候报 Memory Leak，在之后的重复 push 并 pop 同一个 ViewController 过程中，即不报 Object Deallocated，也不报 Memory Leak。这种情况下我们可以确定该对象被设计成单例或者 cache 起来了。</p>
-<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">    pop             push           pop           push          pop</span><br><span class="line">----------&gt; Leak ----------&gt; | ----------&gt; | ----------&gt; | ----------&gt;</span><br></pre></td></tr></table></figure>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">    pop             push           pop           push          pop</div><div class="line">----------&gt; Leak ----------&gt; | ----------&gt; | ----------&gt; | ----------&gt;</div></pre></td></tr></table></figure>
 <p><strong>2) 释放不及时</strong></p>
 <p>如下面所示，在第一次 pop 的时候报 Memory Leak，在之后的重复 push 并 pop 同一个 ViewController 过程中，对于同一个类不断地报 Object Deallocated 和 Memory Leak。这种情况属于释放不及时的情况。</p>
-<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">    pop             push                 pop             push                 pop</span><br><span class="line">----------&gt; Leak ----------&gt; Dealloc ----------&gt; Leak ----------&gt; Dealloc ----------&gt; Leak</span><br></pre></td></tr></table></figure>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">    pop             push                 pop             push                 pop</div><div class="line">----------&gt; Leak ----------&gt; Dealloc ----------&gt; Leak ----------&gt; Dealloc ----------&gt; Leak</div></pre></td></tr></table></figure>
 <p><strong>3) 真正的内存泄漏</strong></p>
 <p>如下面所示，在第一次 pop 的时候报 Memory Leak，在之后的重复 push 并 pop 同一个 ViewController 过程中，不报 Object Deallocated，但每次 pop 之后又报 Memory Leak。这种情况下每回进入并退出一个页面后，就报有新的内存泄漏，同时被报泄漏的对象又从来没有释放过，可以确定是真正的内存泄漏。</p>
-<figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">    pop             push           pop             push           pop</span><br><span class="line">----------&gt; Leak ----------&gt; | ----------&gt; Leak ----------&gt; | ----------&gt; Leak</span><br></pre></td></tr></table></figure>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">    pop             push           pop             push           pop</div><div class="line">----------&gt; Leak ----------&gt; | ----------&gt; Leak ----------&gt; | ----------&gt; Leak</div></pre></td></tr></table></figure>
 <h1 id="查找循环引用链"><a href="#查找循环引用链" class="headerlink" title="查找循环引用链"></a>查找循环引用链</h1><p>Facebook 在前阵子开源了一个循环引用检测工具 <a href="https://github.com/facebook/FBRetainCycleDetector" target="_blank" rel="external">FBRetainCycleDetector</a>。当传入内存中的任意一个 OC 对象，FBRetainCycleDetector 会递归遍历该对象的所有强引用的对象，以检测以该对象为根结点的强引用树有没有循环引用。</p>
 <p>我们知道，很多循环引用是 block 的使用不当造成的。而 FBRetainCycleDetector 最大的技术亮点，正在于如何找出一个 block 的所有强引用对象。对于这个感兴趣的，可以看 facebook 的这篇<a href="https://code.facebook.com/posts/583946315094347/automatic-memory-leak-detection-on-ios/" target="_blank" rel="external">文章</a>。</p>
 <p>然而，FBRetainCycleDetector 的使用存在两个问题：</p>
@@ -300,7 +301,7 @@
 <li>检测循环引用比较耗时</li>
 </ul>
 <p>正是由于这两个问题，FBRetainCycleDetector 通常是结合其它工具一起使用，通过其它工具先找出候选的检测对象，然后进行有选择的检测。当 MLeaksFinder 与 FBRetainCycleDetector 结合使用时，正好能达到很好的效果。我们先通过 MLeaksFinder 找到内存泄漏的对象，然后再过 FBRetainCycleDetector 检测该对象有没有循环引用即可。</p>
-<p>循环引用的输出信息如下：<br><figure class="highlight objc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">(</span><br><span class="line">    <span class="string">"-&gt; MyTableViewCell "</span>,</span><br><span class="line">    <span class="string">"-&gt; _callback -&gt; __NSMallocBlock__ "</span></span><br><span class="line">)</span><br></pre></td></tr></table></figure></p>
+<p>循环引用的输出信息如下：<br><figure class="highlight objc"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">(</div><div class="line">    <span class="string">"-&gt; MyTableViewCell "</span>,</div><div class="line">    <span class="string">"-&gt; _callback -&gt; __NSMallocBlock__ "</span></div><div class="line">)</div></pre></td></tr></table></figure></p>
 <p>上面的信息表示，<code>MyTableViewCell</code> 有一个强引用的成员变量 <code>_callback</code>，该变量的类型是 <code>__NSMallocBlock__</code>，在 <code>_callback</code> 里，又强引用了 <code>MyTableViewCell</code> 造成循环引用。</p>
 
       
