@@ -1,0 +1,801 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  <link href="/vendors/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css"/>
+
+
+
+
+  <link href="//fonts.googleapis.com/css?family=Lato:300,400,700,400italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+
+
+
+<link href="/vendors/font-awesome/css/font-awesome.min.css?v=4.4.0" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=0.5.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="微信读书,iOS" />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=0.5.0" />
+
+
+
+
+
+
+<meta name="description" content="背景当我们在写Objective-C代码时，会习惯性地把model对象的属性定义为nonatomic。如果该属性是被多线程访问的，那么这样做是有可能crash的。我们可以简单地模拟一下： 12345678910111213141516171819202122// Conversation.h@interface Conversation : NSObject@property (nonatomic">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Objective-C单向数据流方案">
+<meta property="og:url" content="http://weread.qq.com/2017/09/30/reflow/index.html">
+<meta property="og:site_name" content="WeRead团队博客">
+<meta property="og:description" content="背景当我们在写Objective-C代码时，会习惯性地把model对象的属性定义为nonatomic。如果该属性是被多线程访问的，那么这样做是有可能crash的。我们可以简单地模拟一下： 12345678910111213141516171819202122// Conversation.h@interface Conversation : NSObject@property (nonatomic">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:image" content="http://weread.qq.com/images/reflow/redux.png">
+<meta property="og:updated_time" content="2017-10-10T03:00:40.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Objective-C单向数据流方案">
+<meta name="twitter:description" content="背景当我们在写Objective-C代码时，会习惯性地把model对象的属性定义为nonatomic。如果该属性是被多线程访问的，那么这样做是有可能crash的。我们可以简单地模拟一下： 12345678910111213141516171819202122// Conversation.h@interface Conversation : NSObject@property (nonatomic">
+<meta name="twitter:image" content="http://weread.qq.com/images/reflow/redux.png">
+
+
+
+<script type="text/javascript" id="hexo.configuration">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: undefined,
+      author: '博主'
+    }
+  };
+</script>
+
+  <title> Objective-C单向数据流方案 | WeRead团队博客 </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">WeRead团队博客</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+  <p class="site-subtitle"></p>
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu ">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-home fa-fw"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-archive fa-fw"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+
+      
+      
+      
+    </ul>
+  
+
+  
+</nav>
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                Objective-C单向数据流方案
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">发表于</span>
+            <time itemprop="dateCreated" datetime="2017-09-30T10:44:48+08:00" content="2017-09-30">
+              2017-09-30
+            </time>
+          </span>
+
+          
+            <span class="post-category" >
+              &nbsp; | &nbsp;
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">作者:</span>
+              
+                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                  <!--a href="/categories/zepo/" itemprop="url" rel="index"-->
+                    <span itemprop="name">zepo</span>
+                  <!--/a-->
+                </span>
+
+                
+                
+
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                &nbsp; | &nbsp;
+                <a href="/2017/09/30/reflow/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2017/09/30/reflow/" itemprop="commentsCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+
+          
+          
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h2><p>当我们在写Objective-C代码时，会习惯性地把model对象的属性定义为<code>nonatomic</code>。如果该属性是被多线程访问的，那么这样做是有可能crash的。我们可以简单地模拟一下：</p>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div></pre></td><td class="code"><pre><div class="line"><span class="comment">// Conversation.h</span></div><div class="line"><span class="class"><span class="keyword">@interface</span> <span class="title">Conversation</span> : <span class="title">NSObject</span></span></div><div class="line"><span class="keyword">@property</span> (<span class="keyword">nonatomic</span>, <span class="keyword">copy</span>) <span class="built_in">NSArray</span> *messages;</div><div class="line"><span class="keyword">@end</span></div><div class="line"></div><div class="line"><span class="comment">// xxx.m</span></div><div class="line">- (<span class="keyword">void</span>)methodA</div><div class="line">&#123;</div><div class="line">    Conversation *conversation = [[Conversation alloc] init];</div><div class="line">    </div><div class="line">    <span class="built_in">dispatch_async</span>(dispatch_get_global_queue(<span class="number">0</span>, <span class="number">0</span>), ^&#123;</div><div class="line">        <span class="keyword">while</span> (<span class="number">1</span>) &#123;</div><div class="line">            conversation.messages = [[<span class="built_in">NSArray</span> alloc] initWithObjects:@<span class="number">1</span>, @<span class="number">2</span>, @<span class="number">3</span>, <span class="literal">nil</span>];</div><div class="line">        &#125;</div><div class="line">    &#125;);</div><div class="line">    </div><div class="line">    <span class="built_in">dispatch_async</span>(dispatch_get_global_queue(<span class="number">0</span>, <span class="number">0</span>), ^&#123;</div><div class="line">        <span class="keyword">while</span> (<span class="number">1</span>) &#123;</div><div class="line">            <span class="built_in">NSLog</span>(<span class="string">@"%@"</span>, conversation.messages);</div><div class="line">        &#125;</div><div class="line">    &#125;);</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<p>调用上面的<code>methodA</code>方法，程序在运行时会抛出<code>EXC_BAD_ACCESS</code>异常。</p>
+<p>如果把属性定义为<code>atomic</code>，我们能避免上面的crash，但仍然存在其他多线程带来的问题。比如竞争条件（race condition）问题，数据一致性问题等等。另外，由于属性是可变的，我们可以在程序的任意地方修改该属性，如果该属性作为某个页面的展示数据，那么我们需要在所有修改的地方发出通知以刷新页面。如果该属性对应的是<code>UITableView</code>的<code>cells</code>，修改该属性而没有通知到<code>UITableView</code>做<code>reloadData</code>的话同样会导致crash。</p>
+<p>随着app的不断发展而变得复杂，修改同一个属性的地方会不断增多，所有这些修改和通知会变得很难维护。一旦出现问题，我们也很难找到修改数据的源头，调试这类bug的成本变得很高。</p>
+<h2 id="Flux-amp-Redux"><a href="#Flux-amp-Redux" class="headerlink" title="Flux &amp; Redux"></a>Flux &amp; Redux</h2><p>对于上面的问题，在js界已经有很成熟的解决方案：<a href="https://facebook.github.io/flux/" target="_blank" rel="external">Flux</a>和<a href="http://redux.js.org/" target="_blank" rel="external">Redux</a>。这两者通过各自的编程规范，来避免上面的数据可变带来的问题。我们以Redux为例，来做具体的分析。下面的分析主要是对Redux官方文档的复述，会有些繁琐，如果你对Redux已经非常熟悉，可跳过该部分。Redux主要有以下几个部分：</p>
+<div align="center"><br><img src="/images/reflow/redux.png" alt=""><br></div>
+
+<h3 id="Store"><a href="#Store" class="headerlink" title="Store"></a>Store</h3><p>整个app只有一个store，且app的所有数据以dictionary的形式存在该store里。以Redux官网的todo app为例，整个app的数据主要分为两块，todo列表<code>todos</code>和过滤器<code>visibilityFilter</code>：</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div></pre></td><td class="code"><pre><div class="line">&#123;</div><div class="line">  todos: [&#123;</div><div class="line">    text: <span class="string">'Eat food'</span>,</div><div class="line">    completed: <span class="literal">true</span></div><div class="line">  &#125;, &#123;</div><div class="line">    text: <span class="string">'Exercise'</span>,</div><div class="line">    completed: <span class="literal">false</span></div><div class="line">  &#125;],</div><div class="line">  visibilityFilter: <span class="string">'SHOW_COMPLETED'</span></div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h3 id="Action"><a href="#Action" class="headerlink" title="Action"></a>Action</h3><p>对于store里的数据，外部是不能直接修改的。所有数据的修改都必须通过store提供的<code>dispatch</code>接口，传进一个action，在store内部进行。Action是对修改操作的描述：</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">&#123; <span class="attr">type</span>: <span class="string">'ADD_TODO'</span>, <span class="attr">text</span>: <span class="string">'Go to swimming pool'</span> &#125;</div><div class="line">&#123; <span class="attr">type</span>: <span class="string">'TOGGLE_TODO'</span>, <span class="attr">index</span>: <span class="number">1</span> &#125;</div><div class="line">&#123; <span class="attr">type</span>: <span class="string">'SET_VISIBILITY_FILTER'</span>, <span class="attr">filter</span>: <span class="string">'SHOW_ALL'</span> &#125;</div></pre></td></tr></table></figure>
+<p>用action来描述所有修改操作有很多好处，比如我们可以很方便地记录所有修改以便调试。如果记录了初始状态和所有actions我们也可以很方便地实现回放，撤消（undo）等功能。</p>
+<h3 id="Reducer"><a href="#Reducer" class="headerlink" title="Reducer"></a>Reducer</h3><p>Store在接收到action后，会通过reducer来修改内部的状态。Reducer只是一些普通的纯函数，输入初始状态和action，输出修改后的状态：</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">function</span> <span class="title">visibilityFilter</span>(<span class="params">state = <span class="string">'SHOW_ALL'</span>, action</span>) </span>&#123;</div><div class="line">  <span class="keyword">if</span> (action.type === <span class="string">'SET_VISIBILITY_FILTER'</span>) &#123;</div><div class="line">    <span class="keyword">return</span> action.filter</div><div class="line">  &#125; <span class="keyword">else</span> &#123;</div><div class="line">    <span class="keyword">return</span> state</div><div class="line">  &#125;</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">function</span> <span class="title">todos</span>(<span class="params">state = [], action</span>) </span>&#123;</div><div class="line">  <span class="keyword">switch</span> (action.type) &#123;</div><div class="line">    <span class="keyword">case</span> <span class="string">'ADD_TODO'</span>:</div><div class="line">      <span class="keyword">return</span> state.concat([&#123; <span class="attr">text</span>: action.text, <span class="attr">completed</span>: <span class="literal">false</span> &#125;])</div><div class="line">    <span class="keyword">case</span> <span class="string">'TOGGLE_TODO'</span>:</div><div class="line">      <span class="keyword">return</span> state.map(</div><div class="line">        (todo, index) =&gt;</div><div class="line">          action.index === index</div><div class="line">            ? &#123; <span class="attr">text</span>: todo.text, <span class="attr">completed</span>: !todo.completed &#125;</div><div class="line">            : todo</div><div class="line">      )</div><div class="line">    <span class="keyword">default</span>:</div><div class="line">      <span class="keyword">return</span> state</div><div class="line">  &#125;</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">function</span> <span class="title">todoApp</span>(<span class="params">state = &#123;&#125;, action</span>) </span>&#123;</div><div class="line">  <span class="keyword">return</span> &#123;</div><div class="line">    todos: todos(state.todos, action),</div><div class="line">    visibilityFilter: visibilityFilter(state.visibilityFilter, action)</div><div class="line">  &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<p>注意reducer在执行时不会直接修改原数据，而是重新生成整棵状态树，model数据是不可变的。</p>
+<p>我们可以看到，在Redux里数据的流向是单向的。数据只能从store流向view，而不能从view流向store。当在view上进行操作需要修改数据时，我们要用action来描述操作，然后把action传进store里，在store内部修改数据。这样，我们就把所有的修改都收拢到了store这一层。同时，我们也只需要在store这一层发出通知来刷新view，所有的通知也被收拢到了一个地方。这样就解决了我们前面提到的修改和通知很难维护的问题。</p>
+<h2 id="Objective-C的不适应性"><a href="#Objective-C的不适应性" class="headerlink" title="Objective-C的不适应性"></a>Objective-C的不适应性</h2><p>我们可以把Redux这套方案直接应用到Objective-C上，但这样做存在几个问题：</p>
+<h3 id="Action的定义"><a href="#Action的定义" class="headerlink" title="Action的定义"></a>Action的定义</h3><p>JavaScript是弱类型语言，把action定义为<code>dictionary</code>是很自然的事。但在Objective-C里，如果我们把action定义为<code>NSDictionary</code>，就失去了强类型语言带来的好处。我们也可以为每一个action定义一个相应的类，但这样又会使开发变得很繁琐。通常，客户端app执行一个action操作是比较复杂的，涉及数据库操作和网络请求，大多数时候我们需要再抽出一个方法来执行action。这样同时定义action和定义执行action的方法会使开发变得很重复。</p>
+<h3 id="Store的存储"><a href="#Store的存储" class="headerlink" title="Store的存储"></a>Store的存储</h3><p>通常客户端app的数据是比较多，而且我们需要在app的多次启动间保存数据。因此，对于大多数客户端app，部分数据是存在磁盘的，我们不可能把所有数据以dictionary的形式存在内存。当数据存在磁盘时，我们也无法用类似reducer的纯函数来修改store的状态。</p>
+<h2 id="Reflow解决方案"><a href="#Reflow解决方案" class="headerlink" title="Reflow解决方案"></a>Reflow解决方案</h2><p><a href="https://github.com/Zepo/Reflow" target="_blank" rel="external">Reflow</a>参照了Redux的架构和规范，实现了Objective-C语言的单向数据流方案，同时解决了语言的不适应性问题。下面我们来具体的分析一下Reflow：</p>
+<h3 id="Store-1"><a href="#Store-1" class="headerlink" title="Store"></a>Store</h3><p>与Redux类似，在Reflow里我们要求所有的数据都存在store这一层，且所有的修改和通知也收拢到store这一层。但在Reflow里，store是抽象的概念，store里的数据可以存在磁盘，也可以存在内存，也可以是两者的混合。Store这一层通过对外暴露<code>getters</code>接口以拿数据，暴露<code>actions</code>接口以修改数据。随着app的不断发展而变得复杂，我们可以把store划分成多个模块，每个模块都继承于<code>RFStore</code>：</p>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div></pre></td><td class="code"><pre><div class="line"><span class="class"><span class="keyword">@interface</span> <span class="title">TodoStore</span> : <span class="title">RFStore</span></span></div><div class="line"></div><div class="line"><span class="meta">#pragma mark - Getters</span></div><div class="line"></div><div class="line">- (<span class="built_in">NSArray</span> *)visibleTodos;</div><div class="line">- (VisibilityFilter)visibilityFilter;</div><div class="line"></div><div class="line"><span class="meta">#pragma mark - Actions</span></div><div class="line"></div><div class="line">- (<span class="keyword">void</span>)actionAddTodo:(<span class="built_in">NSString</span> *)text;</div><div class="line">- (<span class="keyword">void</span>)actionToggleTodo:(<span class="built_in">NSInteger</span>)todoId;</div><div class="line"></div><div class="line">- (<span class="keyword">void</span>)actionSetVisibilityFilter:(VisibilityFilter)filter;</div><div class="line"></div><div class="line"><span class="keyword">@end</span></div></pre></td></tr></table></figure>
+<h3 id="Action-1"><a href="#Action-1" class="headerlink" title="Action"></a>Action</h3><p>Action是定义在store上的普通方法，action的方法名都以<code>action</code>开头。Reflow会对所有以<code>action</code>开头的方法做特殊处理：</p>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div></pre></td><td class="code"><pre><div class="line"><span class="class"><span class="keyword">@implementation</span> <span class="title">TodoStore</span></span></div><div class="line"></div><div class="line">...</div><div class="line"></div><div class="line"><span class="meta">#pragma mark - Actions</span></div><div class="line"></div><div class="line">- (<span class="keyword">void</span>)actionAddTodo:(<span class="built_in">NSString</span> *)text &#123;</div><div class="line">    Todo *todo = ...</div><div class="line">    </div><div class="line">    <span class="keyword">self</span>.todos = [<span class="keyword">self</span>.todos arrayByAddingObject:todo];</div><div class="line">&#125;</div><div class="line"></div><div class="line">- (<span class="keyword">void</span>)actionToggleTodo:(<span class="built_in">NSInteger</span>)todoId &#123;</div><div class="line">    <span class="keyword">self</span>.todos = [<span class="keyword">self</span>.todos map:^<span class="keyword">id</span>(Todo *value) &#123;</div><div class="line">        <span class="keyword">if</span> (value.todoId == todoId) &#123;</div><div class="line">            Todo *todo = ...</div><div class="line">            <span class="keyword">return</span> todo;</div><div class="line">        &#125;</div><div class="line">        <span class="keyword">return</span> value;</div><div class="line">    &#125;];</div><div class="line">&#125;</div><div class="line"></div><div class="line">- (<span class="keyword">void</span>)actionSetVisibilityFilter:(VisibilityFilter)filter &#123;</div><div class="line">    <span class="keyword">self</span>.filter = filter;</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="keyword">@end</span></div></pre></td></tr></table></figure>
+<p>在action方法里，我们只需做数据修改的任务，而不用去发通知以刷新UI。并且，在Reflow里，我们建议所有的数据修改都要生成新的model对象并替换，而不是直接修改原model对象的属性。</p>
+<h3 id="Subscriptions"><a href="#Subscriptions" class="headerlink" title="Subscriptions"></a>Subscriptions</h3><p>继承<code>RFStore</code>后，所有store模块都有<code>subscribe</code>接口。我们可以通过该接口订阅发生在该store模块上的所有action操作：</p>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div></pre></td><td class="code"><pre><div class="line"><span class="class"><span class="keyword">@implementation</span> <span class="title">TodoTableViewController</span></span></div><div class="line"></div><div class="line">- (<span class="keyword">void</span>)viewDidLoad &#123;</div><div class="line">    [<span class="keyword">super</span> viewDidLoad];</div><div class="line">    </div><div class="line">    <span class="keyword">self</span>.todoStore = [[TodoStore alloc] init];</div><div class="line">    <span class="keyword">self</span>.todos = [<span class="keyword">self</span>.todoStore visibleTodos];</div><div class="line">    <span class="keyword">self</span>.filterButton.title = [<span class="keyword">self</span> stringFromVisibilityFilter:[<span class="keyword">self</span>.todoStore visibilityFilter]];</div><div class="line">    </div><div class="line">    <span class="keyword">self</span>.subscription = [<span class="keyword">self</span>.todoStore subscribe:^(RFAction *action) &#123;</div><div class="line">        <span class="keyword">if</span> (action.selector == <span class="keyword">@selector</span>(actionSetVisibilityFilter:)) &#123;</div><div class="line">            <span class="keyword">self</span>.filterButton.title = [<span class="keyword">self</span> stringFromVisibilityFilter:[<span class="keyword">self</span>.todoStore visibilityFilter]];</div><div class="line">        &#125;</div><div class="line">        <span class="keyword">self</span>.todos = [<span class="keyword">self</span>.todoStore visibleTodos];</div><div class="line">        [<span class="keyword">self</span>.tableView reloadData];</div><div class="line">    &#125;];</div><div class="line">&#125;</div><div class="line"></div><div class="line">...</div><div class="line"><span class="keyword">@end</span></div></pre></td></tr></table></figure>
+<p>每当store模块上的action方法被调用后，该store模块会拼装一个<code>RFAction</code>对象，作为参数调用所有订阅的<code>block</code>。<code>RFAction</code>对象与Redux的action类似，包含了描述一个操作所需的信息：</p>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line"><span class="class"><span class="keyword">@interface</span> <span class="title">RFAction</span> : <span class="title">NSObject</span></span></div><div class="line"></div><div class="line"><span class="keyword">@property</span> (<span class="keyword">nonatomic</span>, <span class="keyword">readonly</span>) <span class="keyword">id</span> object;</div><div class="line"><span class="keyword">@property</span> (<span class="keyword">nonatomic</span>, <span class="keyword">readonly</span>) SEL selector;</div><div class="line"><span class="keyword">@property</span> (<span class="keyword">nonatomic</span>, <span class="keyword">readonly</span>) <span class="built_in">NSArray</span> *arguments;</div><div class="line"></div><div class="line"><span class="keyword">@end</span></div></pre></td></tr></table></figure>
+<p>我们也可以通过下面的方法订阅所有store模块的所有action，这样我们就可以记录app的所有修改以便调试，也可以很容易地实现回放操作，撤消操作等：</p>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">[RFStore subscribeToAllStores:^(RFAction *action) &#123;</div><div class="line">    ...</div><div class="line">&#125;];</div></pre></td></tr></table></figure>
+<p>上面的完整的例子可以参考Github上的<a href="https://github.com/Zepo/Reflow/tree/master/Example" target="_blank" rel="external">Example</a>。</p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>Reflow这个库相对比较小，代码量也很少。对于Reflow来说，更重要的是它的架构设计和规范：</p>
+<ul>
+<li>model对象不可变</li>
+<li>整个app的数据存于store层</li>
+<li>更新和通知也收拢于store层</li>
+</ul>
+<p>Reflow的设计参考了很多优秀的开源框架和文章，这里把它们列出来以供参考：</p>
+<ul>
+<li><a href="https://facebook.github.io/flux/" target="_blank" rel="external">Flux</a></li>
+<li><a href="http://redux.js.org/" target="_blank" rel="external">Redux</a></li>
+<li><a href="https://vuejs.org/" target="_blank" rel="external">Vue</a></li>
+<li><a href="https://code.facebook.com/posts/1154141864616569/building-and-managing-ios-model-objects-with-remodel/" target="_blank" rel="external">Building and managing iOS model objects with Remodel</a></li>
+</ul>
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2017/03/13/Signature/" rel="next" title="iOS App 签名的原理">
+                <i class="fa fa-chevron-left"></i> iOS App 签名的原理
+              </a>
+            
+          </div>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel ">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/default_avatar.png"
+               alt="" />
+          <p class="site-author-name" itemprop="name"></p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">17</span>
+              <span class="site-state-item-name">日志</span>
+            </a>
+          </div>
+          
+          
+            <div class="site-state-item site-state-categories">
+              
+                <span class="site-state-item-count">7</span>
+                <span class="site-state-item-name">分类</span>
+              
+            </div>
+          
+
+          
+
+        </nav>
+
+        
+        <div class="links">
+          <h4>开源项目</h4>
+          <div class="links-of-author motion-element">
+            
+              
+                <div class="links-of-author-item">
+                  <a href="https://github.com/bang590/JSPatch" target="_blank">
+                    
+                      <i class="fa fa-github"></i> JSPatch
+                    
+                  </a>
+                </div>
+              
+                <div class="links-of-author-item">
+                  <a href="https://github.com/Zepo/MLeaksFinder" target="_blank">
+                    
+                      <i class="fa fa-github"></i> MLeaksFinder
+                    
+                  </a>
+                </div>
+              
+                <div class="links-of-author-item">
+                  <a href="https://github.com/hypoyao/GYHttpMock" target="_blank">
+                    
+                      <i class="fa fa-github"></i> GYHttpMock
+                    
+                  </a>
+                </div>
+              
+                <div class="links-of-author-item">
+                  <a href="https://github.com/liuslevis/GYBootingProtection" target="_blank">
+                    
+                      <i class="fa fa-github"></i> GYBootingProtection
+                    
+                  </a>
+                </div>
+              
+                <div class="links-of-author-item">
+                  <a href="https://github.com/Zepo/GYDataCenter" target="_blank">
+                    
+                      <i class="fa fa-github"></i> GYDataCenter
+                    
+                  </a>
+                </div>
+              
+                <div class="links-of-author-item">
+                  <a href="https://github.com/featuretower/GYMonitor" target="_blank">
+                    
+                      <i class="fa fa-github"></i> GYMonitor
+                    
+                  </a>
+                </div>
+              
+            
+          </div>
+        </div>
+
+        
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+      </section>
+
+      
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc-indicator-top post-toc-indicator">
+            <i class="fa fa-angle-double-up"></i>
+          </div>
+          <div class="post-toc">
+            
+              
+            
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#背景"><span class="nav-number">1.</span> <span class="nav-text">背景</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Flux-amp-Redux"><span class="nav-number">2.</span> <span class="nav-text">Flux & Redux</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Store"><span class="nav-number">2.1.</span> <span class="nav-text">Store</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Action"><span class="nav-number">2.2.</span> <span class="nav-text">Action</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Reducer"><span class="nav-number">2.3.</span> <span class="nav-text">Reducer</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Objective-C的不适应性"><span class="nav-number">3.</span> <span class="nav-text">Objective-C的不适应性</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Action的定义"><span class="nav-number">3.1.</span> <span class="nav-text">Action的定义</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Store的存储"><span class="nav-number">3.2.</span> <span class="nav-text">Store的存储</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Reflow解决方案"><span class="nav-number">4.</span> <span class="nav-text">Reflow解决方案</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Store-1"><span class="nav-number">4.1.</span> <span class="nav-text">Store</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Action-1"><span class="nav-number">4.2.</span> <span class="nav-text">Action</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Subscriptions"><span class="nav-number">4.3.</span> <span class="nav-text">Subscriptions</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#总结"><span class="nav-number">5.</span> <span class="nav-text">总结</span></a></li></ol></div>
+            
+          </div>
+          <div class="post-toc-indicator-bottom post-toc-indicator">
+            <i class="fa fa-angle-double-down"></i>
+          </div>
+        </section>
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2017</span>
+  <span class="with-love">
+    <i class="icon-next-heart fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder"></span>
+</div>
+
+<div class="powered-by">
+  程序 - <a class="theme-link" href="http://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  主题 -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+<div class="footer-links">
+  <a href="http://weread.qq.com/">
+    微信读书
+  </a>
+</div>
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-1895639-12', 'auto');
+  ga('send', 'pageview');
+
+</script>
+
+
+
+      </div>
+    </footer>
+
+    <div class="back-to-top"></div>
+  </div>
+
+  
+
+
+  
+
+
+
+  <script type="text/javascript" src="/vendors/jquery/index.js?v=2.1.3"></script>
+
+  <script type="text/javascript" src="/vendors/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  <script type="text/javascript" src="/vendors/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  <script type="text/javascript" src="/vendors/velocity/velocity.min.js"></script>
+
+  <script type="text/javascript" src="/vendors/velocity/velocity.ui.min.js"></script>
+
+  <script type="text/javascript" src="/vendors/fancybox/source/jquery.fancybox.pack.js"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=0.5.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=0.5.0"></script>
+
+
+
+  
+  
+
+  
+  
+<script type="text/javascript" src="/js/src/scrollspy.js?v=0.5.0"></script>
+
+<script type="text/javascript" id="sidebar.toc.highlight">
+  $(document).ready(function () {
+    var tocSelector = '.post-toc';
+    var $tocSelector = $(tocSelector);
+    var activeCurrentSelector = '.active-current';
+
+    $tocSelector
+      .on('activate.bs.scrollspy', function () {
+        var $currentActiveElement = $(tocSelector + ' .active').last();
+
+        removeCurrentActiveClass();
+        $currentActiveElement.addClass('active-current');
+
+        $tocSelector[0].scrollTop = $currentActiveElement.position().top;
+      })
+      .on('clear.bs.scrollspy', function () {
+        removeCurrentActiveClass();
+      });
+
+    function removeCurrentActiveClass () {
+      $(tocSelector + ' ' + activeCurrentSelector)
+        .removeClass(activeCurrentSelector.substring(1));
+    }
+
+    function processTOC () {
+      getTOCMaxHeight();
+      toggleTOCOverflowIndicators();
+    }
+
+    function getTOCMaxHeight () {
+      var height = $('.sidebar').height() -
+                   $tocSelector.position().top -
+                   $('.post-toc-indicator-bottom').height();
+
+      $tocSelector.css('height', height);
+
+      return height;
+    }
+
+    function toggleTOCOverflowIndicators () {
+      tocOverflowIndicator(
+        '.post-toc-indicator-top',
+        $tocSelector.scrollTop() > 0 ? 'show' : 'hide'
+      );
+
+      tocOverflowIndicator(
+        '.post-toc-indicator-bottom',
+        $tocSelector.scrollTop() >= $tocSelector.find('ol').height() - $tocSelector.height() ? 'hide' : 'show'
+      )
+    }
+
+    $(document).on('sidebar.motion.complete', function () {
+      processTOC();
+    });
+
+    $('body').scrollspy({ target: tocSelector });
+    $(window).on('resize', function () {
+      if ( $('.sidebar').hasClass('sidebar-active') ) {
+        processTOC();
+      }
+    });
+
+    onScroll($tocSelector);
+
+    function onScroll (element) {
+      element.on('mousewheel DOMMouseScroll', function (event) {
+          var oe = event.originalEvent;
+          var delta = oe.wheelDelta || -oe.detail;
+
+          this.scrollTop += ( delta < 0 ? 1 : -1 ) * 30;
+          event.preventDefault();
+
+          toggleTOCOverflowIndicators();
+      });
+    }
+
+    function tocOverflowIndicator (indicator, action) {
+      var $indicator = $(indicator);
+      var opacity = action === 'show' ? 1 : 0;
+      $indicator.velocity ?
+        $indicator.velocity('stop').velocity({
+          opacity: opacity
+        }, { duration: 100 }) :
+        $indicator.stop().animate({
+          opacity: opacity
+        }, 100);
+    }
+
+  });
+</script>
+
+<script type="text/javascript" id="sidebar.nav">
+  $(document).ready(function () {
+    var html = $('html');
+    var TAB_ANIMATE_DURATION = 200;
+    var hasVelocity = $.isFunction(html.velocity);
+
+    $('.sidebar-nav li').on('click', function () {
+      var item = $(this);
+      var activeTabClassName = 'sidebar-nav-active';
+      var activePanelClassName = 'sidebar-panel-active';
+      if (item.hasClass(activeTabClassName)) {
+        return;
+      }
+
+      var currentTarget = $('.' + activePanelClassName);
+      var target = $('.' + item.data('target'));
+
+      hasVelocity ?
+        currentTarget.velocity('transition.slideUpOut', TAB_ANIMATE_DURATION, function () {
+          target
+            .velocity('stop')
+            .velocity('transition.slideDownIn', TAB_ANIMATE_DURATION)
+            .addClass(activePanelClassName);
+        }) :
+        currentTarget.animate({ opacity: 0 }, TAB_ANIMATE_DURATION, function () {
+          currentTarget.hide();
+          target
+            .stop()
+            .css({'opacity': 0, 'display': 'block'})
+            .animate({ opacity: 1 }, TAB_ANIMATE_DURATION, function () {
+              currentTarget.removeClass(activePanelClassName);
+              target.addClass(activePanelClassName);
+            });
+        });
+
+      item.siblings().removeClass(activeTabClassName);
+      item.addClass(activeTabClassName);
+    });
+
+    $('.post-toc a').on('click', function (e) {
+      e.preventDefault();
+      var targetSelector = NexT.utils.escapeSelector(this.getAttribute('href'));
+      var offset = $(targetSelector).offset().top;
+      hasVelocity ?
+        html.velocity('stop').velocity('scroll', {
+          offset: offset  + 'px',
+          mobileHA: false
+        }) :
+        $('html, body').stop().animate({
+          scrollTop: offset
+        }, 500);
+    });
+
+    // Expand sidebar on post detail page by default, when post has a toc.
+    NexT.motion.middleWares.sidebar = function () {
+      var $tocContent = $('.post-toc-content');
+
+      if (CONFIG.sidebar === 'post') {
+        if ($tocContent.length > 0 && $tocContent.html().trim().length > 0) {
+          NexT.utils.displaySidebar();
+        }
+      }
+    };
+  });
+</script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=0.5.0"></script>
+
+
+
+  
+
+
+
+  
+
+    <script type="text/javascript">
+      var disqus_shortname = 'wereadteam';
+      var disqus_identifier = '2017/09/30/reflow/';
+      var disqus_title = 'Objective-C单向数据流方案';
+      var disqus_url = 'http://weread.qq.com/2017/09/30/reflow/';
+
+      function run_disqus_script(disqus_script){
+        var dsq = document.createElement('script');
+        dsq.type = 'text/javascript';
+        dsq.async = true;
+        dsq.src = '//' + disqus_shortname + '.disqus.com/' + disqus_script;
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+      }
+
+      run_disqus_script('count.js');
+      
+        run_disqus_script('embed.js');
+      
+    </script>
+  
+
+
+
+  
+  
+
+  
+  
+
+
+</body>
+</html>
