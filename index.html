@@ -177,6 +177,15 @@
 
     
     
+      
+      
+        
+        
+        
+      
+
+      
+    
 
     
       
@@ -274,7 +283,7 @@
 <p>如果把属性定义为<code>atomic</code>，我们能避免上面的crash，但仍然存在其他多线程带来的问题。比如竞争条件（race condition）问题，数据一致性问题等等。另外，由于属性是可变的，我们可以在程序的任意地方修改该属性，如果该属性作为某个页面的展示数据，那么我们需要在所有修改的地方发出通知以刷新页面。如果该属性对应的是<code>UITableView</code>的<code>cells</code>，修改该属性而没有通知到<code>UITableView</code>做<code>reloadData</code>的话同样会导致crash。</p>
 <p>随着app的不断发展而变得复杂，修改同一个属性的地方会不断增多，所有这些修改和通知会变得很难维护。一旦出现问题，我们也很难找到修改数据的源头，调试这类bug的成本变得很高。</p>
 <h2 id="Flux-amp-Redux"><a href="#Flux-amp-Redux" class="headerlink" title="Flux &amp; Redux"></a>Flux &amp; Redux</h2><p>对于上面的问题，在js界已经有很成熟的解决方案：<a href="https://facebook.github.io/flux/" target="_blank" rel="external">Flux</a>和<a href="http://redux.js.org/" target="_blank" rel="external">Redux</a>。这两者通过各自的编程规范，来避免上面的数据可变带来的问题。我们以Redux为例，来做具体的分析。下面的分析主要是对Redux官方文档的复述，会有些繁琐，如果你对Redux已经非常熟悉，可跳过该部分。Redux主要有以下几个部分：</p>
-<div align="center"><br><img src="/images/reflow/redux.png" alt=""><br></div>
+<div align="center"><br><img src="/img/redux.png" alt=""><br></div>
 
 <h3 id="Store"><a href="#Store" class="headerlink" title="Store"></a>Store</h3><p>整个app只有一个store，且app的所有数据以dictionary的形式存在该store里。以Redux官网的todo app为例，整个app的数据主要分为两块，todo列表<code>todos</code>和过滤器<code>visibilityFilter</code>：</p>
 <figure class="highlight js"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div></pre></td><td class="code"><pre><div class="line">&#123;</div><div class="line">  todos: [&#123;</div><div class="line">    text: <span class="string">'Eat food'</span>,</div><div class="line">    completed: <span class="literal">true</span></div><div class="line">  &#125;, &#123;</div><div class="line">    text: <span class="string">'Exercise'</span>,</div><div class="line">    completed: <span class="literal">false</span></div><div class="line">  &#125;],</div><div class="line">  visibilityFilter: <span class="string">'SHOW_COMPLETED'</span></div><div class="line">&#125;</div></pre></td></tr></table></figure>
