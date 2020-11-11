@@ -1,0 +1,853 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  <link href="/vendors/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css"/>
+
+
+
+
+  <link href="//fonts.googleapis.com/css?family=Lato:300,400,700,400italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+
+
+
+<link href="/vendors/font-awesome/css/font-awesome.min.css?v=4.4.0" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=0.5.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="微信读书,iOS" />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=0.5.0" />
+
+
+
+
+
+
+<meta name="description" content="前言&amp;emsp;&amp;emsp;微信读书iOS客户端也有几年历史了，和人一样，项目代码老了或多或少总有一些毛病很难根治。微信读书iOS客户端就有一个这样的历史代码模块：阅读器排版引擎。想来这个引擎代码还是和 @bang哥 共事年代的代码。基于DTCoreText的HTML树排版引擎，总体思路就是把HTML文本通过libxml2解析，再用DFS遍历树结点，处理CSS后转成NSAttributeStri">
+<meta property="og:type" content="article">
+<meta property="og:title" content="NSAttributeString的autorelease内存风暴">
+<meta property="og:url" content="http://weread.qq.com/2020/11/11/AttributeString/index.html">
+<meta property="og:site_name" content="WeRead团队博客">
+<meta property="og:description" content="前言&amp;emsp;&amp;emsp;微信读书iOS客户端也有几年历史了，和人一样，项目代码老了或多或少总有一些毛病很难根治。微信读书iOS客户端就有一个这样的历史代码模块：阅读器排版引擎。想来这个引擎代码还是和 @bang哥 共事年代的代码。基于DTCoreText的HTML树排版引擎，总体思路就是把HTML文本通过libxml2解析，再用DFS遍历树结点，处理CSS后转成NSAttributeStri">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:image" content="https://weread-1253731777.cos.ap-shanghai.myqcloud.com/app/assets/reader/autoreleasepool.png">
+<meta property="og:image" content="https://weread-1253731777.cos.ap-shanghai.myqcloud.com/app/assets/reader/autoreleasecontent.png">
+<meta property="og:image" content="https://weread-1253731777.cos.ap-shanghai.myqcloud.com/app/assets/reader/callbacksymbol.png">
+<meta property="og:image" content="https://weread-1253731777.cos.ap-shanghai.myqcloud.com/app/assets/reader/autoreleasepoolpage.png">
+<meta property="og:image" content="https://weread-1253731777.cos.ap-shanghai.myqcloud.com/app/assets/reader/objc_loadWeak.png">
+<meta property="og:image" content="https://weread-1253731777.cos.ap-shanghai.myqcloud.com/app/assets/reader/objc_loadWeak_after.png">
+<meta property="og:updated_time" content="2020-11-11T11:38:23.823Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="NSAttributeString的autorelease内存风暴">
+<meta name="twitter:description" content="前言&amp;emsp;&amp;emsp;微信读书iOS客户端也有几年历史了，和人一样，项目代码老了或多或少总有一些毛病很难根治。微信读书iOS客户端就有一个这样的历史代码模块：阅读器排版引擎。想来这个引擎代码还是和 @bang哥 共事年代的代码。基于DTCoreText的HTML树排版引擎，总体思路就是把HTML文本通过libxml2解析，再用DFS遍历树结点，处理CSS后转成NSAttributeStri">
+<meta name="twitter:image" content="https://weread-1253731777.cos.ap-shanghai.myqcloud.com/app/assets/reader/autoreleasepool.png">
+
+
+
+<script type="text/javascript" id="hexo.configuration">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: undefined,
+      author: '博主'
+    }
+  };
+</script>
+
+  <title> NSAttributeString的autorelease内存风暴 | WeRead团队博客 </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">WeRead团队博客</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+  <p class="site-subtitle"></p>
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu ">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-home fa-fw"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-archive fa-fw"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+
+      
+      
+      
+    </ul>
+  
+
+  
+</nav>
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                NSAttributeString的autorelease内存风暴
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">发表于</span>
+            <time itemprop="dateCreated" datetime="2020-11-11T00:00:00+08:00" content="2020-11-11">
+              2020-11-11
+            </time>
+          </span>
+
+          
+            <span class="post-category" >
+              &nbsp; | &nbsp;
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">作者:</span>
+              
+                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                  <!--a href="/categories/jasenhuang/" itemprop="url" rel="index"-->
+                    <span itemprop="name">jasenhuang</span>
+                  <!--/a-->
+                </span>
+
+                
+                
+
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                &nbsp; | &nbsp;
+                <a href="/2020/11/11/AttributeString/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2020/11/11/AttributeString/" itemprop="commentsCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+
+          
+          
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h3 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h3><p>&emsp;&emsp;微信读书iOS客户端也有几年历史了，和人一样，项目代码老了或多或少总有一些毛病很难根治。微信读书iOS客户端就有一个这样的历史代码模块：阅读器排版引擎。想来这个引擎代码还是和 @bang哥 共事年代的代码。基于DTCoreText的HTML树排版引擎，总体思路就是把HTML文本通过libxml2解析，再用DFS遍历树结点，处理CSS后转成NSAttributeString，最终利用CoreText渲染出来，当然少不了在源码基础上，针对业务进行各种魔改。</p>
+<h3 id="顽疾"><a href="#顽疾" class="headerlink" title="顽疾"></a>顽疾</h3><p>&emsp;&emsp;回到微信读书排版引擎的问题，经常有微信读书的线上用户反馈过来，阅读的时候经常卡死闪退，但是我们的内部监控系统(bugly/matrix)一直没有抓到crash堆栈上报。这就很神奇了，根据以往经验，没有crash堆栈上报很大概率是被系统的WatchDog强杀了，一般是OOM或者wakelock太频繁。针对用户反馈的日志定位到相应的场景，发现有一个共性：HTML里<code>&lt;p&gt;</code>标签特别多，具体用户的场景里是遇到单个章节有2w+的<code>&lt;p&gt;</code>标签，大胆盲猜，这里是OOM了，果然用instruments一跑，发现了有个神奇的东西：</p>
+<div align="center"><img src="https://weread-1253731777.cos.ap-shanghai.myqcloud.com/app/assets/reader/autoreleasepool.png" width="800"></div><br><div align="center"><img src="https://weread-1253731777.cos.ap-shanghai.myqcloud.com/app/assets/reader/autoreleasecontent.png" width="800"></div>
+
+<p>Allocation Summary里多了很多<code>@autoreleasepool content</code>，每一个占去了4k的内存，App的内存在短时间内暴涨到1个G以上，触发系统WatchDog强杀。</p>
+<h3 id="定位原因"><a href="#定位原因" class="headerlink" title="定位原因"></a>定位原因</h3><p>&emsp;&emsp;这里大小为4k<code>@autoreleasepool content</code>是怎么产生的？而且<code>NSAttributeString</code>在整个iOS开发生态里使用非常多，UIKit系统控件都会用到，为什么单单这个场景会引发这个问题? 难道又是打开方式不对？<strong><em>长文预警，想看结论的同学可以直接跳到后面</em></strong></p>
+<p>我们带着这两个疑问继续往下分析，我们先来看下调用链：</p>
+<div align="center"><img src="https://weread-1253731777.cos.ap-shanghai.myqcloud.com/app/assets/reader/callbacksymbol.png" width="800"></div>
+
+<ol>
+<li>DFS遍历树结点<code>[DTHtmlElement attributeString]</code></li>
+<li><p>在<code>&lt;p&gt;</code>标签结束处理段落<code>appendEndOfParagraph</code>，代码可以简化为：</p>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line">- (<span class="keyword">void</span>)appendEndOfParagraph &#123;</div><div class="line">    ....</div><div class="line">    <span class="comment">// create a temp attributed string from the appended part</span></div><div class="line">    <span class="built_in">NSAttributedString</span> *appendString = </div><div class="line">        [[<span class="built_in">NSAttributedString</span> alloc] initWithString:<span class="string">@"\n"</span> attributes:attributes];</div><div class="line"></div><div class="line">    [<span class="keyword">self</span> appendAttributedString:appendString];</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+</li>
+<li><p>生成<code>NSAttributedString</code>对象，并设置属性<code>attributes</code></p>
+</li>
+<li><strong><em><code>NSConcreteHashTable</code>触发<code>autoreleaseFullPage</code>去申请内存<code>_malloc_zone_memalign</code></em></strong></li>
+</ol>
+<p>单纯看项目代码，是很普通的函数调用，为什么会用到HashTable，HashTable又为什么会触发<code>autoreleaseFullPage</code>？<code>autorelease pool</code>没有及时释放吗？<br>关于<code>autorelease</code>，网上有很多文章，大家可以自行google或参考文章最后的文章链接，基本结论可以归结为：</p>
+<ol>
+<li><p><code>autorelease</code>对象什么时候产生？</p>
+<ul>
+<li>以alloc/new/copy/mutableCopy开头的函数调用，编译器会自动插入release语句，否则返回的对象会加到autorelease池子中</li>
+<li>函数调用会根据<code>objc_autoreleaseReturnValue</code>和<code>objc_retainAutoreleasedReturnValue</code>进行TLS优化判断，避免autorelease过多</li>
+</ul>
+</li>
+<li><p><code>autorelease</code>对象什么时候释放？</p>
+<ul>
+<li><code>@autoreleasepool{}</code> -&gt; 退出作用域的时候</li>
+<li>NSThread -&gt; 线程退出调用<code>tls_dealloc</code>的时候</li>
+<li>GCD -&gt; 处理完队列任务后调用 <code>_dispatch_last_resort_autorelease_pool_pop</code></li>
+</ul>
+</li>
+</ol>
+<p><strong>不过GCD任务存在多线程切换的时机问题，释放时机有随机性，按照<a href="https://developer.apple.com/library/archive/documentation/General/Conceptual/ConcurrencyProgrammingGuide/OperationQueues/OperationQueues.html" target="_blank" rel="external">Apple文档</a>的说法：</strong>  </p>
+<blockquote>
+<p>If your block creates more than a few Objective-C objects, you might want to enclose parts of your block’s code in an @autorelease block to handle the memory management for those objects. Although GCD dispatch queues have their own autorelease pools, they make no guarantees as to when those pools are drained. If your application is memory constrained, creating your own autorelease pool allows you to free up the memory for autoreleased objects at more regular intervals.<br>大概的意思就是GCD会自动添加autorelease池，但释放时机不能保证，创建大量对象时需要自行添加<code>@autoreleasepool{}</code>保证及时释放</p>
+</blockquote>
+<p>回到微信读书排版引擎的代码实现本身，逻辑上讲并没有什么问题，可以简化为：<br><figure class="highlight objc"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line">dispatch_group_async(queue, ^&#123;</div><div class="line">    ...</div><div class="line">    assembleString = [node attributeString];</div><div class="line">    [assembleString appendEndOfParagraph];</div><div class="line">    ...</div><div class="line">&#125;)</div></pre></td></tr></table></figure></p>
+<p>&emsp;&emsp;那这里是不是加上<code>@autoreleasepool{}</code>就万事大吉了呢？结果一顿操作，内存是降下来了，但排版速度却严重变慢，看来还不是这么简单，这里先盗张图：</p>
+<div align="center"><img src="https://weread-1253731777.cos.ap-shanghai.myqcloud.com/app/assets/reader/autoreleasepoolpage.png" width="500"></div>
+
+<p><code>autorelease</code>池子会不断pop对象并调用<code>[obj release]</code>，查询共用的<code>sizetable</code>重新计算refCnt，refCnt为0的时候要调<code>[obj dealloc]</code>，<code>autorelease</code>对象多的话这个过程还是挺耗时的。</p>
+<p>&emsp;&emsp;既然不能直接加<code>@autoreleasepool{}</code>，那回过头来看，可不可以减少加到<code>autorelease</code>池里对象呢？首先我们要搞清楚这里加入<code>aurelease</code>池是哪些对象？为什么会产生大量的对象？从代码上看，<code>NSSAttributeString</code>直接调用alloc方法，返回对象经过<strong>TLS优化</strong>也不存在加入<code>aurelease</code>池的情况（可以在xcode里通过<code>Debug-&gt;DebugWorkflow-&gt;Disassembly</code>查看汇编代码，再用LLDB进去看<strong>TLS优化</strong>生效了没有）没办法只能祭出最后的武器：<strong><em>汇编</em></strong></p>
+<p>&emsp;&emsp;通过反编译<code>Foundation/UIFoundation/libobjc.A.dylib</code>，我们大概理清了一下<code>NSAttributeString</code>的初始化过程：</p>
+<ol>
+<li><p><code>NSConcreteAttributedString</code>初始化</p>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">int</span> -[<span class="built_in">NSConcreteAttributedString</span> initWithString:attributes:]() &#123;</div><div class="line">    r14 = rcx;</div><div class="line">    rbx = [rdi initWithString:rdx];</div><div class="line">    <span class="keyword">if</span> ((r14 != <span class="number">0x0</span>) &amp;&amp; (rbx != <span class="number">0x0</span>)) &#123;</div><div class="line">            r15 = [[<span class="built_in">NSMutableRLEArray</span> allocWithZone:[rbx zone]] init];</div><div class="line">            r14 = [__NSAttributeDictionaryClass() newWithDictionary:r14]; <span class="comment">//r14 是传入属性NSDictionary</span></div><div class="line">            [rbx length];</div><div class="line">            [r15 insertObject:r14 range:<span class="number">0x0</span>];</div><div class="line">            [r14 release];</div><div class="line">            rbx-&gt;attributes = r15;<span class="comment">//r15 是 NSMutableRLEArray</span></div><div class="line">    &#125;</div><div class="line">    rax = rbx;</div><div class="line">    <span class="keyword">return</span> rax;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+</li>
+<li><p><code>NSDictionary -&gt; NSAttributeDictionary</code>过程可以简化为：</p>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div></pre></td><td class="code"><pre><div class="line">+ (<span class="built_in">NSAttributeDictionary</span>*)newWithDictionary:(<span class="built_in">NSDictionary</span>*)dict &#123;</div><div class="line">    <span class="keyword">if</span> (!dict) &#123;</div><div class="line">        <span class="keyword">return</span> _emptyAttributeDictionary;</div><div class="line">    &#125;</div><div class="line"></div><div class="line">    os_unfair_lock_lock_with_options(_attributeDictionaryLock, <span class="number">0x10000</span>);</div><div class="line">    <span class="built_in">NSAttributeDictionary</span>* rax = [_attributeDictionaryTable getItem:dict];<span class="comment">//NSConcreteHashTable</span></div><div class="line">    <span class="keyword">if</span> (!rax)&#123;</div><div class="line">        os_unfair_lock_unlock(_attributeDictionaryLock);</div><div class="line">        ...</div><div class="line">        <span class="built_in">NSZoneMalloc</span>();<span class="comment">//找不到重新new一个</span></div><div class="line">        ...</div><div class="line">        [dict getObjects:andKeys:count:];<span class="comment">// 遍历dict取出kv对，copy到NSAttributeDictionary</span></div><div class="line">        ...</div><div class="line">    &#125;<span class="keyword">else</span>&#123;</div><div class="line">        [rax <span class="keyword">retain</span>];<span class="comment">//找到直接返回对象复用</span></div><div class="line">        os_unfair_lock_unlock(_attributeDictionaryLock);</div><div class="line">    &#125;</div><div class="line">    <span class="keyword">return</span> rax;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+</li>
+</ol>
+<blockquote>
+<p><strong><em><code>_attributeDictionaryTable</code>是全局共用的<code>NSConcreteHashTable</code>，操作的时候需要加上<code>os_unfair_lock</code>，<code>NSAttributeDictionary</code>存放在<code>NSConcreteHashTable</code>，看逻辑应该是为了在初始化<code>NSAttributeString</code>的attributes的时候进行对象复用。</em></strong></p>
+</blockquote>
+<ol>
+<li><p><code>NSConcreteHashTable</code>如何查找<code>NSDictionary</code></p>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line">- (<span class="keyword">void</span>)getItem:(<span class="built_in">NSDictionary</span>*)dict &#123;</div><div class="line">    <span class="keyword">if</span> (dict != <span class="number">0x0</span>) &#123;</div><div class="line">        rax = _hashProbe(dict);<span class="comment">//关键函数</span></div><div class="line">    &#125;</div><div class="line">    <span class="keyword">return</span> rax;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+</li>
+<li><p><code>hashProbe</code>函数简化版：</p>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">id</span> hashProbe(<span class="built_in">NSDictionary</span>* dict) &#123;</div><div class="line">    <span class="keyword">void</span>* location = attributeDictionaryHash(dict);<span class="comment">// hash函数：遍历kv值进行hash累加</span></div><div class="line">    <span class="keyword">do</span> &#123;</div><div class="line">        ...</div><div class="line">        location = (location + <span class="number">1</span>) &amp; (capicity - <span class="number">1</span>);<span class="comment">// hash值偏移0x1 线性探测</span></div><div class="line">        obj = readARCWeakAtWithSentinel(location, <span class="number">0</span>);</div><div class="line">        <span class="keyword">if</span> (!obj)&#123;</div><div class="line">            <span class="keyword">break</span>; <span class="comment">// hash桶的位置数据为空</span></div><div class="line">        &#125;</div><div class="line">    &#125; <span class="keyword">while</span> (!isEqualFuntion(obj, dict));</div><div class="line"></div><div class="line">    <span class="keyword">return</span> obj;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+</li>
+<li><p><code>readARCWeakAtWithSentinel</code>从HashTable里取出NSAttributeDictionay</p>
+<figure class="highlight objc"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">id</span> readARCWeakAtWithSentinel(<span class="keyword">void</span>* location, <span class="keyword">int</span> sentinel)&#123;</div><div class="line">    ...</div><div class="line">    rax = objc_loadWeak(locaction);<span class="comment">// 关键函数</span></div><div class="line">    <span class="keyword">return</span> rax;</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="keyword">id</span> objc_loadWeak(<span class="keyword">void</span>* location)&#123;</div><div class="line">    <span class="keyword">if</span> (!*location) <span class="keyword">return</span> <span class="literal">nil</span>;</div><div class="line">    <span class="keyword">return</span> objc_autorelease(objc_loadWeakRetained(location));<span class="comment">//autorelease在这里</span></div><div class="line">&#125;</div></pre></td></tr></table></figure>
+</li>
+</ol>
+<blockquote>
+<p>看到这里终于理清了这些autorelease对象是哪里产生: <strong><em><code>NSConcreteHashTable</code>进行hash探测的时候，会不断读出hash值所在location的对象，放到autorelease池并进行<code>isEqualFunction</code>比较，如果不相等，hash值会先偏移0x1继续while查找。问题就在这里：如果<code>NSConcreteHashTable</code>里存了大量的对象，那这个while过程会不断产生autorelease对象，造成<code>AutoreleasePoolPage::autoreleaseFullPage</code>不断重新申请4k的内存</em></strong></p>
+</blockquote>
+<p>实践出真理，我们直接fishhook相应的函数来验证：<br><figure class="highlight objc"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line"><span class="built_in">NSUInteger</span> attributeDictionaryCount = <span class="number">0</span>;</div><div class="line"><span class="keyword">static</span> <span class="keyword">id</span> (*orig_objc_loadWeak)(<span class="keyword">id</span> *location);</div><div class="line"><span class="keyword">id</span> my_objc_loadWeak(<span class="keyword">id</span> *location) &#123;</div><div class="line">    <span class="keyword">if</span> ([(*location) isKindOfClass:<span class="built_in">NSClassFromString</span>(<span class="string">@"NSAttributeDictionary"</span>)])&#123;</div><div class="line">        ++attributeDictionaryCount;<span class="comment">// 计数</span></div><div class="line">    &#125;</div><div class="line">    <span class="keyword">return</span> orig_objc_loadWeak(location);</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>排版一个有2w个<code>&lt;p&gt;</code>标签的HTML章节，<code>objc_loadWeak</code>会加载<strong>6747w</strong>个<code>NSAttributeDictionary</code>对象</p>
+<div align="center"><img src="https://weread-1253731777.cos.ap-shanghai.myqcloud.com/app/assets/reader/objc_loadWeak.png" width="800"></div>
+
+<h3 id="解决方案"><a href="#解决方案" class="headerlink" title="解决方案"></a>解决方案</h3><p>&emsp;&emsp;到此，<code>NSAttributeString</code>内存暴涨的原因算是找到了，解决方案其实很简单：就是如何避免hash冲突。这里有两个前提：</p>
+<ol>
+<li>直接去改<code>NSDictionary</code>的<code>hash</code>函数有点困难</li>
+<li>加<code>@autoreleasepool{}</code> 影响效率</li>
+</ol>
+<p>其实从场景上分析，HTML的<code>&lt;p&gt;</code>标签是有限个(实际场景中超1w个的都是极少数)，而且<code>&lt;p&gt;</code>对应的<code>attributes</code>里只保存的对象的pointer，内存占用大小也只是<code>NSAttributeDictionay</code>本身，<code>attributes</code>复用的意义并不是很大。这里直接在<code>attributes</code>里加上一个 <strong><em>随机因子</em></strong>，减少 <strong><em>hashProbe</em></strong> 的命中数，<code>NSConcreteHashTable</code>没命中会直接跳过<code>objc_loadWeak</code>的调用，也就不会产生<code>autorelease</code>对象了。<br><figure class="highlight objc"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div></pre></td><td class="code"><pre><div class="line">- (<span class="keyword">void</span>)appendEndOfParagraph &#123;</div><div class="line">    ....</div><div class="line">    <span class="comment">// create a temp attributed string from the appended part</span></div><div class="line">    <span class="built_in">NSAttributedString</span> *appendString = </div><div class="line">        [[<span class="built_in">NSAttributedString</span> alloc] initWithString:<span class="string">@"\n"</span> attributes:attributes];</div><div class="line"></div><div class="line">    [attributes setObject:@(arc4random()) forKey:<span class="string">@"random"</span>];<span class="comment">//随机因子</span></div><div class="line"></div><div class="line">    [<span class="keyword">self</span> appendAttributedString:appendString];</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>优化后解析同一个HTML章节，objc_loadWeak只加载了 <strong>27w</strong>个<code>NSAttributeDictionary</code>对象</p>
+<div align="center"><img src="https://weread-1253731777.cos.ap-shanghai.myqcloud.com/app/assets/reader/objc_loadWeak_after.png" width="800"></div>
+
+<blockquote>
+<p>当然这种解决方案并不是最好的，只是衡量投入产出比后折中的方案，如果有更好的解决方案，欢迎私信交流!</p>
+</blockquote>
+<p><strong><em>最后打个广告：微信读书iOS/Android客户端大量招人，欢迎大家加入</em></strong><br><strong><em>简历直接发：<a href="&#x6d;&#97;&#105;&#108;&#116;&#111;&#x3a;&#x6a;&#x61;&#x73;&#101;&#110;&#x68;&#x75;&#x61;&#x6e;&#x67;&#64;&#x72;&#x64;&#x67;&#x7a;&#x2e;&#111;&#x72;&#x67;">&#x6a;&#x61;&#x73;&#101;&#110;&#x68;&#x75;&#x61;&#x6e;&#x67;&#64;&#x72;&#x64;&#x67;&#x7a;&#x2e;&#111;&#x72;&#x67;</a></em></strong></p>
+<h3 id="友情链接"><a href="#友情链接" class="headerlink" title="友情链接"></a>友情链接</h3><ol>
+<li><a href="https://blog.sunnyxx.com/2014/10/15/behind-autorelease/" target="_blank" rel="external">黑幕背后的Autorelease</a></li>
+<li><a href="https://draveness.me/autoreleasepool/" target="_blank" rel="external">自动释放池的前世今生</a></li>
+<li><a href="http://satanwoo.github.io/2019/07/02/RevisitAutorelease/#disqus_thread" target="_blank" rel="external">Autorelease 之不经意间可能被影响的优化</a></li>
+<li><a href="http://satanwoo.github.io/2019/07/07/RevisitAutorelease2/" target="_blank" rel="external">Revisit iOS Autorelease</a></li>
+</ol>
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2017/09/30/reflow/" rel="next" title="Objective-C单向数据流方案">
+                <i class="fa fa-chevron-left"></i> Objective-C单向数据流方案
+              </a>
+            
+          </div>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div id="disqus_thread">
+        <noscript>
+          Please enable JavaScript to view the
+          <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a>
+        </noscript>
+      </div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel ">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/default_avatar.png"
+               alt="" />
+          <p class="site-author-name" itemprop="name"></p>
+          <p class="site-description motion-element" itemprop="description"></p>
+        </div>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">18</span>
+              <span class="site-state-item-name">日志</span>
+            </a>
+          </div>
+          
+          
+            <div class="site-state-item site-state-categories">
+              
+                <span class="site-state-item-count">8</span>
+                <span class="site-state-item-name">分类</span>
+              
+            </div>
+          
+
+          
+
+        </nav>
+
+        
+        <div class="links">
+          <h4>开源项目</h4>
+          <div class="links-of-author motion-element">
+            
+              
+                <div class="links-of-author-item">
+                  <a href="https://github.com/bang590/JSPatch" target="_blank">
+                    
+                      <i class="fa fa-github"></i> JSPatch
+                    
+                  </a>
+                </div>
+              
+                <div class="links-of-author-item">
+                  <a href="https://github.com/Zepo/MLeaksFinder" target="_blank">
+                    
+                      <i class="fa fa-github"></i> MLeaksFinder
+                    
+                  </a>
+                </div>
+              
+                <div class="links-of-author-item">
+                  <a href="https://github.com/hypoyao/GYHttpMock" target="_blank">
+                    
+                      <i class="fa fa-github"></i> GYHttpMock
+                    
+                  </a>
+                </div>
+              
+                <div class="links-of-author-item">
+                  <a href="https://github.com/liuslevis/GYBootingProtection" target="_blank">
+                    
+                      <i class="fa fa-github"></i> GYBootingProtection
+                    
+                  </a>
+                </div>
+              
+                <div class="links-of-author-item">
+                  <a href="https://github.com/Zepo/GYDataCenter" target="_blank">
+                    
+                      <i class="fa fa-github"></i> GYDataCenter
+                    
+                  </a>
+                </div>
+              
+                <div class="links-of-author-item">
+                  <a href="https://github.com/featuretower/GYMonitor" target="_blank">
+                    
+                      <i class="fa fa-github"></i> GYMonitor
+                    
+                  </a>
+                </div>
+              
+            
+          </div>
+        </div>
+
+        
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+      </section>
+
+      
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc-indicator-top post-toc-indicator">
+            <i class="fa fa-angle-double-up"></i>
+          </div>
+          <div class="post-toc">
+            
+              
+            
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#前言"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#顽疾"><span class="nav-number">2.</span> <span class="nav-text">顽疾</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#定位原因"><span class="nav-number">3.</span> <span class="nav-text">定位原因</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#解决方案"><span class="nav-number">4.</span> <span class="nav-text">解决方案</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#友情链接"><span class="nav-number">5.</span> <span class="nav-text">友情链接</span></a></li></ol></div>
+            
+          </div>
+          <div class="post-toc-indicator-bottom post-toc-indicator">
+            <i class="fa fa-angle-double-down"></i>
+          </div>
+        </section>
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2020</span>
+  <span class="with-love">
+    <i class="icon-next-heart fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder"></span>
+</div>
+
+<div class="powered-by">
+  程序 - <a class="theme-link" href="http://hexo.io">Hexo</a>
+</div>
+
+<div class="theme-info">
+  主题 -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+<div class="footer-links">
+  <a href="http://weread.qq.com/">
+    微信读书
+  </a>
+</div>
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-1895639-12', 'auto');
+  ga('send', 'pageview');
+
+</script>
+
+
+
+      </div>
+    </footer>
+
+    <div class="back-to-top"></div>
+  </div>
+
+  
+
+
+  
+
+
+
+  <script type="text/javascript" src="/vendors/jquery/index.js?v=2.1.3"></script>
+
+  <script type="text/javascript" src="/vendors/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  <script type="text/javascript" src="/vendors/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  <script type="text/javascript" src="/vendors/velocity/velocity.min.js"></script>
+
+  <script type="text/javascript" src="/vendors/velocity/velocity.ui.min.js"></script>
+
+  <script type="text/javascript" src="/vendors/fancybox/source/jquery.fancybox.pack.js"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=0.5.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=0.5.0"></script>
+
+
+
+  
+  
+
+  
+  
+<script type="text/javascript" src="/js/src/scrollspy.js?v=0.5.0"></script>
+
+<script type="text/javascript" id="sidebar.toc.highlight">
+  $(document).ready(function () {
+    var tocSelector = '.post-toc';
+    var $tocSelector = $(tocSelector);
+    var activeCurrentSelector = '.active-current';
+
+    $tocSelector
+      .on('activate.bs.scrollspy', function () {
+        var $currentActiveElement = $(tocSelector + ' .active').last();
+
+        removeCurrentActiveClass();
+        $currentActiveElement.addClass('active-current');
+
+        $tocSelector[0].scrollTop = $currentActiveElement.position().top;
+      })
+      .on('clear.bs.scrollspy', function () {
+        removeCurrentActiveClass();
+      });
+
+    function removeCurrentActiveClass () {
+      $(tocSelector + ' ' + activeCurrentSelector)
+        .removeClass(activeCurrentSelector.substring(1));
+    }
+
+    function processTOC () {
+      getTOCMaxHeight();
+      toggleTOCOverflowIndicators();
+    }
+
+    function getTOCMaxHeight () {
+      var height = $('.sidebar').height() -
+                   $tocSelector.position().top -
+                   $('.post-toc-indicator-bottom').height();
+
+      $tocSelector.css('height', height);
+
+      return height;
+    }
+
+    function toggleTOCOverflowIndicators () {
+      tocOverflowIndicator(
+        '.post-toc-indicator-top',
+        $tocSelector.scrollTop() > 0 ? 'show' : 'hide'
+      );
+
+      tocOverflowIndicator(
+        '.post-toc-indicator-bottom',
+        $tocSelector.scrollTop() >= $tocSelector.find('ol').height() - $tocSelector.height() ? 'hide' : 'show'
+      )
+    }
+
+    $(document).on('sidebar.motion.complete', function () {
+      processTOC();
+    });
+
+    $('body').scrollspy({ target: tocSelector });
+    $(window).on('resize', function () {
+      if ( $('.sidebar').hasClass('sidebar-active') ) {
+        processTOC();
+      }
+    });
+
+    onScroll($tocSelector);
+
+    function onScroll (element) {
+      element.on('mousewheel DOMMouseScroll', function (event) {
+          var oe = event.originalEvent;
+          var delta = oe.wheelDelta || -oe.detail;
+
+          this.scrollTop += ( delta < 0 ? 1 : -1 ) * 30;
+          event.preventDefault();
+
+          toggleTOCOverflowIndicators();
+      });
+    }
+
+    function tocOverflowIndicator (indicator, action) {
+      var $indicator = $(indicator);
+      var opacity = action === 'show' ? 1 : 0;
+      $indicator.velocity ?
+        $indicator.velocity('stop').velocity({
+          opacity: opacity
+        }, { duration: 100 }) :
+        $indicator.stop().animate({
+          opacity: opacity
+        }, 100);
+    }
+
+  });
+</script>
+
+<script type="text/javascript" id="sidebar.nav">
+  $(document).ready(function () {
+    var html = $('html');
+    var TAB_ANIMATE_DURATION = 200;
+    var hasVelocity = $.isFunction(html.velocity);
+
+    $('.sidebar-nav li').on('click', function () {
+      var item = $(this);
+      var activeTabClassName = 'sidebar-nav-active';
+      var activePanelClassName = 'sidebar-panel-active';
+      if (item.hasClass(activeTabClassName)) {
+        return;
+      }
+
+      var currentTarget = $('.' + activePanelClassName);
+      var target = $('.' + item.data('target'));
+
+      hasVelocity ?
+        currentTarget.velocity('transition.slideUpOut', TAB_ANIMATE_DURATION, function () {
+          target
+            .velocity('stop')
+            .velocity('transition.slideDownIn', TAB_ANIMATE_DURATION)
+            .addClass(activePanelClassName);
+        }) :
+        currentTarget.animate({ opacity: 0 }, TAB_ANIMATE_DURATION, function () {
+          currentTarget.hide();
+          target
+            .stop()
+            .css({'opacity': 0, 'display': 'block'})
+            .animate({ opacity: 1 }, TAB_ANIMATE_DURATION, function () {
+              currentTarget.removeClass(activePanelClassName);
+              target.addClass(activePanelClassName);
+            });
+        });
+
+      item.siblings().removeClass(activeTabClassName);
+      item.addClass(activeTabClassName);
+    });
+
+    $('.post-toc a').on('click', function (e) {
+      e.preventDefault();
+      var targetSelector = NexT.utils.escapeSelector(this.getAttribute('href'));
+      var offset = $(targetSelector).offset().top;
+      hasVelocity ?
+        html.velocity('stop').velocity('scroll', {
+          offset: offset  + 'px',
+          mobileHA: false
+        }) :
+        $('html, body').stop().animate({
+          scrollTop: offset
+        }, 500);
+    });
+
+    // Expand sidebar on post detail page by default, when post has a toc.
+    NexT.motion.middleWares.sidebar = function () {
+      var $tocContent = $('.post-toc-content');
+
+      if (CONFIG.sidebar === 'post') {
+        if ($tocContent.length > 0 && $tocContent.html().trim().length > 0) {
+          NexT.utils.displaySidebar();
+        }
+      }
+    };
+  });
+</script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=0.5.0"></script>
+
+
+
+  
+
+
+
+  
+
+    <script type="text/javascript">
+      var disqus_shortname = 'wereadteam';
+      var disqus_identifier = '2020/11/11/AttributeString/';
+      var disqus_title = 'NSAttributeString的autorelease内存风暴';
+      var disqus_url = 'http://weread.qq.com/2020/11/11/AttributeString/';
+
+      function run_disqus_script(disqus_script){
+        var dsq = document.createElement('script');
+        dsq.type = 'text/javascript';
+        dsq.async = true;
+        dsq.src = '//' + disqus_shortname + '.disqus.com/' + disqus_script;
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+      }
+
+      run_disqus_script('count.js');
+      
+        run_disqus_script('embed.js');
+      
+    </script>
+  
+
+
+
+  
+  
+
+  
+  
+
+
+</body>
+</html>
