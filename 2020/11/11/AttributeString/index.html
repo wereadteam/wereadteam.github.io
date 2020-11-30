@@ -57,12 +57,12 @@
 
 
 
-<meta name="description" content="前言&amp;emsp;&amp;emsp;微信读书iOS客户端也有几年历史了，和人一样，项目代码老了或多或少总有一些毛病很难根治。微信读书iOS客户端就有一个这样的历史代码模块：阅读器排版引擎。想来这个引擎代码还是和 @bang哥 共事年代的代码。基于DTCoreText的HTML树排版引擎，总体思路就是把HTML文本通过libxml2解析，再用DFS遍历树结点，处理CSS后转成NSAttributeStri">
+<meta name="description" content="前言&amp;emsp;&amp;emsp;微信读书iOS客户端也有几年历史了，和人一样，项目代码老了或多或少总有一些毛病很难根治。微信读书iOS客户端就有一个这样的历史代码模块：阅读器排版引擎。想来这个引擎代码还是和 @bang哥 共事年代的代码。基于DTCoreText的HTML树排版引擎，总体思路就是把HTML文本通过libxml2解析，再用DFS遍历树结点，处理CSS后转成NSAttributedStr">
 <meta property="og:type" content="article">
-<meta property="og:title" content="NSAttributeString的autorelease内存风暴">
+<meta property="og:title" content="NSAttributedString的autorelease内存风暴">
 <meta property="og:url" content="http://weread.qq.com/2020/11/11/AttributeString/index.html">
 <meta property="og:site_name" content="WeRead团队博客">
-<meta property="og:description" content="前言&amp;emsp;&amp;emsp;微信读书iOS客户端也有几年历史了，和人一样，项目代码老了或多或少总有一些毛病很难根治。微信读书iOS客户端就有一个这样的历史代码模块：阅读器排版引擎。想来这个引擎代码还是和 @bang哥 共事年代的代码。基于DTCoreText的HTML树排版引擎，总体思路就是把HTML文本通过libxml2解析，再用DFS遍历树结点，处理CSS后转成NSAttributeStri">
+<meta property="og:description" content="前言&amp;emsp;&amp;emsp;微信读书iOS客户端也有几年历史了，和人一样，项目代码老了或多或少总有一些毛病很难根治。微信读书iOS客户端就有一个这样的历史代码模块：阅读器排版引擎。想来这个引擎代码还是和 @bang哥 共事年代的代码。基于DTCoreText的HTML树排版引擎，总体思路就是把HTML文本通过libxml2解析，再用DFS遍历树结点，处理CSS后转成NSAttributedStr">
 <meta property="og:locale" content="zh-Hans">
 <meta property="og:image" content="https://weread-1253731777.cos.ap-shanghai.myqcloud.com/app/assets/reader/autoreleasepool.png">
 <meta property="og:image" content="https://weread-1253731777.cos.ap-shanghai.myqcloud.com/app/assets/reader/autoreleasecontent.png">
@@ -70,10 +70,10 @@
 <meta property="og:image" content="https://weread-1253731777.cos.ap-shanghai.myqcloud.com/app/assets/reader/autoreleasepoolpage.png">
 <meta property="og:image" content="https://weread-1253731777.cos.ap-shanghai.myqcloud.com/app/assets/reader/objc_loadWeak.png">
 <meta property="og:image" content="https://weread-1253731777.cos.ap-shanghai.myqcloud.com/app/assets/reader/objc_loadWeak_after.png">
-<meta property="og:updated_time" content="2020-11-11T11:38:23.823Z">
+<meta property="og:updated_time" content="2020-11-30T09:00:56.009Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="NSAttributeString的autorelease内存风暴">
-<meta name="twitter:description" content="前言&amp;emsp;&amp;emsp;微信读书iOS客户端也有几年历史了，和人一样，项目代码老了或多或少总有一些毛病很难根治。微信读书iOS客户端就有一个这样的历史代码模块：阅读器排版引擎。想来这个引擎代码还是和 @bang哥 共事年代的代码。基于DTCoreText的HTML树排版引擎，总体思路就是把HTML文本通过libxml2解析，再用DFS遍历树结点，处理CSS后转成NSAttributeStri">
+<meta name="twitter:title" content="NSAttributedString的autorelease内存风暴">
+<meta name="twitter:description" content="前言&amp;emsp;&amp;emsp;微信读书iOS客户端也有几年历史了，和人一样，项目代码老了或多或少总有一些毛病很难根治。微信读书iOS客户端就有一个这样的历史代码模块：阅读器排版引擎。想来这个引擎代码还是和 @bang哥 共事年代的代码。基于DTCoreText的HTML树排版引擎，总体思路就是把HTML文本通过libxml2解析，再用DFS遍历树结点，处理CSS后转成NSAttributedStr">
 <meta name="twitter:image" content="https://weread-1253731777.cos.ap-shanghai.myqcloud.com/app/assets/reader/autoreleasepool.png">
 
 
@@ -92,7 +92,7 @@
   };
 </script>
 
-  <title> NSAttributeString的autorelease内存风暴 | WeRead团队博客 </title>
+  <title> NSAttributedString的autorelease内存风暴 | WeRead团队博客 </title>
 </head>
 
 <body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
@@ -202,7 +202,7 @@
             
             
               
-                NSAttributeString的autorelease内存风暴
+                NSAttributedString的autorelease内存风暴
               
             
           </h1>
@@ -266,12 +266,12 @@
       
 
       
-        <h3 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h3><p>&emsp;&emsp;微信读书iOS客户端也有几年历史了，和人一样，项目代码老了或多或少总有一些毛病很难根治。微信读书iOS客户端就有一个这样的历史代码模块：阅读器排版引擎。想来这个引擎代码还是和 @bang哥 共事年代的代码。基于DTCoreText的HTML树排版引擎，总体思路就是把HTML文本通过libxml2解析，再用DFS遍历树结点，处理CSS后转成NSAttributeString，最终利用CoreText渲染出来，当然少不了在源码基础上，针对业务进行各种魔改。</p>
+        <h3 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h3><p>&emsp;&emsp;微信读书iOS客户端也有几年历史了，和人一样，项目代码老了或多或少总有一些毛病很难根治。微信读书iOS客户端就有一个这样的历史代码模块：阅读器排版引擎。想来这个引擎代码还是和 @bang哥 共事年代的代码。基于DTCoreText的HTML树排版引擎，总体思路就是把HTML文本通过libxml2解析，再用DFS遍历树结点，处理CSS后转成NSAttributedString，最终利用CoreText渲染出来，当然少不了在源码基础上，针对业务进行各种魔改。</p>
 <h3 id="顽疾"><a href="#顽疾" class="headerlink" title="顽疾"></a>顽疾</h3><p>&emsp;&emsp;回到微信读书排版引擎的问题，经常有微信读书的线上用户反馈过来，阅读的时候经常卡死闪退，但是我们的内部监控系统(bugly/matrix)一直没有抓到crash堆栈上报。这就很神奇了，根据以往经验，没有crash堆栈上报很大概率是被系统的WatchDog强杀了，一般是OOM或者wakelock太频繁。针对用户反馈的日志定位到相应的场景，发现有一个共性：HTML里<code>&lt;p&gt;</code>标签特别多，具体用户的场景里是遇到单个章节有2w+的<code>&lt;p&gt;</code>标签，大胆盲猜，这里是OOM了，果然用instruments一跑，发现了有个神奇的东西：</p>
 <div align="center"><img src="https://weread-1253731777.cos.ap-shanghai.myqcloud.com/app/assets/reader/autoreleasepool.png" width="800"></div><br><div align="center"><img src="https://weread-1253731777.cos.ap-shanghai.myqcloud.com/app/assets/reader/autoreleasecontent.png" width="800"></div>
 
 <p>Allocation Summary里多了很多<code>@autoreleasepool content</code>，每一个占去了4k的内存，App的内存在短时间内暴涨到1个G以上，触发系统WatchDog强杀。</p>
-<h3 id="定位原因"><a href="#定位原因" class="headerlink" title="定位原因"></a>定位原因</h3><p>&emsp;&emsp;这里大小为4k<code>@autoreleasepool content</code>是怎么产生的？而且<code>NSAttributeString</code>在整个iOS开发生态里使用非常多，UIKit系统控件都会用到，为什么单单这个场景会引发这个问题? 难道又是打开方式不对？<strong><em>长文预警，想看结论的同学可以直接跳到后面</em></strong></p>
+<h3 id="定位原因"><a href="#定位原因" class="headerlink" title="定位原因"></a>定位原因</h3><p>&emsp;&emsp;这里大小为4k<code>@autoreleasepool content</code>是怎么产生的？而且<code>NSAttributedString</code>在整个iOS开发生态里使用非常多，UIKit系统控件都会用到，为什么单单这个场景会引发这个问题? 难道又是打开方式不对？<strong><em>长文预警，想看结论的同学可以直接跳到后面</em></strong></p>
 <p>我们带着这两个疑问继续往下分析，我们先来看下调用链：</p>
 <div align="center"><img src="https://weread-1253731777.cos.ap-shanghai.myqcloud.com/app/assets/reader/callbacksymbol.png" width="800"></div>
 
@@ -310,7 +310,7 @@
 
 <p><code>autorelease</code>池子会不断pop对象并调用<code>[obj release]</code>，查询共用的<code>sizetable</code>重新计算refCnt，refCnt为0的时候要调<code>[obj dealloc]</code>，<code>autorelease</code>对象多的话这个过程还是挺耗时的。</p>
 <p>&emsp;&emsp;既然不能直接加<code>@autoreleasepool{}</code>，那回过头来看，可不可以减少加到<code>autorelease</code>池里对象呢？首先我们要搞清楚这里加入<code>aurelease</code>池是哪些对象？为什么会产生大量的对象？从代码上看，<code>NSSAttributeString</code>直接调用alloc方法，返回对象经过<strong>TLS优化</strong>也不存在加入<code>aurelease</code>池的情况（可以在xcode里通过<code>Debug-&gt;DebugWorkflow-&gt;Disassembly</code>查看汇编代码，再用LLDB进去看<strong>TLS优化</strong>生效了没有）没办法只能祭出最后的武器：<strong><em>汇编</em></strong></p>
-<p>&emsp;&emsp;通过反编译<code>Foundation/UIFoundation/libobjc.A.dylib</code>，我们大概理清了一下<code>NSAttributeString</code>的初始化过程：</p>
+<p>&emsp;&emsp;通过反编译<code>Foundation/UIFoundation/libobjc.A.dylib</code>，我们大概理清了一下<code>NSAttributedString</code>的初始化过程：</p>
 <ol>
 <li><p><code>NSConcreteAttributedString</code>初始化</p>
 <figure class="highlight objc"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">int</span> -[<span class="built_in">NSConcreteAttributedString</span> initWithString:attributes:]() &#123;</div><div class="line">    r14 = rcx;</div><div class="line">    rbx = [rdi initWithString:rdx];</div><div class="line">    <span class="keyword">if</span> ((r14 != <span class="number">0x0</span>) &amp;&amp; (rbx != <span class="number">0x0</span>)) &#123;</div><div class="line">            r15 = [[<span class="built_in">NSMutableRLEArray</span> allocWithZone:[rbx zone]] init];</div><div class="line">            r14 = [__NSAttributeDictionaryClass() newWithDictionary:r14]; <span class="comment">//r14 是传入属性NSDictionary</span></div><div class="line">            [rbx length];</div><div class="line">            [r15 insertObject:r14 range:<span class="number">0x0</span>];</div><div class="line">            [r14 release];</div><div class="line">            rbx-&gt;attributes = r15;<span class="comment">//r15 是 NSMutableRLEArray</span></div><div class="line">    &#125;</div><div class="line">    rax = rbx;</div><div class="line">    <span class="keyword">return</span> rax;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
@@ -320,7 +320,7 @@
 </li>
 </ol>
 <blockquote>
-<p><strong><em><code>_attributeDictionaryTable</code>是全局共用的<code>NSConcreteHashTable</code>，操作的时候需要加上<code>os_unfair_lock</code>，<code>NSAttributeDictionary</code>存放在<code>NSConcreteHashTable</code>，看逻辑应该是为了在初始化<code>NSAttributeString</code>的attributes的时候进行对象复用。</em></strong></p>
+<p><strong><em><code>_attributeDictionaryTable</code>是全局共用的<code>NSConcreteHashTable</code>，操作的时候需要加上<code>os_unfair_lock</code>，<code>NSAttributeDictionary</code>存放在<code>NSConcreteHashTable</code>，看逻辑应该是为了在初始化<code>NSAttributedString</code>的attributes的时候进行对象复用。</em></strong></p>
 </blockquote>
 <ol>
 <li><p><code>NSConcreteHashTable</code>如何查找<code>NSDictionary</code></p>
@@ -340,7 +340,7 @@
 <p>排版一个有2w个<code>&lt;p&gt;</code>标签的HTML章节，<code>objc_loadWeak</code>会加载<strong>6747w</strong>个<code>NSAttributeDictionary</code>对象</p>
 <div align="center"><img src="https://weread-1253731777.cos.ap-shanghai.myqcloud.com/app/assets/reader/objc_loadWeak.png" width="800"></div>
 
-<h3 id="解决方案"><a href="#解决方案" class="headerlink" title="解决方案"></a>解决方案</h3><p>&emsp;&emsp;到此，<code>NSAttributeString</code>内存暴涨的原因算是找到了，解决方案其实很简单：就是如何避免hash冲突。这里有两个前提：</p>
+<h3 id="解决方案"><a href="#解决方案" class="headerlink" title="解决方案"></a>解决方案</h3><p>&emsp;&emsp;到此，<code>NSAttributedString</code>内存暴涨的原因算是找到了，解决方案其实很简单：就是如何避免hash冲突。这里有两个前提：</p>
 <ol>
 <li>直接去改<code>NSDictionary</code>的<code>hash</code>函数有点困难</li>
 <li>加<code>@autoreleasepool{}</code> 影响效率</li>
@@ -352,7 +352,7 @@
 <blockquote>
 <p>当然这种解决方案并不是最好的，只是衡量投入产出比后折中的方案，如果有更好的解决方案，欢迎私信交流!</p>
 </blockquote>
-<p><strong><em>最后打个广告：微信读书iOS/Android客户端大量招人，欢迎大家加入</em></strong><br><strong><em>简历直接发：<a href="&#x6d;&#97;&#105;&#108;&#116;&#111;&#x3a;&#x6a;&#x61;&#x73;&#101;&#110;&#x68;&#x75;&#x61;&#x6e;&#x67;&#64;&#x72;&#x64;&#x67;&#x7a;&#x2e;&#111;&#x72;&#x67;">&#x6a;&#x61;&#x73;&#101;&#110;&#x68;&#x75;&#x61;&#x6e;&#x67;&#64;&#x72;&#x64;&#x67;&#x7a;&#x2e;&#111;&#x72;&#x67;</a></em></strong></p>
+<p><strong><em>最后打个广告：微信读书iOS/Android客户端大量招人，欢迎大家加入</em></strong><br><strong><em>简历直接发：<a href="&#109;&#x61;&#x69;&#108;&#x74;&#111;&#x3a;&#106;&#97;&#115;&#101;&#x6e;&#104;&#x75;&#97;&#110;&#x67;&#x40;&#114;&#x64;&#x67;&#x7a;&#46;&#x6f;&#114;&#103;">&#106;&#97;&#115;&#101;&#x6e;&#104;&#x75;&#97;&#110;&#x67;&#x40;&#114;&#x64;&#x67;&#x7a;&#46;&#x6f;&#114;&#103;</a></em></strong></p>
 <h3 id="友情链接"><a href="#友情链接" class="headerlink" title="友情链接"></a>友情链接</h3><ol>
 <li><a href="https://blog.sunnyxx.com/2014/10/15/behind-autorelease/" target="_blank" rel="external">黑幕背后的Autorelease</a></li>
 <li><a href="https://draveness.me/autoreleasepool/" target="_blank" rel="external">自动释放池的前世今生</a></li>
@@ -822,7 +822,7 @@
     <script type="text/javascript">
       var disqus_shortname = 'wereadteam';
       var disqus_identifier = '2020/11/11/AttributeString/';
-      var disqus_title = 'NSAttributeString的autorelease内存风暴';
+      var disqus_title = 'NSAttributedString的autorelease内存风暴';
       var disqus_url = 'http://weread.qq.com/2020/11/11/AttributeString/';
 
       function run_disqus_script(disqus_script){
